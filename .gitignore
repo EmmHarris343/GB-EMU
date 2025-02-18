@@ -1,0 +1,34 @@
+# Ignore all .gb, gba, gbc files
+*.gb
+*.gba
+*.gbc
+
+# Ignore Folders
+rom/
+doc/
+old/
+
+
+# Ignore compiled executable:
+rom_reader
+
+# Other:
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*.so
+*.so.*
+# Libs
+*.lib
+*.a
+*.la
+*.lo
+
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
