@@ -11,6 +11,8 @@ old/
 
 # Ignore compiled executable:
 rom_reader
+sdl_audio
+sdl_graphic
 
 # Other:
 *.out
@@ -28,6 +30,7 @@ rom_reader
 
 
 # Debug files
+.vscode
 *.dSYM/
 *.su
 *.idb
