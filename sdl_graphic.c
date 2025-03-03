@@ -1,5 +1,5 @@
 // build by:
-// gcc test_graphic.c -o sdl_graphic -lSDL2 -lm
+// gcc sdl_graphic.c -o sdl_graphic -lSDL2 -lm -Wall -Werror
 
 
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
@@ -18,19 +18,28 @@
 #define LOGO_B_LNGTH        48
 #define LOGO_WIDTH          48
 #define LOGO_HEIGHT         8
-#define LOGO_START          0x0104
-#define LOGO_END            0x0133
+#define HEX_LOGO_START          0x0104
+#define HEX_LOGO_END            0x0134
 
 
 // LOGO HEX DUMP:
 // |TOP| CE ED 66 66 CC 0D 00 0B 03 73 00 83 00 0C 00 0D 00 08 11 1F 88 89 00 0E
 // |Btm| DC CC 6E E6 DD DD D9 99 BB BB 67 63 6E 0E EC CC DD DC 99 9F BB B9 33 3E
 
+// 00 08
+// DD DC
+
+
 // CE ED:
 // CE: |MSB-SIDE| 1100 1110 |LSB-SIDE
 // ED: |MSB-SIDE| 1110 1101 |LSB-SIDE
 
 // OK. I do not need to weave them.. Just that each byte. Needs to be split in half.
+
+// 00 0D
+// EC CC
+// 0000 0000 0000 1101, 1110 1100 1100 1100
+
 
 /*
 -- CE:
@@ -46,7 +55,7 @@ xx.x
 
 
 
-uint8_t raw_logo_data[LOGO_END - LOGO_START];
+uint8_t raw_logo_data[(HEX_LOGO_END -1) - HEX_LOGO_START];      // -1, cause it only needs to be 0-47 not 0-48
 
 int load_logo_from_rom(const char *filename) {
     FILE *rom = fopen(filename, "rb");
@@ -55,9 +64,18 @@ int load_logo_from_rom(const char *filename) {
         return -1;
     }
 
-    fseek(rom, LOGO_START, SEEK_SET);
-    fread(raw_logo_data, 1, LOGO_END - LOGO_START, rom);
+    fseek(rom, HEX_LOGO_START, SEEK_SET);
+    fread(raw_logo_data, 1, HEX_LOGO_END - HEX_LOGO_START, rom);
+
     fclose(rom);
+
+
+    printf(" -- LOGO size %zu --\n", sizeof(HEX_LOGO_END - HEX_LOGO_START));
+
+    
+    
+    printf("Second-Last Byte: %02X\n", raw_logo_data[46]);
+    printf("Last Byte: %02X\n", raw_logo_data[47]);
 
     return 0;
 }
@@ -65,17 +83,8 @@ int load_logo_from_rom(const char *filename) {
 void decode_colour_tile(uint8_t *left_input_byte_lsb, uint8_t *right_byte_msb, uint16_t *decoded_color) {
     // Extract the 2 bytes for the logo colour data - then interweave
     
-    uint16_t final_logo_data[24];   // Initialize to zero
-    uint8_t lsb_byte[24];    // Less Significant (Left)
-    uint8_t msb_byte[24];    // Most Significant (Right)
-    
-
     int wv_loop_count = 0;  // I'm trying to avoid divides, so add another int to count to..
     for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){
-        uint8_t i_byte = raw_logo_data[byte_count];
-        // if (!(byte_count & 1)) {    // Find which is Even, Which is odd ### Method two ###
-
-        // Ensure we process 2 Byte data, ONLY when we land on the second Byte.
         if (byte_count > 0 && byte_count % 2 > 0) {
             
             uint8_t lsb = raw_logo_data[byte_count -1];
@@ -117,49 +126,39 @@ void decode_colour_tile(uint8_t *left_input_byte_lsb, uint8_t *right_byte_msb, u
 
 
 void render_tile(uint16_t *bit16_tile) {
-    uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];      // 8x Larger due to 1-bit to 8-bit conversion.
-
-    pixels[0] = 0xFFFFFFFF;     // Just make this pixel white for now...
-
     uint16_t bit16_logo[24];
 
-    uint16_t single_colour_data;
-    uint8_t stored_colour;
-    uint8_t logo_2bit[12];
-
-    uint16_t store_bit[15];
+    //uint16_t store_bit[15];
 
     for (int top_logo = 0; top_logo < 11; top_logo++) {
         
         uint16_t converted_colour = bit16_logo[top_logo];
         printf("Working on colour byte: %02X\n", bit16_logo[top_logo]);
-        
-        int pos_count = 0;
         for (int b_bit = 15; b_bit >= 0; b_bit--){
             if ((b_bit % 2) < 1) {  // Multiple of 2 only
                 uint16_t colour_2bit =  (converted_colour >> b_bit ) & 0x03; // & 2, means max of binary b xx10, not b xx 11. 3 allows it to move up to 11
-                store_bit[b_bit] = colour_2bit;
+                //store_bit[b_bit] = colour_2bit;
                 printf("Colour 2bit is... what? :: %d ::\n", colour_2bit);
                 switch(colour_2bit){
                     case 0x00: // white:
                         printf("White\n");
-                        pixels[b_bit] = 0xFFFFFFFF;      // this is not the right value for the pixel, but fun to visually see it maybe regardless?
+                        //pixels[b_bit] = 0xFFFFFFFF;      // this is not the right value for the pixel, but fun to visually see it maybe regardless?
                         break;
                     case 0x01:
                         printf("Light Grey\n");
-                        pixels[b_bit] = 0xFFAAAAAA;
+                        //pixels[b_bit] = 0xFFAAAAAA;
                         break;
                     case 0x02:
                         printf("Dark Grey\n");
-                        pixels[b_bit] = 0xFF555555;
+                        //pixels[b_bit] = 0xFF555555;
                         break;
                     case 0x03: // Black:
                         printf("Black\n");
-                        pixels[b_bit] = 0xFF000000;
+                        //pixels[b_bit] = 0xFF000000;
                         break;
                     default:
                         printf("Default.. to white\n");
-                        pixels[b_bit] = 0xFFFFFFFF;
+                        //pixels[b_bit] = 0xFFFFFFFF;
                         break;
                 }
                 printf("Color?? %02X\n", colour_2bit);
@@ -175,14 +174,8 @@ void render_tile(uint16_t *bit16_tile) {
 void get_16BIT(uint16_t *INTWV_16b_LOGO) {
     // Extract the 2 bytes for the logo colour data - then interweave
     
-    uint16_t final_logo_data[24];   // Initialize to zero
-    uint8_t lsb_byte[24];    // Less Significant (Left)
-    uint8_t msb_byte[24];    // Most Significant (Right)
-    
-
     int wv_loop_count = 0;  // I'm trying to avoid divides, so add another int to count to..
-    for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){
-        uint8_t i_byte = raw_logo_data[byte_count];
+    for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){       
 
         // Ensure we process 2 Byte data, ONLY when we land on the second Byte.
         if (byte_count > 0 && byte_count % 2 > 0) {
@@ -244,11 +237,12 @@ void get_LOGO() {
     uint8_t btm_logo[24];
 
     // Extract data, top / bottom
+
+    printf("Last Byte Value #2: %02X\n", raw_logo_data[46]);
     
     int top_count = 0;
     int btm_count = 0;
     for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){
-        uint8_t i_byte = raw_logo_data[byte_count];
 
         if (byte_count < 24) {
             // Top
@@ -261,12 +255,13 @@ void get_LOGO() {
             btm_count ++;
         }
     }
+    if (btm_logo[0]) { printf("Btm_Logo has data.. (This is to get rid of annoying error...)\n");}
 
 
 
     printf("\n");
 
-    uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];      // 8x Larger due to 1-bit to 8-bit conversion.
+    //uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];      // 8x Larger due to 1-bit to 8-bit conversion.
 
     int data_actual = 0;
     int col_offset = 0;
@@ -303,7 +298,7 @@ void get_LOGO() {
         store_row |= (temp_bits[2] << 4);   // Row 2
         store_row |= temp_bits[3];          // Row 3
 
-        pixels[l_col] = store_row;
+        //pixels[l_col] = store_row;        // Unused RIGHT NOW. So comment out.
         printf("COL:%2d | %04X\n", l_col, store_row);
     }
     //printf("\n");
@@ -341,199 +336,99 @@ void get_LOGO() {
 
 void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_logo) {
     uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];
-    // 8x Larger due to 1-bit to 8-bit conversion ... but why?
-
-    pixels[0] = 0xFFFFFFFF;     // Just make this pixel white for now...
-    pixels[47] = 0xFFFFFFFF;    // This shows the LAST pixel is at Column 47
-    pixels[48] = 0xFFFFFFFF;    // This is Row #2 Start point
-
-    // So... lets say it's
-    // 0-47 Columns BY
-    // 0-40 Rows (not completely true but you know..)
-
-
-    // Needs to be.. At MIN 8 ROWS in Height.
-    // and 12 * 4(bits) in COLUMNS Width. 
-
-
-
-
-
-
-
-
-
-    //
-
-    // -- OK -- 
-    // Single Pixel WIDTH is: 0-47 Long. 
-    
-    // Width of "Texture" is 48 * sizeof(uint32_t) 4 = 120 Pixel widths..
-
-    // Window/ Screen Width X Height = 580 X 510
-
-    // 120 Pixel Width. 
-    // If I don't upscale it. Then it's 1/4 width of "screen".
-
     uint8_t top_logo[24];
     uint8_t btm_logo[24];
 
-    // Extract data, top / bottom
-    
+    // Extract data, top / bottom    
     int top_count = 0;
     int btm_count = 0;
     for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){
-        uint8_t i_byte = raw_logo_data[byte_count];
 
         if (byte_count < 24) {
             // Top
             top_logo[top_count] = raw_logo_data[byte_count];
             top_count ++;
         }
-        if (byte_count > 24) {
+        if (byte_count >= 24) {
             // Bottom
             btm_logo[btm_count] = raw_logo_data[byte_count];
             btm_count ++;
         }
     }
 
-
-
-    printf("\n");
-
-    uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];      // 8x Larger due to 1-bit to 8-bit conversion.
-    uint32_t pixels_raw[LOGO_WIDTH * LOGO_HEIGHT];      // not multiplying... should be enough..
+    uint32_t pixels_raw[LOGO_WIDTH * LOGO_HEIGHT];      // Not upscaling.
 
     int data_actual = 0;
-    int col_offset = 0;
-
-    uint16_t store_row = 0;
-    
-    
-
+    int col_offset_t = 0;
+    int col_offset_b = 0;
+    uint32_t store_row = 0;
+  
     for (int l_col = 0; l_col < 12; l_col++){
         store_row = 0;
-        uint8_t temp_bits[4] = {0};
-
-        col_offset = 0;
+        uint8_t temp_bits[8] = {0};
+        col_offset_t = 0;
+        col_offset_b = 0;
         data_actual = (l_col * 2);
 
-        
-        //printf("|| COL:%d || BIT0: %02X BIT1: %02X|", l_col, top_logo[data_actual], top_logo[data_actual+1]);
-        
-        for (int l_row = 0; l_row < 4; l_row++) {
-            if (l_row == 2) col_offset = 1; // Nudge forward column offset
-
-
-            if (l_row == 0 || l_row == 2) {
-                temp_bits[l_row] = top_logo[data_actual + col_offset] >> 4;
-                //printf("|BIT| %02X", top_logo[data_actual + col_offset] >> 4);
+        for (int l_row = 0; l_row < 8; l_row++) {
+            if (l_row < 4) {
+                if (l_row == 2) col_offset_t = 1; // Nudge forward column offset                
+                if (l_row == 0 || l_row == 2) {
+                    temp_bits[l_row] = (top_logo[data_actual + col_offset_t]) >> 4;
+                }
+                else {
+                    temp_bits[l_row] = (top_logo[data_actual + col_offset_t]) & 0xF;
+                }
             }
-            else {
-                temp_bits[l_row] = top_logo[data_actual + col_offset] & 0xf;
-                //printf("|BIT| %02X", top_logo[data_actual + col_offset] & 0xf);
+            if (l_row >= 4) {
+                if (l_row == 6) col_offset_b = 1; // Nudge forward column offset
+                if (l_row == 4 || l_row == 6) {
+                    temp_bits[l_row] = (btm_logo[data_actual + col_offset_b] >> 4) & 0xF;
+                }
+                else {
+                    temp_bits[l_row] = (btm_logo[data_actual + col_offset_b]) & 0xF;
+                }
             }
         }
-        store_row |= (temp_bits[0] << 12);  // Row 0 (top-most)
-        store_row |= (temp_bits[1] << 8);   // Row 1
-        store_row |= (temp_bits[2] << 4);   // Row 2
-        store_row |= temp_bits[3];          // Row 3
+        store_row |= (temp_bits[0] & 0XF) << 28;   // Row 0 (top-most)
+        store_row |= (temp_bits[1] & 0XF) << 24;   // Row 1
+        store_row |= (temp_bits[2] & 0XF) << 20;   // Row 2
+        store_row |= (temp_bits[3] & 0XF) << 16;   // Row 3
+        store_row |= (temp_bits[4] & 0XF) << 12;   // Row 4 (top of btm-row)
+        store_row |= (temp_bits[5] & 0XF) << 8;    // Row 5
+        store_row |= (temp_bits[6] & 0XF) << 4;    // Row 6
+        store_row |= (temp_bits[7] & 0XF);         // Row 7
 
         pixels_raw[l_col] = store_row;
-        printf("COL:%2d | %04X\n", l_col, store_row);
     }
-    //printf("\n");
 
 
-    // 
 
-
-    
-
-
-    int col_4bitgroup = 0;
-    // There is actually 12 columns... 
-
-    // pixels_raw[0-11] Has a 16Bit value, with 2 * 8 bit values squished together.
-    // IE: CE & ED = CEED
-
-    // I need to split, C, E, E, D .. Into the 4 bit gropus. 
-    // Reading on this FIRST-ROW only pixels_raw[0] Left-Most bit (C), 
-    // NEXT ROW, I need to Read Pixels_raw[0] Second-Left-Most Bit (E), 
-    // 
-
-
-    // So..... Put Rows in a loop. With Columns inside the Loop.
-    // Each row looped through, 0 - 7. Off-sets the value stored in the uint32_t pixels_raw[]
-    // 
-    // Example:
-    // pixels_raw[0]: bit0(row0), pixels_raw[1]: bit0(row0) ...
-    // pixels_raw[0]: bit1(row1), pixels_raw[1]: bit1(row1) ...
-
-
-    // Then.... however... 
-    // Each 4bit value extracted... 
-    // Need to set the value in pixels[pixel_index]
-    // To, either 1=WHITE or 0=BLACK (In the color codes). 
-
-
-    // The pixels. Does not have an XY Cord. Only an Index.
-    // The index is idk.. lets say 300+ value.
-    // When the Pixel hits pixels[48] That EQUALs NEWLINE.
-
-    // So... 48 * (row +1)= Pixel Coordinate  (+1 so it's not 48* 0... but, depending on code, maybe I want that..)
-
-
+    int bitgroup = 0;
+    int pixel_index = 0;
+    uint32_t pixels_storage = 0;
     for (int row = 0; row < LOGO_HEIGHT; row++) {
+        bitgroup = 0;
         for (int col = 0; col < LOGO_WIDTH; col++) {    // 48 is accurate, Because 4bit per column * 12 = 48
-            for (int bit = 0; bit < 8; bit++) {
-                int pixel_index = (row * 8 + bit) * LOGO_WIDTH + col;       // Exmple: index.. (row (3) * 8 + bit (2) = 66) 
-                //uint8_t data = (bytes << (7 - 1));
+            if (col > 3 && (col) % 4 == 0) bitgroup++; // it's hit a 4 group...
+            int bitrow_loc[4] = {3, 2, 1, 0};
+            int bitgroup_loc[8] = {28, 24, 20, 16, 12, 8, 4, 0};
+            pixel_index = (LOGO_WIDTH * row) + col;
 
 
+            pixels_storage = pixels_raw[bitgroup];
+            uint32_t bitrow_val = (pixels_storage >> bitgroup_loc[row]) & 0xf;
+            uint8_t bit_val = (bitrow_val >> bitrow_loc[col % 4]) & 1;
 
-                
-                //pixels[pixel_index] = (byte & (1 << (7 - 1))) ? 0xFFFFFFFF : 0xFF000000;    // if bit true, make white. else make black
-            }
-            //printf(" ROW: %d | COL: %d", row, col);
+            pixels[pixel_index] = (bit_val > 0) ? 0xFFFFFFFF : 0xFF000000;
         }
-        //printf("\n");
     }
 
 
 
-    //// This is wrong.... 
-    //// Data is only in row 0, col 0 - 48......
-    // for (int row = 0; row < LOGO_HEIGHT; row++) {
-    //     for (int col = 0; col < LOGO_WIDTH; col++) {
-    //         uint8_t byte = logo_data[row * LOGO_WIDTH + col];               // Example. 3 * 48 + 4 (= 148)
-    //         // Example Logo data [index] or .. Logo_data[148].. (0 to 383 Indexes?)
 
-            
-    //         printf(" :: |%d|%d|:%02X:", row, col, byte);
-
-    //         // ? : is short hand for if, else.
-    //         // EXAMPLE SHORTHAND: int x = (5 > 3) ? 10 : 20;  // x = 10
-
-    //         for (int bit = 0; bit < 8; bit++) {
-    //             int pixel_index = (row * 8 + bit) * LOGO_WIDTH + col;       // Exmple: index.. (row (3) * 8 + bit (2) = 66) 
-    //             uint8_t data = (byte & (1 << (7 - 1)));
-    //             pixels[pixel_index] = (byte & (1 << (7 - 1))) ? 0xFFFFFFFF : 0xFF000000;    // if bit true, make white. else make black
-                
-
-                
-    //             // printf("Pixel data => %02X", pixels[pixel_index]);
-    //         }
-    //         // printf(" ROW: %d | COL: %d", row, col);
-    //     }
-    //     printf("\n");
-    // }
-
-
-    // NOt entirely sure why am updating the Width of the Logo. It's already set to 0-47..
-
-    // Update a texture Rectangle with pixel data.  --- 
-    // The last value being the Pitch: Number of bytes in a row of pixel data, (Including padding between Lines)
+    // "Update a texture Rectangle with pixel data.  ---"
+    // "The last value being the Pitch: Number of bytes in a row of pixel data, (Including padding between Lines)"
     SDL_UpdateTexture(texture, NULL, pixels, LOGO_WIDTH * sizeof(uint32_t)); // sizeof(uint32_t) = 4?
     
     SDL_RenderClear(renderer);
@@ -546,14 +441,14 @@ void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_l
 
 int main() {
     // Startup, load rom, read logo data..
-    char *rom_file = "rom/pkmn_red.gb";
+    char *rom_file = "rom/wrio_land_2.gb";
     printf("Using rom file: %s\n", rom_file);
 
     if (load_logo_from_rom(rom_file) < 0) {
         printf("Failure reading logo from rom file..");
         return 1;
     }
-    printf("Get logo..");
+    printf("Get logo..\n");
 
     uint16_t INTWV_16b_LOGO[24];
     get_LOGO();
@@ -600,7 +495,7 @@ int main() {
 
 
 
-    SDL_Delay(2000);        // Display for only 2 seconds (LIkely similar to wait(2000)..)
+    SDL_Delay(4000);        // Display for only 2 seconds (LIkely similar to wait(2000)..)
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
