@@ -26,34 +26,6 @@
 // |TOP| CE ED 66 66 CC 0D 00 0B 03 73 00 83 00 0C 00 0D 00 08 11 1F 88 89 00 0E
 // |Btm| DC CC 6E E6 DD DD D9 99 BB BB 67 63 6E 0E EC CC DD DC 99 9F BB B9 33 3E
 
-// 00 08
-// DD DC
-
-
-// CE ED:
-// CE: |MSB-SIDE| 1100 1110 |LSB-SIDE
-// ED: |MSB-SIDE| 1110 1101 |LSB-SIDE
-
-// OK. I do not need to weave them.. Just that each byte. Needs to be split in half.
-
-// 00 0D
-// EC CC
-// 0000 0000 0000 1101, 1110 1100 1100 1100
-
-
-/*
--- CE:
-XX..
-XXX.
--- ED:
-xxx.
-xx.x
-
-*/
-
-// if (!(byte_count & 1)) {    // Odd Vs Even (Method 2)
-
-
 
 uint8_t raw_logo_data[(HEX_LOGO_END -1) - HEX_LOGO_START];      // -1, cause it only needs to be 0-47 not 0-48
 
@@ -68,14 +40,6 @@ int load_logo_from_rom(const char *filename) {
     fread(raw_logo_data, 1, HEX_LOGO_END - HEX_LOGO_START, rom);
 
     fclose(rom);
-
-
-    printf(" -- LOGO size %zu --\n", sizeof(HEX_LOGO_END - HEX_LOGO_START));
-
-    
-    
-    printf("Second-Last Byte: %02X\n", raw_logo_data[46]);
-    printf("Last Byte: %02X\n", raw_logo_data[47]);
 
     return 0;
 }
@@ -305,34 +269,6 @@ void get_LOGO() {
 }
 
 
-            // // THIS ONLY PRINTS:
-            // if (l_row == 0 || l_row == 2) {
-            //     printf("< |dc:%d|OF:%d| B0: %02X >", data_actual, col_offset, (top_logo[data_actual + col_offset] >> 4));
-            //     // Shift bytes over so there is only 4 bits selected. (1111 XXXX) -> (XXXX 1111)
-            // }
-            // else {
-            //     printf("< |dc:%d|OF:%d| B1: %02X >", data_actual, col_offset, (top_logo[data_actual + col_offset] & 0xf));
-            //     // Select only the first 4 bits up to value 0xf (15) (XXXX 1111)
-            // }
-            // if (l_row == 3){
-            //     // Only needed when printing to console..
-            //     printf("\n");
-            // }
-
-        //int pixel_index = (row * 8 + bit) * LOGO_WIDTH + l_col;
-
-
-        // Now save this to something kind of variable?
-        // int pixel_index = (row * 8 + bit) * LOGO_WIDTH + col;       // Exmple: index.. (row (3) * 8 + bit (2) = 66) 
-        // uint8_t data = (byte & (1 << (7 - 1)));
-        // pixels[pixel_index] = (byte & (1 << (7 - 1))) ? 0xFFFFFFFF : 0xFF000000;    // if bit true, make white. else make black
-
-
-
-
-
-
-
 
 void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_logo) {
     uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];
@@ -417,9 +353,16 @@ void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_l
 
 
             pixels_storage = pixels_raw[bitgroup];
-            uint32_t bitrow_val = (pixels_storage >> bitgroup_loc[row]) & 0xf;
+            uint32_t bitrow_val = (pixels_storage >> bitgroup_loc[row]) & 0xf;  // >> Left by 4, grabbing 4 bits
             uint8_t bit_val = (bitrow_val >> bitrow_loc[col % 4]) & 1;
+            /*
+            Using (mod) col % 4, This will always return 0,1,2,3 
+            The reversed "bitrow_loc" array values. Tells it how many bits to shift Left.
+            >> by 3, then 2, then 1, then 0. 
+            Ensuring only 1 bit (the rightmost) is assigned to "bit_val"
+            */
 
+            // If bit_val is 1 or 0, Assign *White or *Black. To the value at the pixel index.
             pixels[pixel_index] = (bit_val > 0) ? 0xFFFFFFFF : 0xFF000000;
         }
     }
