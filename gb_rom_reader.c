@@ -1,6 +1,7 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 
 // See documentation for these values at: https://gbdev.io/pandocs/The_Cartridge_Header.html
@@ -25,6 +26,7 @@
 
 #define CARTRIDGE_TYPE_ADDR     0x0147
 #define ROM_SIZE_ADDR           0x0148
+#define RAM_SIZE_ADDR           0x0149
 
 
 #define QA_ASCII_START 32
@@ -34,6 +36,8 @@
 #define CHKSM_START         0x0134
 #define CHKSM_END           0x014C
 #define CHKSM_BYTE          0x014D
+
+
 
 
 // Checksum.
@@ -63,15 +67,7 @@ void read_rom_info(const char *filename) {
     fread(header, 1, HEADER_SIZE, file);
     fclose(file);
 
-
-    // Get Entry point:
-    printf("Entry point:\n");
-    for (int i = ENTRY_POINT_START - HEADER_START; 
-        i <= ENTRY_POINT_START - HEADER_START; 
-        i++){
-        printf("%02X ", header[i]);
-    }
-    printf("\n");
+    printf("== Header data ; Information as follows.. ==\n");
 
     // Get Title:
 
@@ -82,40 +78,56 @@ void read_rom_info(const char *filename) {
             header[TITLE_START - HEADER_START + i] <= QA_ASCII_END
             )
             ? header[TITLE_START - HEADER_START + i]
-            : '.';  // Add the little Dots, between the Character.
+            : '.';  // Add dots for Unused Characters
     }
     title[TITLE_LENGTH] = '\0';     // Set the Null Terminator (For the string stuff);
-    printf("Rom Title: %s\n", title);
+    printf(" - ROM Title: %s\n", title);
+
+
+    // Get Entry point:
+    printf(" - Entry point: ");
+    for (int i = ENTRY_POINT_START - HEADER_START; 
+             i <= ENTRY_POINT_START - HEADER_START; 
+             i++)
+    {
+        printf("%02X ", header[i]);
+    }
+    printf("\n");
 
     // Get the Code:    
-    unsigned char LIC[LIC_LENG +1];
-    unsigned char LIC_2;
+    uint8_t LIC[LIC_LENG +1];
+    uint8_t LIC_2;
     LIC_2 = (header[LIC_CODE_START - HEADER_START]);
-    printf("LIC CODE (2): %02X | (DEC): %d\n", LIC_2, LIC_2);
+    printf(" - Licensee CODE: 0x%02X\n", LIC_2);
 
 
-    unsigned char cartridge_type = header[CARTRIDGE_TYPE_ADDR- HEADER_START];
-    printf("Cartridge Type: 0x%02X\n", cartridge_type);
+    uint8_t cartridge_type = header[CARTRIDGE_TYPE_ADDR- HEADER_START];
+    printf(" - Cartridge Type: 0x%02X\n", cartridge_type);
 
+    uint8_t rom_size = header[ROM_SIZE_ADDR - HEADER_START];
+    printf(" - ROM Size Code: 0x%02X\n", rom_size);
 
-    unsigned char rom_size = header[ROM_SIZE_ADDR - HEADER_START];
-    printf("ROM Size Code: 0x%02X\n", rom_size);
-
-
-
+    uint8_t ram_size = header[RAM_SIZE_ADDR - HEADER_START];
+    printf(" - RAM Size Code: 0x%02X\n", ram_size);
     // Verify Chksum
     u_int8_t clc_hdr_chksm = calculate_header_checksum(header);
     u_int8_t chk_byte_val = header[CHKSM_BYTE - HEADER_OFFSET];
     // printf("And what's in this byte.. (Without the 0x) %02X\n", chk_byte_val);
 
-    printf("Verifying Chksum....\n");
+    printf("Start Verifying Chksum....\n");
 
     if (clc_hdr_chksm == chk_byte_val) {
-        printf("  - Success : Calculated Chksum Matches Byte Val: 0x%02X\n", chk_byte_val);
+        printf("  - Success : Calculated Chksum Matches 8 Bit: 0x%02X\n", chk_byte_val);
     }
     else {
         printf("  - Failure.. : Calculated Chksum failed doesn't match");
     }
+
+
+    printf("\n:::LEGEND:::\n");
+    printf(" --Cartridge Type $13 = MBC3+RAM+BATTERY\n");
+    printf(" --ROM Size $05 = 1MB|64 Rom Banks\n");
+    printf(" --RAM Size $03 = 32 KiB|4 banks of 8 KiB each\n");
 
 }
 
@@ -125,9 +137,10 @@ void read_rom_info(const char *filename) {
 
 
 int main() {
+    printf("Startup Begun..\n");
     //char *rom_file = "zelda_lnk_a(fr).gbc";
     char *rom_file = "rom/pkmn_red.gb";
-    printf("Using rom file: %s\n", rom_file);
+    printf("NOTE: Using rom file: %s\n\n", rom_file);
 
     // NOTE, when accessing ROM Data from the header. It is FINALLYYYY something that is:
     // header[OFFSET - HEADER_START]        A fucking offset.... 

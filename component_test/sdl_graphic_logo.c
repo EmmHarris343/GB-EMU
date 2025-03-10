@@ -200,10 +200,7 @@ void get_LOGO() {
     uint8_t top_logo[24];
     uint8_t btm_logo[24];
 
-    // Extract data, top / bottom
-
-    printf("Last Byte Value #2: %02X\n", raw_logo_data[46]);
-    
+    // Extract data, top / bottom    
     int top_count = 0;
     int btm_count = 0;
     for (int byte_count = 0; byte_count < LOGO_WIDTH; byte_count++){
@@ -219,11 +216,7 @@ void get_LOGO() {
             btm_count ++;
         }
     }
-    if (btm_logo[0]) { printf("Btm_Logo has data.. (This is to get rid of annoying error...)\n");}
-
-
-
-    printf("\n");
+    if (btm_logo[0]) { printf("get_logo function finished\n");}
 
     //uint32_t pixels[LOGO_WIDTH * LOGO_HEIGHT * 8];      // 8x Larger due to 1-bit to 8-bit conversion.
 
@@ -263,7 +256,7 @@ void get_LOGO() {
         store_row |= temp_bits[3];          // Row 3
 
         //pixels[l_col] = store_row;        // Unused RIGHT NOW. So comment out.
-        printf("COL:%2d | %04X\n", l_col, store_row);
+        //printf("COL:%2d | %04X\n", l_col, store_row);
     }
     //printf("\n");
 }
@@ -340,27 +333,42 @@ void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_l
 
 
 
+
+    /*
+    1. Each pixels_raw[N] value, stores 32 bits. 
+    2. There is a total of *8* 4bit groups (4*8 = 32)
+    3. A single 32bit pixels_raw[N] stores a "CHUNK" or Rectangle Column. 4bits wide by 8 rows high. (32 total)
+    4. Every 4 columns, it enters a new "CHUNK", with new data. 
+    */
+
+
+
+
+
+    /*
+    Using (mod) col % 4, This will always return 0,1,2,3 
+    The reversed "bitrow_loc" array values. Tells it how many bits to shift Left.
+    >> by 3, then 2, then 1, then 0. 
+    Ensuring only 1 bit (the rightmost) is assigned to "bit_val"
+    */
+
     int bitgroup = 0;
     int pixel_index = 0;
+    int bitrow_loc[4] = {3, 2, 1, 0};
+    int bitgroup_loc[8] = {28, 24, 20, 16, 12, 8, 4, 0};
+
     uint32_t pixels_storage = 0;
     for (int row = 0; row < LOGO_HEIGHT; row++) {
         bitgroup = 0;
-        for (int col = 0; col < LOGO_WIDTH; col++) {    // 48 is accurate, Because 4bit per column * 12 = 48
-            if (col > 3 && (col) % 4 == 0) bitgroup++; // it's hit a 4 group...
-            int bitrow_loc[4] = {3, 2, 1, 0};
-            int bitgroup_loc[8] = {28, 24, 20, 16, 12, 8, 4, 0};
+        for (int col = 0; col < LOGO_WIDTH; col++) {
+            if (col > 3 && (col) % 4 == 0) bitgroup++;      // Advance bitgroup by 1, 
+
             pixel_index = (LOGO_WIDTH * row) + col;
 
-
             pixels_storage = pixels_raw[bitgroup];
-            uint32_t bitrow_val = (pixels_storage >> bitgroup_loc[row]) & 0xf;  // >> Left by 4, grabbing 4 bits
-            uint8_t bit_val = (bitrow_val >> bitrow_loc[col % 4]) & 1;
-            /*
-            Using (mod) col % 4, This will always return 0,1,2,3 
-            The reversed "bitrow_loc" array values. Tells it how many bits to shift Left.
-            >> by 3, then 2, then 1, then 0. 
-            Ensuring only 1 bit (the rightmost) is assigned to "bit_val"
-            */
+            uint32_t bitrow_val = (pixels_storage >> bitgroup_loc[row]) & 0xf;  // Asigns a single 4bit group based on row.. Shifts >> Left N amount, grabbing 4 bits
+            uint8_t bit_val = (bitrow_val >> bitrow_loc[col % 4]) & 1;          // Grabs only 1 bit, shifting the bits between 3-0.
+
 
             // If bit_val is 1 or 0, Assign *White or *Black. To the value at the pixel index.
             pixels[pixel_index] = (bit_val > 0) ? 0xFFFFFFFF : 0xFF000000;
@@ -384,18 +392,16 @@ void render_logo(SDL_Renderer *renderer, SDL_Texture *texture, uint16_t *bit16_l
 
 int main() {
     // Startup, load rom, read logo data..
-    char *rom_file = "rom/wrio_land_2.gb";
+    char *rom_file = "rom/pkmn_red.gb";
     printf("Using rom file: %s\n", rom_file);
 
     if (load_logo_from_rom(rom_file) < 0) {
-        printf("Failure reading logo from rom file..");
+        printf("Failure reading logo from rom file..\n");
         return 1;
     }
-    printf("Get logo..\n");
 
     uint16_t INTWV_16b_LOGO[24];
     get_LOGO();
-    printf("Got 16bit LOGO Data\n");
 
     // Initialize window, layout pixel format size etc.
     if (SDL_Init(SDL_INIT_VIDEO) < 0 ) {
