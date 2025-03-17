@@ -1,8 +1,6 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 
+#include <e_core.h>
 
 // Bank one 0b00100
 

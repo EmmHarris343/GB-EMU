@@ -14,6 +14,10 @@ rom_reader
 sdl_audio
 sdl_graphic
 cpu_op
+# What I'm calling my executable files
+*.o
+
+
 
 # Other:
 *.out
@@ -28,6 +32,7 @@ cpu_op
 *.a
 *.la
 *.lo
+
 
 
 # Debug files

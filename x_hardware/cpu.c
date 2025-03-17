@@ -18,16 +18,90 @@
 // DMG0	DMG	MGB	SGB	SGB2
 #define GB_VER              0x01        // This is just my, definition. Saying, 01 is regular DMG.
 
+// The AF, Specifically the F CPU Register. This is each flag
+#define FLAG_Z  (1 << 7)
+#define FLAG_N  (1 << 6)
+#define FLAG_H  (1 << 5)
+#define FLAG_C  (1 << 4)
+
+
 // Total WORK Ram       = 8 KiB
 // Total VIDEO RAM      = 8 KiB
 // CPU SPEED            = 4.194304 MHz
 
+typedef struct {
+    union {
+        struct {
+            uint8_t f;  // Flag Register (Yes the ZNHC)
+            uint8_t a;  // The Accumulator
+        };
+        uint16_t af;
+    };
+    union {
+        struct {
+            uint8_t c;
+            uint8_t b;
+        };
+        uint16_t bc;
+    };
+    union {
+        struct {
+            uint8_t e;
+            uint8_t d;
+        };
+        uint16_t de;
+    };
+    union {
+        struct {
+            uint8_t l;
+            uint8_t h;
+        };
+        uint16_t hl;
+    };
+
+    uint16_t sp;    // Stack pointer
+    uint16_t pc;    // Program Counter
+
+} CPU_Registers;
+
+
+CPU_Registers registers;        // Define globablly so can be access anywhere..
 
 
 
 
 
 
+
+void set_flag(int cpu_flag) {
+    
+    switch (cpu_flag) {
+        case 0: // Z Flag
+            //printf("Set z Flag\n");
+            registers.f |= FLAG_Z;
+        case 1: // N Flag
+            //printf("Set N Flag\n");
+            registers.f |= FLAG_N;
+        case 2: // H Flag
+            //printf("Set H Flag\n");
+            registers.f |= FLAG_H;
+        case 3: // C Flag
+            //printf("Set C Flag\n");
+    }
+}
+
+void clear_flag(int cpu_flag) {
+    switch (cpu_flag) {
+        case 0: // Z Flag
+            registers.f &= ~FLAG_Z;
+        case 1: // N Flag
+            registers.f &= ~FLAG_N;
+        case 2: // H Flag
+            registers.f &= ~FLAG_H;
+        case 3: // C Flag
+            registers.f &= ~FLAG_C;
+    }
+}
 
 
 // REMINDER:
@@ -77,7 +151,7 @@ void do_opcode(uint8_t special_val) {
 
 }
 
-void cpu_initialize(uint8_t *gb) {
+void cpu_initialize() {
     // GB_VER = 0x01 (DMG), only one I am programming for now..
 
     /*
@@ -98,9 +172,43 @@ void cpu_initialize(uint8_t *gb) {
     Carry and half-carry flags are clear (FOR DMG); otherwise, they are both set.
     */
 
+
+
+    // Set the Flag Registers, and the Registers.
+    // Note, this is the intial state of the GB ver: DMG
+    // AFTER the Bootrom would have run, and passed
+    // (Pass meaning, ready to start reading OP_Code instructions from ROM)
+
+    // Set Flag Registers   (This is actually Registers F)
+    set_flag(0);    // Z
+    clear_flag(1);  // N
+    clear_flag(2);  // H
+    clear_flag(3);  // C
+
+    // Set the Registers initial state (After Bootrom Pass)
+    registers.a = 0x01;
+    registers.b = 0x00;
+    registers.c = 0x13;
+    registers.d = 0x00;
+    registers.e = 0xD8;
+    registers.h = 0x01;
+    registers.l = 0x4D;
+
+    registers.pc = 0x0100;
+    registers.sp = 0xFFFE;
 }
 
-
+void check_registers() {
+    printf("Registers:\n");
+    (registers.f & FLAG_Z) ? printf(" - Zero Flag set\n") : printf(" - Zero Flag NOT set\n");
+    (registers.f & FLAG_N) ? printf(" - N Flag set\n") : printf(" - N Flag NOT set\n");
+    (registers.f & FLAG_H) ? printf(" - H Flag set\n") : printf(" - H Flag NOT set\n");
+    (registers.f & FLAG_C) ? printf(" - C Flag set\n") : printf(" - C Flag NOT set\n");
+    printf("A: 0x%X\n", registers.a);
+    printf("B: 0x%X, C: 0x%X\n", registers.b, registers.c);
+    printf("D: 0x%X, E: 0x%X\n", registers.b, registers.c);
+    printf("H: 0x%X, L: 0x%X\n", registers.h, registers.l);
+}
 
 // Gets Entry Point from ROM.
 uint8_t hold_entry_point[3] = {0};   // Declare here, so the address doesn't disappear once the Function closes
@@ -179,12 +287,16 @@ int main() {
     const char *rom_file = "rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
+    cpu_initialize();
+    check_registers();
 
+    printf("Begin CPU OP Instructions.. \n ");
 
     uint8_t *entry_point = get_entry_point(rom_file);
 
     manual_read_CPU(rom_file, entry_point);
 
+    
 
 
 

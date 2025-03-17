@@ -4,7 +4,10 @@
 #include <stdint.h>
 
 
-typedef void opcode_t(uint8_t *gb_val, uint8_t opcode);        // Placeholder to make code work
+typedef void opcode_t(uint8_t *gb_val, uint8_t opcode);        // Placeholder to stop throwing compile error
+
+
+// NOTICE all the uint8_t *gb_val, in the code. Is a placeholder. -- I have no idea what it was supposed to be..
 
 
 // NOP - No operation
