@@ -65,7 +65,7 @@ typedef struct {
 } CPU_Registers;
 
 
-CPU_Registers registers;        // Define globablly so can be access anywhere..
+CPU_Registers registers;        // Accessable to any other C file
 
 
 
@@ -130,8 +130,6 @@ Be given details about the OP_CODE, such as how many bytes it needs, 1, 2, 3 etc
     1. The data stored in memory, to complete the instruction (Add, subtract, copy, compare, load/ LD, jump address).
     2. Where the NEXT 8-BIT OP_CODE is located.
     3. So I *ultimately* know how far to advance the **PC.. 
-
-
 
 
 After all that... I can just print out the op_codes and the data for now. 

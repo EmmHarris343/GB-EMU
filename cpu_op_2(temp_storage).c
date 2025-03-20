@@ -1,43 +1,6 @@
+#include <stdint.h>
+
 typedef void opcode_t(uint8_t *gb_val, uint8_t opcode);        // Placeholder to make code work
-
-
-
-/*
-    --      CPU FLAGS        --
-
-(Z) Zero flag:
-    This flag is set if and only if the result of an operation is zero. Used by conditional jumps.
-
-(C) Carry Flag (C or Cy):
-    Flag is set in these cases:
-
-    1. 8-bit Addition is > $FF.
-    2. 16-bit Addition is > $FFFF.
-    3. When Sub or ComPare lower than zero.
-    4. If shift/ rotate shifts out a "1" bit.
-* NOTE: this used by conditional jumps and certain instructions, ADC, SBC ..
-
-(N) Subtraction Flag: 
-    N indicates whether the previous instruction has been a subtraction
-(H) Half Carry Flag:
-    H indicates carry for the lower 4 bits of the result
-* NOTE: Both N & H flags are ONLY used, when:
-    An Arithmatic action is performed on a Value originally in BCD Format (Binary-Coded-Decimal).
-    Which the DAA Function will convert back to BCD, depending on the Value in A, the N, H, (and sometimes) Cary flags.
-    
-|| CPU DAA      : https://rgbds.gbdev.io/docs/v0.9.1/gbz80.7#DAA
-|| N & H Flags  : https://gbdev.io/pandocs/CPU_Registers_and_Flags.html#the-bcd-flags-n-h
-
-*/
-struct cpu_flag{
-    uint8_t z;      // Zero flag
-    uint8_t n;      // Subtraction flag   (BCD / DAA Only)
-    uint8_t h;      // Half Carry flag    (BCD / DAA Only)
-    uint8_t c;      // Carry flag
-};
-
-
-
 
 
 
