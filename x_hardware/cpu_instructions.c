@@ -117,50 +117,38 @@ static void LD_r8_p_HL(uint8_t opcode) {       // Copy data inside HL (that is b
 static void LD_p_r16_A(uint8_t opcode) {
     
 }
-
 static void LD_p_n16_A(uint8_t opcode) {
     
 }
-
 static void LD_A_p_r16(uint8_t opcode) {
     
 }
-
 static void LD_A_p_n16(uint8_t opcode) {
     
 }
-
 // LDH (A) Load Instructions
 static void LDH_p_n16_A(uint8_t opcode) {
     
 }
-
 static void LDH_p_C_A(uint8_t opcode) {
     
 }
-
-
 static void LDH_A_p_n16(uint8_t opcode) {
     
 }
-
 static void LDH_A_p_C(uint8_t opcode) {
     
 }
-
 // LD/ Load (A) with Increment and Decrement Instructions:
 static void LD_p_HLI_A(uint8_t opcode) {
     
 }
-
 static void LD_p_HLD_A(uint8_t opcode) {
     
 }
-
 static void LD_A_p_HLD(uint8_t opcode) {
     
 }
-
 static void LD_A_p_HLI(uint8_t opcode) {
     
 }
@@ -171,15 +159,12 @@ static void LD_A_p_HLI(uint8_t opcode) {
 static void LD_SP_n16(uint8_t opcode) {
     
 }
-
 static void LD_p_n16_SP(uint8_t opcode) {
     
 }
-
 static void LD_HL_SP_Pe8(uint8_t opcode) {     // Load value in SP + (8bit (e) SIGNED int) into HL Register
     
 }
-
 static void LD_SP_HL(uint8_t opcode) {
     
 }
@@ -194,16 +179,14 @@ static void JP_HL(uint8_t opcode) {    // Copy Address in HL to PC
     // Jump to address in HL; effectively, copy the value in register HL into PC.
     // COPY HL into PC
 }
-
 static void JP_n16(uint8_t opcode) {                // Copy Address into PC from n16 value
 
 }
 
+// JR (Relative Jump) Instructions:                 //  NOTE: Must be within -128 bytes and 127 bytes from current address in PC
 static void JP_cc_n16(uint8_t opcode) {             // Copy address into PC from n16 value.. IF conditions met.
 
 }
-
-
 static void JR_e8(uint8_t opcode) {
     // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
     // NOTE: int8_t != uint8_t  THESE ARE VERY DIFFERNT! (Alows for -negative and +positive values)
@@ -218,7 +201,6 @@ static void JR_e8(uint8_t opcode) {
     // Flags Changed, none
 
 }
-
 static void JR_cc_e8(uint8_t opcode) {
     // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
     // NOTE: int8_t != uint8_t  THESE ARE VERY DIFFERNT! (Alows for -negative and +positive values)
@@ -231,9 +213,6 @@ static void JR_cc_e8(uint8_t opcode) {
     // Bytes: 2
     // Flags Changed, None
 }
-
-
-// JR (Relative Jump) Instructions:                 //  NOTE: Must be within -128 bytes and 127 bytes from current address in PC
 static void JR_n16(uint8_t opcode) {   // Relative Jump to 16 byte address (Must be close enough)
     // Cycles 3
     // Bytes 2
@@ -244,13 +223,14 @@ static void JR_n16(uint8_t opcode) {   // Relative Jump to 16 byte address (Must
     // JR Label  ; no-op; encoded offset of 0
     // JR Label  ; infinite loop; encoded offset of -2
 }
-
 static void JR_cc_n16(uint8_t opcode) {    // Relative Jump to 16 Byte Address (Must be close enough). As long as CC Conditions met.
     // Relative Jump to address n16 if condition cc is met.
     // Cycles: 3 taken / 2 untaken
     // Bytes: 2
     // Flags Changed, None
 }
+
+
 
 // Subroutine Instructions:
 static void CALL_n16(uint8_t opcode) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
@@ -886,72 +866,11 @@ LD_DHL_Y(B) LD_DHL_Y(C) LD_DHL_Y(D) LD_DHL_Y(E) LD_DHL_Y(H) LD_DHL_Y(L) /* NOP *
 
 
 
-// Example simple load instruction:
-void ld_drr_a(uint8_t passed_opcode) {
-    uint8_t register_id;
-    register_id = (passed_opcode >> 4) + 1;
-    // cycle_write(gb, gb->registers[register_id], gb->af >> 8);
-
-}
 
 
 
 
 
-/* Operand naming conventions for functions:
-   r = 8-bit register
-   lr = low 8-bit register
-   hr = high 8-bit register
-   rr = 16-bit register
-   d8 = 8-bit imm   (Immediate?)        (n8)    -- 8-bit integer constant   ... So ROM data / RAM data?
-   d16 = 16-bit imm (Immediate?)        (n16)   -- 16-bit integer constant  ... So ROM data / RAM data?
-   d.. = [..]       (Pointer? huh)
-   cc = condition code (z, nz, c, nc)
-*/
-
-
-/*
-These are pointers to the actual Functions:
-
-*opcodes[256] {
-&NOP, &LD_p_r16_n16,  &LD_p_r16_A, &INC_r16,  &INC_hr8,  &DEC_hr8,  &LD_hr_n8, &RLCA ....... etc
-}
-
-
-The TypeDEF: 
-void opcode_t(uint8_t opcode) 
-=
-void (*)(uint8_t) 
-
-The array:
-static opcode_t *opcodes[256] = { ... }               == void (*)(uint8_t)
-
-Soooooo... 
-Calling "opcodes[0x00]", passes the matching function.
-Which, passes the address of the Function &NOP.
-0x00 == &NOP
-
-== void (*)(uint8_t opcode)
-== void (&NOP)(uint8_t opcode)
-
-== void NOP(uint8_t opcode)
-
-So...
-Calling: 
-opcodes[0x00](0x00)
-
-Calls the function w/ argument: 
-NOP(0x00)
-
-Why I cannot print the value inside of the *opcodes[256]. 
-Is all I will actually get is &(0x..). Which is only the memory location of the function.
-
-Trying to print opcodes[0x00](0x00)
-will only give me a function. So a "void NOP(uint8_t)"
-
-
-
-*/
 
 static opcode_t *opcodes[256] = {
 /*  ---> X0, X1, X2, X3, X4 ... XB .. XF etc */
@@ -975,18 +894,6 @@ static opcode_t *opcodes[256] = {
 
 
 
-/// NOTICE values such as jp_a16. or jp_a8. Are specific memory address. a8 often means a specific memory I/0 Space. (So likely High memeory (fast memeory))
-
-// NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
-
-
-
-
-
-
-
-
-
 void calc_op_num(uint8_t num) {
     // OP CODE -> to Decimal to work with Array.
 
@@ -1000,31 +907,9 @@ int main() {
 
 
 
-
-    // Op_code random ... tinkering...
-    // 256 Instructions, each value, represents an OP_CODE.
-
-    // 256... Total. Each line has 16 OP_CODES.
-    // 0x00, +1, +1, +1, +1, +1, +1, +1, +1 
-
-    // Left Bit [0x0_ - 0xF_] right bit [0x_0 - 0x_F]
-
-    // But yes. This is literally, 0x00 +1 +1 +1 +1 +1 . 
-
     uint8_t store_code = 0xB1;
 
-
-    // void (*)(uint8_t) 
-
-    // {aka void (*)(unsigned char)}
     opcodes[store_code](store_code);
 
     opcodes[store_code];
-
-    
-    // Well. I can't print them.... But it does seem to be working.. 
-    // I can call a value say, HALT using the opp code. and it will execute the function.
-    // Having 0x75 (value 1 digit left of HALT) then adding +1. Shifts it over to the correct function, and it executes it..
-
-    printf("(This is basically useless..) but: Function Pointer Address of opcodes[0x%2X] = %p\n", store_code, opcodes[store_code]);   // Incomplete Void type not allowed... for opcodes[]()
 }
