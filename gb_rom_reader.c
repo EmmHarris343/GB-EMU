@@ -74,7 +74,7 @@ void read_rom_info(const char *filename) {
     char title[TITLE_LENGTH + 1]; // +1 for null terminator
     for (int i = 0; i < TITLE_LENGTH; i++) {
         title[i] = (
-            header[TITLE_START - HEADER_START + i] >= QA_ASCII_START &&
+            header[TITLE_START - HEADER_START + i] >= QA_ASCII_START &&     // Between these values (If it's actually a character)
             header[TITLE_START - HEADER_START + i] <= QA_ASCII_END
             )
             ? header[TITLE_START - HEADER_START + i]
@@ -94,7 +94,7 @@ void read_rom_info(const char *filename) {
     }
     printf("\n");
 
-    // Get the Code:    
+    // Get the Code:
     uint8_t LIC[LIC_LENG +1];
     uint8_t LIC_2;
     LIC_2 = (header[LIC_CODE_START - HEADER_START]);

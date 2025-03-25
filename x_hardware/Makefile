@@ -1,14 +1,15 @@
 cc = gcc
 
 
-CFLAGS = -Wall -Wextra -std=c11
+CFLAGS = -std=c11 -Wall 
+# -Wextra
 
 # Object files (Not all of these exist)
-OBJ = e_core.o memory.o cpu.o ppu.o main.o
+OBJ = e_core.o cpu.c cpu_instructions.c
 
 # Single Executable:
-g_emu: $(OBJ)
-	$(CC) $(CFLAGS) -o g_emu $(OBJ)
+gb_em: $(OBJ)
+	$(CC) $(CFLAGS) -o gb_em $(OBJ)
 
 # Compile .c into .o
 %.o %.c

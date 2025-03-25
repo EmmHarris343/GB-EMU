@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "cpu.h"
+#include "cpu_instructions.h"
+
+
+
+
 
 #define HEADER_START        0x0100
 #define HEADER_OFFSET       0x0100      // Same as Start, just easier to understand
@@ -15,57 +21,15 @@
 #define OP_Extra_size         0x50      // Lets just... load a bunch of data for fun
 
 
-// DMG0	DMG	MGB	SGB	SGB2
-#define GB_VER              0x01        // This is just my, definition. Saying, 01 is regular DMG.
 
-// The AF, Specifically the F CPU Register. This is each flag
-#define FLAG_Z  (1 << 7)
-#define FLAG_N  (1 << 6)
-#define FLAG_H  (1 << 5)
-#define FLAG_C  (1 << 4)
+
 
 
 // Total WORK Ram       = 8 KiB
 // Total VIDEO RAM      = 8 KiB
 // CPU SPEED            = 4.194304 MHz
 
-typedef struct {
-    union {
-        struct {
-            uint8_t f;  // Flag Register (Yes the ZNHC)
-            uint8_t a;  // The Accumulator
-        };
-        uint16_t af;
-    };
-    union {
-        struct {
-            uint8_t c;
-            uint8_t b;
-        };
-        uint16_t bc;
-    };
-    union {
-        struct {
-            uint8_t e;
-            uint8_t d;
-        };
-        uint16_t de;
-    };
-    union {
-        struct {
-            uint8_t l;
-            uint8_t h;
-        };
-        uint16_t hl;
-    };
-
-    uint16_t sp;    // Stack pointer
-    uint16_t pc;    // Program Counter
-
-} CPU_Registers;
-
-
-CPU_Registers registers;        // Accessable to any other C file
+CPU_Registers registers;        // Enable (Makes global as well) -- Struct in cpu.h file
 
 
 
@@ -292,7 +256,7 @@ int main() {
 
     uint8_t *entry_point = get_entry_point(rom_file);
 
-    manual_read_CPU(rom_file, entry_point);
+    //manual_read_CPU(rom_file, entry_point);
 
     
 
