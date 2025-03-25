@@ -45,7 +45,9 @@ typedef struct {
 
 // Functions inside cart.c (Make it accessable elsewhere)
 
+void parse_cart_header(const char *filename, Cartridge *cart);
 void set_cart_features(Cartridge *cart);
+
 
 
 

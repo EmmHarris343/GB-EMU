@@ -14,8 +14,6 @@ uint8_t HRAM[HRAM_size];
 uint8_t VRAM[VRAM_size];
 
 uint8_t EXT_RAM;                        // Dynamic Memory
-uint8_t ROM_header_raw[HEADER_SIZE];    // Storage of ROM Header
-
 uint8_t ROM;
 
 
@@ -49,57 +47,6 @@ void load_rom(const char *filename) {
     fseek(file, jump_address, SEEK_SET);
     fread(next_op, 1, 10, file);            // Read up to 10 values, and store into next_op[x]
     fclose(file);
-}
-
-// maybe delete...
-void get_header_multi_bit_val(uint8_t *value, int is_string, uint8_t range_start, uint8_t range_end) {
-    
-    uint8_t length;
-    if (is_string == 1) {
-        length = (range_end - range_start) + 1;
-    }
-    else {
-        length = (range_end - range_start);
-    }
-
-    uint8_t combined_hdr[length];
-
-    for (int i = range_start; i <= length; i++)
-        {
-            combined_hdr[i] = ROM_header_raw[i];        // I really don't think that is going to work :/
-            printf("%02X ", combined_hdr[i]);
-        }
-    value = combined_hdr;      // Likely will throw an error cause I suck at pointers...
-    
-}
-
-
-
-void parse_cart_header(const char *filename, Cartridge *cart) {
-    FILE *file = fopen(filename, "rb");             // rb = Read bytes of the file.
-    if (!file) {
-        perror("Error reading ROM file\n");
-        return;
-    }
-
-    fseek(file, HEADER_OFFSET, SEEK_SET);           // The offset is 0x0100 to 0x0150
-    fread(ROM_header_raw, 1, HEADER_SIZE, file);
-    fclose(file);
-
-    
-    
-    // NOTICE: Codes are usually like "0x0134", how I read the header file, means all those codes have 0x100 removed already.
-    cart->header_config.cart_type_code = ROM_header_raw[0x47];
-    cart->header_config.rom_size_code = ROM_header_raw[0x48];    // Rom
-    cart->header_config.ram_size_code = ROM_header_raw[0x49];    // Ram  (Memory size)
-    cart->header_config.chksm = ROM_header_raw[0x4D];
-
-    for (int i = 0; i <= 3; i++)
-    {
-        cart->header_config.entry_point[i] = ROM_header_raw[i];        // I really don't think that is going to work :/
-        printf("%02X ", cart->header_config.entry_point[i]);
-    }
-
 }
 
 
