@@ -244,7 +244,7 @@ void manual_read_CPU(const char *filename, uint8_t *entry_point) {
 
 
 // Startup, get entry point from rom. BLABLA
-int main() {
+int main_task() {
     printf("Startup.. Bla bla\n");
     const char *rom_file = "rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);

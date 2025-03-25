@@ -97,21 +97,6 @@ extern uint8_t EXT_RAM;                     // Dynamic.
 extern uint8_t ROM;                         // Dynamic.
 extern uint8_t ROM_header_raw[HEADER_SIZE];     // This is a constant size in all ROMs.
 
-struct {
-    uint8_t Hd_entry_point[4];
-    uint8_t Hd_logo[47];
-    uint8_t Hd_title[16];       // +1 cause string.. I guess. --- Depending on rom not used at all, and non populated.
-    uint8_t Hd_cart_type;
-    uint8_t Hd_rom_size;
-    uint8_t Hd_ram_size;
-    uint8_t Hd_chksm;
-    uint8_t Hd_gbl_chksm[2];    // Technically 16 bit....
-    uint8_t Hd_cgb_f;
-    uint8_t Hd_sgb_f;
-    uint8_t Hd_new_lic[2];      // Only used if old licence = $33
-    uint8_t Hd_old_lic;
-} Header;
-
 
 
 extern uint8_t memory_map[M_MAP_size];

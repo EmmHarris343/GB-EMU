@@ -901,7 +901,7 @@ void calc_op_num(uint8_t num) {
 
 
 
-int main() {
+int main_test() {
     // Random Entry point for testing sections of code..
     printf("CPU Instructions... Needs much more stuff...\n");
 

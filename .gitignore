@@ -14,9 +14,11 @@ rom_reader
 sdl_audio
 sdl_graphic
 cpu_op
-# What I'm calling my executable files
-*.o
 
+# What I'm calling my executable library files 
+*.o
+# (The main executable for now)
+x_hardware/gb_em
 
 
 # Other:
