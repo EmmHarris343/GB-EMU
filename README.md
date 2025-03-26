@@ -17,7 +17,6 @@ That being said. My goals are not set in stone. But at bare-min basic functional
  - [ ] MMU address space handling.
  - [ ] CPU OP Code/ Instruction Emulation (Basic at first)
  - [ ] CPU, OP Code / PC syncronization. 
- - [ ] 
  - [ ] VRAM, GPU, LCD Emulation
  - [ ] Rendering of screen, logos, images, sprites.
  - [ ] Handling of multiple colour palette
