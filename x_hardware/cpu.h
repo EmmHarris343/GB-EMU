@@ -8,8 +8,8 @@ typedef struct {
     uint8_t B, C;
     uint8_t D, E;
     uint8_t H, L;
-    uint16_t SP;
-    uint16_t PC;
+    uint16_t SP;    // 
+    uint16_t PC;    // Pointer Counter
     uint8_t memory[0x10000]; // Simplified, 64KB
 } CPU;
 

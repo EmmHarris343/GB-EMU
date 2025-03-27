@@ -105,16 +105,7 @@ But, I will need to implement JUMP codes at a bare-min, to properly jumpto / cal
 
 
 
-
-
-void do_opcode(uint8_t special_val) {
-    // uint8_t opcode = cycle_read(gb, gb->pc++);      // Get the current op_code
-    // opcodes[opcode](gb, opcode);                    // Run the op_code that's inside the Function pointer. (List of functions)
-
-}
-
-void cpu_initialize() {
-    // GB_VER = 0x01 (DMG), only one I am programming for now..
+void cpu_initialize() {         // Initialize this to the DMG   (Original)
 
     /*
     DMG Register values:
@@ -135,11 +126,6 @@ void cpu_initialize() {
     */
 
 
-
-    // Set the Flag Registers, and the Registers.
-    // Note, this is the intial state of the GB ver: DMG
-    // AFTER the Bootrom would have run, and passed
-    // (Pass meaning, ready to start reading OP_Code instructions from ROM)
 
     // Set Flag Registers   (This is actually Registers F)
     set_flag(0);    // Z

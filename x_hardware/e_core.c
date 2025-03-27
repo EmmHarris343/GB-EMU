@@ -7,47 +7,22 @@
 extern Cartridge cartridge;             // Global instance of this, so it can be passed around (Declared only once)
 
 
+/*
+Comment / Note taking note.. (Ironic yes.)
 
-// Global Memory:
-uint8_t WRAM[WRAM_size];
-uint8_t HRAM[HRAM_size];
-uint8_t VRAM[VRAM_size];
+1. Is this for me to figure out what I'm doing? (thinking aloud)
+    OR
+2. Is this so others understand my code?
 
-uint8_t EXT_RAM;                        // Dynamic Memory
-uint8_t ROM;
+1: Yes -> Write in obsidian..
+2: Yes -> Write in Code
 
-
-uint8_t memory_map[M_MAP_size];
-
-// Some CPU Registers:
-uint16_t PC = 0x100;                    // Maybe delete this...
-uint16_t SP = 0xFFFE;                   // Maybe.. delete this..
+*/
 
 
 
-// Read rom, AFTER header.
-void load_rom(const char *filename) {
-    FILE *file = fopen(filename, "rb");     // rb = Read bytes of the file.
-    if (!file) {
-        perror("Error reading ROM file\n");
-        return;
-    }
-
-    //printf("Entry Points: (0)%02X (1)%02X (2)%02X\n", entry_point[0], entry_point[1], entry_point[2]);
-    // BE, 00. Little Endian means. Least significant Byte first.
-
-    uint16_t jump_address;
-
-    // Entry point value said: 0xC3 (JUMP) to BE OO (Reversed cause little endian)
-    jump_address = 0x00BE;
-
-    uint8_t next_op[OP_Extra_size] = {0};
 
 
-    fseek(file, jump_address, SEEK_SET);
-    fread(next_op, 1, 10, file);            // Read up to 10 values, and store into next_op[x]
-    fclose(file);
-}
 
 
 
@@ -59,18 +34,28 @@ int main() {
     //get_RomHeader(rom_file);
     parse_cart_header(rom_file, &cartridge);     // Loads the header, reads the data, parses each setting, sets easy to use flags for each header.
 
-    set_cart_features(&cartridge);
+    decode_cart_features(&cartridge);
     
     // Check Rom Data
     // Raw Codes:
     printf("::ROM_RAW:: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cartridge.header_config.cart_type_code, cartridge.header_config.rom_size_code, cartridge.header_config.ram_size_code);
 
     // Cart settings.
-    printf("::ROM:: \n| MBC_type 0x%02X | ROM Size: 0x%02X | RAM Size: 0x%02X | ROM BANKS: %d\n", cartridge.config.mbc_type, cartridge.config.rom_size, cartridge.config.ram_size, cartridge.config.rom_banks);
+    printf("::ROM:: \n| MBC_type 0x%02X | ROM Size: 0x%02X | RAM Size: 0x%02X | ROM BANKS: %d\n", cartridge.config.mbc_type, cartridge.config.rom_size, cartridge.config.ram_size, cartridge.config.rom_bank_count);
+
+
+    configure_mbc(&cartridge);  // Load Cart.c's Configure MBC function.
 
     // Load the entire Rom into memory. (Deal with banks after, if any)
 
 
+
+    uint8_t test_8bit = 0xA;
+
+    // Simple test:
+    if (test_8bit == 0x0A) {
+        printf("Test is true\n");
+    }
 
     return 0;
 }

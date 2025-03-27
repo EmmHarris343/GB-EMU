@@ -5,7 +5,7 @@ CFLAGS = -std=c11 #-Wall
 # -Wextra
 
 # Object files (Not all of these exist)
-OBJ = e_core.o cpu.c cpu_instructions.c cart.c mbc.c
+OBJ = e_core.o cpu.c cpu_instructions.c cart.c mbc.c mmu.c
 
 # Single Executable:
 gb_em: $(OBJ)

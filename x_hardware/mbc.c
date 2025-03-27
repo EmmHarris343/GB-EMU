@@ -8,6 +8,9 @@
 // MBC Write functions. Matches to the TypeDef inside the cart.h header file
 
 
+
+
+
 // Untested, but might work. (More of a placeholder, to test the Function pointers actually work)
 void mbc1_write(uint16_t addr, uint8_t val) {
     if (addr >= 0x2000 && addr <= 0x3FFF) {

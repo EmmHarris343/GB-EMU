@@ -11,10 +11,22 @@ typedef struct {
     uint8_t has_ram;            // 1 if external RAM exists
     uint8_t has_rtc;            // For MBC3 Real-Time Clock
     uint32_t rom_size;          // in bytes
+    uint8_t rom_bank_count;     // Total of rom banks
     uint32_t ram_size;          // in bytes
-    uint32_t rom_banks;         // Total of rom banks
+    uint8_t ram_bank_count;     // RAM (External Memory Banks)
 } Cart_Config;
 
+typedef struct {
+    uint8_t cur_ROM_BANK;
+    uint8_t cur_RAM_BANK;
+    uint8_t enable_ROM;
+    uint32_t EXT_RAM;
+    
+    
+    
+
+
+} cart_Resources;
 
 typedef struct {
     uint8_t entry_point[3];
@@ -36,6 +48,7 @@ typedef struct {
 typedef struct {
     Cart_Config config;
     Header header_config;
+    cart_Resources cart_res;
     mbc_write_func mbc_write;
     mbc_read_func mbc_read;
 } Cartridge;
@@ -46,9 +59,9 @@ typedef struct {
 // Functions inside cart.c (Make it accessable elsewhere)
 
 void parse_cart_header(const char *filename, Cartridge *cart);
-void set_cart_features(Cartridge *cart);
+void decode_cart_features(Cartridge *cart);
 
-
+void configure_mbc(Cartridge *cart);
 
 
 
