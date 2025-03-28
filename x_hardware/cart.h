@@ -1,3 +1,6 @@
+#ifndef CART_H
+#define CART_H
+
 #include <stdint.h>
 
 typedef void (*mbc_write_func)(uint16_t addr, uint8_t val);
@@ -63,6 +66,8 @@ void decode_cart_features(Cartridge *cart);
 
 void configure_mbc(Cartridge *cart);
 
+void write_intercept(uint16_t address, uint8_t data);
+
 
 
 
@@ -71,3 +76,4 @@ void configure_mbc(Cartridge *cart);
 // cart->config.mbc_type;
 
 
+#endif

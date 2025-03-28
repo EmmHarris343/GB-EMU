@@ -1,5 +1,6 @@
 
 #include "mmu.h"
+#include "cart.h"
 
 // Using 1, 16-bit Address space. It can point to 65536 memory locations
 
@@ -82,4 +83,11 @@ void bus_entry(uint16_t address) {
         default: 
             printf("Out of range... FAULT");
     }
+}
+
+
+
+void test_bank_switch() {
+    write_intercept(0x2044, 0x01A);     // 0x01A => 26 | SWITCH to bank 26.
+
 }

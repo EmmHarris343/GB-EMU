@@ -23,7 +23,7 @@
 
 /// NOTE: Getting stuck on the MBC2 RAM switching logic.. Need to ignore it for now
 
-/// HACK: Temporary fix for Y
+/// HACK: this is to remember to write these..
 
  
 
@@ -174,8 +174,44 @@ void latch_RTC(uint8_t address) {
 
 }
 
-void set_ROM_Bank(uint8_t address) {
+void set_ROM_Bank(uint16_t address, uint8_t data) {
+    // MBC 1, and other MBCs follow. IF: 
+    printf("Set ROM bank Function %2x\n", data);
 
+
+    if (cartridge.config.mbc_type == 1) { 
+        // ROM Bank range is: 01-7F
+
+        // Has weird logic, if bit 5 is 1. (I think)
+        // Shift to bank +1, so 20,40,60 = 21,41,61.
+        // Plus some other logic for Multi Game carts
+        // NOTE: Some of these roms are 1Mib+
+
+        // Instead of: Default of: MBC1 upto 512 KiB ROM & upto KiB of banked RAM.
+        // 2Mbit ROMS sacrifice ROM space, for more RAM space
+    }
+    
+    if (cartridge.config.mbc_type == 2) { 
+        // Max Rom Bank is $01-$0F | MAX of 16 ROM Banks supported
+    }
+
+    if (cartridge.config.mbc_type == 3) { 
+        // Supports 2MB ROMs (128 Banks) & 32KB RAM (4 banks)
+        // Bank switching is the same as MBC1. BUT, has no limitation for 20,40,60 bla bla
+
+        // This is likely easist Logic. (Excluding the RTC Clock).
+        // Writing value of $00 will select Bank 1, All other Values are correct for selecting the ROM banks
+        // Value of: $01 - $7F (125 ROM Banks)
+
+        if (data == 0x00){
+            cartridge.cart_res.cur_ROM_BANK = 0x01;
+        }
+        if (data <= cartridge.config.rom_bank_count) {      // Quick note, MBC3 supports up to 2MB / 128 banked ROM (But not all use that, some only use 1MB 64 Bank)
+            cartridge.cart_res.cur_ROM_BANK = data;
+        }
+
+
+    }
 }
 
 void set_RAM_Bank(uint8_t address) {
@@ -219,7 +255,7 @@ void mbc2_RAM(uint16_t address, uint8_t data) {
 
 
 // ADDRESS MUST BE 16bit. Because 8bit is too short for the address space 0x0000 - 0xFFFF (1 "digit" is 4 bits. 2*4 = 8bit, 4*4 = 16bit.)
-void write_ROM(uint16_t address, uint8_t data) {    
+void write_intercept(uint16_t address, uint8_t data) {    
     /*  (Quick recap)
         CPU Will try to write to ROM space. (Which is im possible)
         If you intercept where this ADDRESS is trying to write to, and the DATA trying to be writen. 
@@ -243,7 +279,7 @@ void write_ROM(uint16_t address, uint8_t data) {
         break;
     case 0x2000 ... 0x3FFF:
         // Change the selected ROM Bank (Read only Memory)
-        set_ROM_Bank(data);
+        set_ROM_Bank(address, data);
         break;
     case 0x4000 ... 0x5FFF:
         // RAM Switch Bank (Random access memory)
@@ -277,11 +313,7 @@ void write_RAM(uint8_t address, uint8_t data) {
 
 }
 
-// Next: Intercept "RAM" Enable/ Disable
-// Next: Intercept "ROM" Mode: 0/1
 
-
-// Next: RAM Read from "ROM" space
 
 
 

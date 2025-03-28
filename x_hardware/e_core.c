@@ -2,6 +2,7 @@
 
 #include "e_core.h"
 #include "cart.h"
+#include "mmu.h"
 
 
 extern Cartridge cartridge;             // Global instance of this, so it can be passed around (Declared only once)
@@ -48,14 +49,16 @@ int main() {
 
     // Load the entire Rom into memory. (Deal with banks after, if any)
 
+    load_entire_rom(rom_file);
 
 
-    uint8_t test_8bit = 0xA;
 
-    // Simple test:
-    if (test_8bit == 0x0A) {
-        printf("Test is true\n");
-    }
+    test_bank_switch();
+
+    printf("Rom Bank? %02X\n ", cartridge.cart_res.cur_ROM_BANK);
+
+
+
 
     return 0;
 }

@@ -2,11 +2,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// ROM / Rom Banks
-#define FIXED_BANK_SIZE     0x4000          // The fixed bank at 0x0000-0x3FFF
-#define ROM_BANK_SIZE       0x4000          // 16 KB banks
-#define MAX_ROM_SIZE        0x800000        // 8MB Max Rom Size. (Note 800000 => 8,388,608 bytes. /1024 = 8,192 KB)
-
 // Ram sizes
 #define WRAM_size           0x2000
 #define HRAM_size           0x80
@@ -35,3 +30,7 @@ extern uint8_t memory_map[M_MAP_size];
 
 extern uint16_t PC;
 extern uint16_t SP;
+
+
+
+void test_bank_switch();
