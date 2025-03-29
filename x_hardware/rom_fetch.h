@@ -2,11 +2,11 @@
 #define ROM_FETCH_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 
-uint8_t *rom_data = NULL;
-size_t rom_size = 0;
+
 
 
 // ROM / Rom Banks
@@ -16,7 +16,7 @@ size_t rom_size = 0;
 
 
 // Prototypes: 
-void load_entire_rom(const char *filename);
+void load_entire_rom(const char *filename, size_t exp_rom);
 
 
 #endif

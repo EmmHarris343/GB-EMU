@@ -36,6 +36,34 @@ CPU_Registers registers;        // Enable (Makes global as well) -- Struct in cp
 
 
 
+/*
+
+THIS IS LIKELY HOW I WILL CALL THE CPU LOOP / Interface with Memory etc
+
+
+
+
+*/
+
+void cpu_step(void) {
+    //uint8_t opcode = mmu_read(cpu_state.pc);
+    //decode_and_execute(opcode);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void set_flag(int cpu_flag) {
     

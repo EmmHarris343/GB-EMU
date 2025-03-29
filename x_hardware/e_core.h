@@ -1,11 +1,13 @@
+#ifndef E_CORE_H
+#define E_CORE_H
+
 #pragma once    // Ensure header file is included once
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
-// Component files:
-#include "cpu.h"
+
 
 
 
@@ -29,6 +31,9 @@
 
 // Time? Copy pasta...
 
+
+
+/// TODO:  Time, MOVE This out of here..
 typedef union {
     struct {
         uint8_t seconds;
@@ -46,3 +51,5 @@ typedef union {
     uint8_t time_data[5];
 } CORE_rtc_time_t;
 
+
+#endif

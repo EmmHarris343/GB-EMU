@@ -52,9 +52,11 @@ typedef struct {
 
 
 
+// SOME OTHER THINGY
+// void cpu_init(CPU *cpu);
+// void cpu_step(CPU *cpu);
 
-void cpu_init(CPU *cpu);
-void cpu_step(CPU *cpu);
+void cpu_step(void);
 
 
 // The AF, Specifically the F CPU Register. - This is each individual flag

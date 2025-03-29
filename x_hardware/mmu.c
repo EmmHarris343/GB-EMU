@@ -1,6 +1,7 @@
 
 #include "mmu.h"
-#include "cart.h"
+#include "mmu_interface.h"
+
 
 // Using 1, 16-bit Address space. It can point to 65536 memory locations
 
@@ -37,9 +38,28 @@ uint8_t VRAM[VRAM_size];
 uint8_t memory_map[M_MAP_size];
 
 
+static mmu_map_entry *mmu_map = NULL;
+static int mmu_map_size = 0;
+
+void mmu_init(mmu_map_entry *map, int num_entries) {
+    mmu_map = map;
+    mmu_map_size = num_entries;
+}
+
+uint8_t mmu_read(uint16_t addr) {
+    for (int i = 0; i < mmu_map_size; i++) {
+        if (addr <= mmu_map[i].start && addr <= mmu_map[i].end) {
+            return mmu_map[i].read(addr);
+        }
+    }
+    return 0xFF;
+}
 
 
 
+
+
+// OLD (Just for reference.)
 void bus_entry(uint16_t address) {
     printf("Memory going to be directed");
     
@@ -87,7 +107,7 @@ void bus_entry(uint16_t address) {
 
 
 
-void test_bank_switch() {
-    write_intercept(0x2044, 0x01A);     // 0x01A => 26 | SWITCH to bank 26.
+// void test_bank_switch() {
+//     write_intercept(0x2044, 0x01A);     // 0x01A => 26 | SWITCH to bank 26.
 
-}
+// }

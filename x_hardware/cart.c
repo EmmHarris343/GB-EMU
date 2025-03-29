@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "cart.h"
-#include "mbc.h"        // Might not use this.. Might keep all of it in Cart. NOT SURE
+//#include "mbc.h"        // Might not use this.. Might keep all of it in Cart. NOT SURE
 
 
 /*
@@ -34,6 +34,23 @@
 Cartridge cartridge;        // This must be defined once. HERE makes the most sense (If not, the linker will throw an error and won't compile)
 
 uint8_t ROM_header_raw[HEADER_SIZE];        // Storage of ROM Header
+
+
+// Untested, but might work. (More of a placeholder, to test the Function pointers actually work)
+void mbc1_write(uint16_t addr, uint8_t val) {
+    if (addr >= 0x2000 && addr <= 0x3FFF) {
+        
+        // Change the ROM bank based on the value
+        uint8_t current_rom_bank = val & 0x1F; // Only 5 bits used
+        if (current_rom_bank == 0) current_rom_bank = 1; // Bank 0 is forbidden
+    }
+}
+
+
+void mbc3_write(uint16_t addr, uint8_t val) {
+    // MBC3-specific behavior
+}
+
 
 
 
@@ -339,4 +356,30 @@ void configure_mbc(Cartridge *cart) {
 
     printf("ROM Banking? => %d\n", cart->config.rom_bank_count);
     
+}
+
+
+
+
+
+
+
+
+
+// ENTRY POINT from E_CTRL:
+
+uint8_t cart_read(uint16_t addr) {
+
+}
+
+void cart_write(uint16_t addr, uint8_t val) {
+
+}
+
+uint8_t cart_ram_read(uint16_t addr) {
+
+}
+
+void cart_ram_write(uint16_t addr, uint8_t val) {
+
 }

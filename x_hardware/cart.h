@@ -64,9 +64,21 @@ typedef struct {
 void parse_cart_header(const char *filename, Cartridge *cart);
 void decode_cart_features(Cartridge *cart);
 
+
 void configure_mbc(Cartridge *cart);
 
 void write_intercept(uint16_t address, uint8_t data);
+
+
+
+
+// ENTRY POINTS (e_ctrl):
+
+uint8_t cart_read(uint16_t addr);
+void cart_write(uint16_t addr, uint8_t val);
+uint8_t cart_ram_read(uint16_t addr);
+void cart_ram_write(uint16_t addr, uint8_t val);
+
 
 
 
