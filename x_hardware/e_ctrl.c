@@ -4,7 +4,7 @@
 #include "cart.h"
 #include "loc_ram.h"
 
-//#include "cpu.h"
+#include "cpu.h"
 #include "ppu.h"
 #include "oam.h"
 #include "apu.h"
@@ -48,36 +48,27 @@ void startup_sequence() {
 
     size_t expected_rom_size = cartridge.config.rom_size;
 
-    const char *rom_file = "../rom/pkmn_red.gb";    
+    const char *rom_file = "../rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
     // Need to get th ROMs header first. To know how big the entire Rom file is.
     //get_RomHeader(rom_file);
     parse_cart_header(rom_file, &cartridge);     // Loads the header, reads the data, parses each setting, sets easy to use flags for each header.
-
     decode_cart_features(&cartridge);
-
-
     configure_mbc(&cartridge);  // Load Cart.c's Configure MBC function.
-
-    // Load the entire Rom into memory. (Deal with banks after, if any)
-
-    load_entire_rom(rom_file, cartridge.config.rom_size);
-
-
-
-
-
-    //  test_bank_switch();     THIS Goes into mmu
-
-
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cartridge.header_config.cart_type_code, cartridge.header_config.rom_size_code, cartridge.header_config.ram_size_code);
 
+    // Load the entire Rom into memory. (Deal with banks after, if any)
+    load_entire_rom(rom_file, cartridge.config.rom_size);
 
-    printf("Rom Bank? %02X\n ", cartridge.cart_res.cur_ROM_BANK);
+    
+    printf("Rom Bank? %02X\n", cartridge.cart_res.cur_ROM_BANK);
+    
+    // Pass ROM Entry point INTO the CPU module.
+    uint8_t *rom_entry = cartridge.header_config.entry_point;
+    cpu_init(rom_entry);
 }
 
-
 void reset_sequence() {
-    
+
 }

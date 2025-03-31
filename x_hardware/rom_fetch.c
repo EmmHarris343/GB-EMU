@@ -23,7 +23,7 @@ void chop_rom(uint8_t rom_banks) {
 
 void load_entire_rom(const char *filename, size_t exp_rom) {
 
-    printf(":ROM_FETCH: Loading entire ROM into Memory\n");
+    printf(":ROM_FETCH: Loading entire ROM into Memory... ");
     // Load the entire ROM file
     FILE *rom_file = fopen(filename, "rb");             // rb = Read bytes of the file.
     if (!rom_file) {
@@ -52,6 +52,9 @@ void load_entire_rom(const char *filename, size_t exp_rom) {
     rewind(rom_file);
     fread(rom_data, 1, exp_rom, rom_file);
     rom_size = 0;
+
+
+    printf("Done.\n");
 }
 
 

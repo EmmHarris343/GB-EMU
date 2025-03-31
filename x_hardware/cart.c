@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "cart.h"
-//#include "mbc.h"        // Might not use this.. Might keep all of it in Cart. NOT SURE
+
 
 
 /*
@@ -19,14 +19,6 @@
 */
 
 
-/// TODO: DO ROM Bank Switching.    (MBC1/2 I think has strange logic..)
-
-/// NOTE: Getting stuck on the MBC2 RAM switching logic.. Need to ignore it for now
-
-/// HACK: this is to remember to write these..
-
- 
-
 // Rom Header:
 #define HEADER_OFFSET       0x0100          // Same as Start, just easier to understand
 #define HEADER_SIZE         0x50            // Header END point is: 0x014f (50 Bytes Total - 80 Decimal)
@@ -34,7 +26,6 @@
 Cartridge cartridge;        // This must be defined once. HERE makes the most sense (If not, the linker will throw an error and won't compile)
 
 uint8_t ROM_header_raw[HEADER_SIZE];        // Storage of ROM Header
-
 
 // Untested, but might work. (More of a placeholder, to test the Function pointers actually work)
 void mbc1_write(uint16_t addr, uint8_t val) {
@@ -73,11 +64,13 @@ void parse_cart_header(const char *filename, Cartridge *cart) {
     cart->header_config.ram_size_code = ROM_header_raw[0x49];           // Ram  (Memory size)
     cart->header_config.chksm = ROM_header_raw[0x4D];
 
+    printf(":cart.c: Rom entry point print\n");
     for (int i = 0; i <= 3; i++)
     {
         cart->header_config.entry_point[i] = ROM_header_raw[i];         // I really don't think that is going to work :/
         printf("%02X ", cart->header_config.entry_point[i]);
     }
+    printf("\n");
 }
 
 
@@ -235,7 +228,7 @@ void set_RAM_Bank(uint8_t address) {
 
 }
 
-void rr_mode(uint8_t address) { // ROM/RAM Mode 0 / 1 
+void rom_ram_mode(uint8_t address) { // ROM/RAM Mode 0 / 1 
 
 }
 
@@ -307,7 +300,7 @@ void write_intercept(uint16_t address, uint8_t data) {
     case 0x6000 ... 0x7FFF:
         if (cartridge.config.mbc_type == 2) {
             // ROM/RAM MODE 0/1 SET
-            rr_mode(data);
+            rom_ram_mode(data);
         }
         if (cartridge.config.mbc_type == 3) {
             latch_RTC(data);
@@ -371,7 +364,6 @@ void configure_mbc(Cartridge *cart) {
 uint8_t cart_read(uint16_t addr) {
 
 }
-
 void cart_write(uint16_t addr, uint8_t val) {
 
 }
@@ -379,7 +371,6 @@ void cart_write(uint16_t addr, uint8_t val) {
 uint8_t cart_ram_read(uint16_t addr) {
 
 }
-
 void cart_ram_write(uint16_t addr, uint8_t val) {
 
 }

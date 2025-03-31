@@ -57,6 +57,7 @@ typedef struct {
 // void cpu_step(CPU *cpu);
 
 void cpu_step(void);
+void cpu_init(uint8_t *rom_entry);
 
 
 // The AF, Specifically the F CPU Register. - This is each individual flag
