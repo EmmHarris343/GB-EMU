@@ -816,7 +816,9 @@ static void LDH_p_a8_A(uint8_t opcode) {
 }
 
 // Jump a16 instructions:
-static void JP_cc_a16(uint8_t opcode) {
+static void JP_cc_a16(uint8_t opcode) {         // This is first instruction in ROM (I am using).
+    // JP NZ a16
+    
     
 }
 static void JP_a16(uint8_t opcode) {

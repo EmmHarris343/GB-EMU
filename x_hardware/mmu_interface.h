@@ -17,5 +17,6 @@ typedef struct {
 void mmu_init(mmu_map_entry *map, int num_entries);
 uint8_t mmu_read(uint16_t addr);
 void mmu_write(uint16_t addr, uint8_t val);
+void mmu_debugger(uint16_t addr);
 
 #endif

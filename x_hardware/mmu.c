@@ -2,6 +2,7 @@
 #include "mmu.h"
 #include "mmu_interface.h"
 
+#include <stdlib.h>
 
 // Using 1, 16-bit Address space. It can point to 65536 memory locations
 
@@ -47,15 +48,62 @@ void mmu_init(mmu_map_entry *map, int num_entries) {
 }
 
 uint8_t mmu_read(uint16_t addr) {
+    printf(":MMU: Read memory Space %04X\n", addr);
+    printf(":MMU: map size = %d\n", mmu_map_size);
+
+    if (mmu_map == NULL) {
+        printf("ERROR: mmu_map is null!\n");
+        exit(1);
+    }
+
+
+    /// NOTE: 
+    // for (int i = 0; i < mmu_map_size; i++) {
+    //     printf("mmu_map values START: %04X | END: %04X\n", mmu_map[i].start, mmu_map[i].end);
+    //     //printf("mmu_map values END: %04X\n", mmu_map[i].end);
+    // }
+
     for (int i = 0; i < mmu_map_size; i++) {
-        if (addr <= mmu_map[i].start && addr <= mmu_map[i].end) {
+        if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             return mmu_map[i].read(addr);
         }
     }
     return 0xFF;
 }
 
+void mmu_write(uint16_t addr, uint8_t val){
+    printf(":MMU: Write to memory Space: %04X, Value: %02X", addr, val);
+    for (int i = 0; i < mmu_map_size; i++) {
+        if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
+            mmu_map[i].write(addr, val);
+        }
+    }
+}
 
+
+void mmu_debugger(uint16_t addr) {
+    printf("::: NOTICE ::: MMU DEBUGGER\n");
+    printf(":MMU: Addr %04X\n", addr);
+    printf(":MMU: map size = %d\n", mmu_map_size);
+
+    if (mmu_map == NULL) {
+        printf("ERROR: mmu_map is null!\n");
+        exit(1);
+    }
+
+
+    /// NOTE: Helpful to know exactly what the values are in the MMUMAP:
+    for (int i = 0; i < mmu_map_size; i++) {
+        printf("mmu_map values START: %04X | END: %04X\n", mmu_map[i].start, mmu_map[i].end);
+        //printf("mmu_map values END: %04X\n", mmu_map[i].end);
+    }
+
+    for (int i = 0; i < mmu_map_size; i++) {
+        if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
+            printf("Landed on MMU_MAP #%d, Between Memory Space: 0x%04X | 0x%04X\n", i, mmu_map[i].start, mmu_map[i].end);
+        }
+    }
+}
 
 
 

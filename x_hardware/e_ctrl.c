@@ -16,7 +16,7 @@ extern Cartridge cartridge;
 
 
 void e_int(void) {
-    mmu_map_entry map[] = {
+    static mmu_map_entry mmu_map[] = {
         {0x0000, 0x7FFF, cart_read, cart_write },           // Read ROM Data, Intercept WRITE functions
         {0xA000, 0xBFFF, cart_ram_read, cart_ram_write },   // External (Cart) RAM
         {0xC000, 0xCFFF, loc_wram_read, loc_wram_write },   // Working RAM
@@ -31,7 +31,9 @@ void e_int(void) {
         // 0xFFFF: Interupt space?
         // Unused: 0xFEA0 ... 0xFEFF (prohibited )
     };
-    mmu_init(map, sizeof(map) / sizeof(mmu_map_entry));
+    const size_t mmu_map_size = sizeof(mmu_map) / sizeof(mmu_map_entry);
+    //mmu_init(mmu_map, sizeof(mmu_map) / sizeof(mmu_map_entry));
+    mmu_init(mmu_map, mmu_map_size);
 }
 
 
@@ -60,13 +62,25 @@ void startup_sequence() {
 
     // Load the entire Rom into memory. (Deal with banks after, if any)
     load_entire_rom(rom_file, cartridge.config.rom_size);
-
     
+    // Split into Banks?
+    /// TODO: Add Function/ Code for splitting into seperate ROM Banks
     printf("Rom Bank? %02X\n", cartridge.cart_res.cur_ROM_BANK);
     
+    // Setup the MMU memory Map.
+    e_int();
+
     // Pass ROM Entry point INTO the CPU module.
     uint8_t *rom_entry = cartridge.header_config.entry_point;
+    
+    // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
     cpu_init(rom_entry);
+
+
+    test_step_instruction();
+
+
+    /// TODO: START CPU Emulation!
 }
 
 void reset_sequence() {

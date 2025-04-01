@@ -59,11 +59,14 @@ typedef struct {
 void cpu_step(void);
 void cpu_init(uint8_t *rom_entry);
 
+void test_step_instruction();
+
 
 // The AF, Specifically the F CPU Register. - This is each individual flag
 // NOTE, excluding flag N (Subtract flag) Yes/No 1/0.
 
 // The others Z, H, C, I believe can be set to specific values!!
+/// TODO: This needs to be redone. This is wrong :/
 #define FLAG_Z  (1 << 7)
 #define FLAG_N  (1 << 6)
 #define FLAG_H  (1 << 5)

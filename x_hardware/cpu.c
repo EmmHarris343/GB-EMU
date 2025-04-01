@@ -6,7 +6,7 @@
 #include "cpu.h"
 #include "cpu_instructions.h"
 
-#include "mmu.h"
+#include "mmu_interface.h"
 
 
 uint8_t local_rom_entry[3];
@@ -18,14 +18,30 @@ CPU_Registers registers;        // Enable (Makes global as well) -- Struct in cp
 
 
 
+/// LOOP: 
 /*
-
-THIS IS LIKELY HOW I WILL CALL THE CPU LOOP / Interface with Memory etc
-
-
-
-
+    main loop is as follows:
+    PC -> Read PC memory location
+    Decode OP Code
+    Determin OP Code + byte Length
+    Execute OP Code and Pass Bytes
+    Update PC based on byte length
+    -- IF JUMP OP Code, Update PC to the new Location.
+    
 */
+
+void lookup_opcode_len(uint8_t opcode) {
+
+}
+
+
+
+void decode_opcode(uint8_t curr_addr_val) {
+
+}
+
+
+// Each CPU_STEP is called ..
 
 void cpu_step(void) {
     //uint8_t opcode = mmu_read(cpu_state.pc);
@@ -36,7 +52,8 @@ void cpu_step(void) {
 
 
 
-
+/// PROBLEM: I thought registers were 0/ 1. But they can hold values. 
+/// DO: That means entire Flag system needs to be overhauled
 
 void set_flag(int cpu_flag) {
     
@@ -146,6 +163,84 @@ void check_registers() {
     printf("B: 0x%X, C: 0x%X\n", registers.b, registers.c);
     printf("D: 0x%X, E: 0x%X\n", registers.b, registers.c);
     printf("H: 0x%X, L: 0x%X\n", registers.h, registers.l);
+}
+
+/// NOTICE: CC Condition codes. 
+/*
+cc = A condition code:
+    Z    Execute if Z is set.
+    NZ   Execute if Z is not set.
+    C    Execute if C is set.
+    NC   Execute if C is not set. 
+
+*/
+
+
+uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
+    uint16_t cvrt_byte = (HIGH << 8) | LOW;
+    printf("Cnvrt FROM LIL Endian => LOW: %02X | HIGH %02X Little Endian Output: %04X\n", LOW, HIGH, cvrt_byte);
+    return cvrt_byte;
+}
+
+
+void read_opcode_val(uint16_t addr_pc) {
+    int len = 2;            // OP code is included in 3 bit lengths.
+    uint8_t value[3];       // Each value will be split into 8bit Values regardless..
+
+    printf("Fetching %d bytes from PC: 0x%04X\n", len, addr_pc);
+    // value[1] = mmu_read(addr_pc + 1);
+    // printf("value 1, %02X\n", value[1]);
+
+    //mmu_debugger(addr_pc);
+
+    for (int i = 0; i <= len; i++ ) {
+        value[i] = mmu_read(addr_pc + i);
+        printf("Byte %d @ 0x%04X: %02X\n", i, addr_pc + i, value[i]);
+    }
+
+    uint8_t cpu_opcode = value[0];
+    printf("Next Op_Code: %02X\n", cpu_opcode);
+
+}
+
+
+void test_step_instruction() {
+    
+    // GB Startup, Jumps to $0100 (Entry point in header)
+    registers.pc = 0x0100;
+
+    uint8_t init_op = local_rom_entry[0];
+
+    // Usually this Entry point is a NOP, Followed by a Jump instruction. Lets find out.
+    printf("Rom Entry point, First OP_CODE %02x\n", init_op);
+    
+    // First OP Code is:
+    // C3 = JP a16 (3 byte, including OP Code)
+
+    // C3 50 01    ; JP 0x0150
+    // C3 = 1 Byte, 50 = 1 Byte, 01 = 1 Byte.
+
+    printf("What is the Entry point values.. [1] %02X, [2] %02X\n", local_rom_entry[1], local_rom_entry[2]);   
+    uint16_t a16_byte = cnvrt_lil_endian(local_rom_entry[1], local_rom_entry[2]);
+    
+    printf("The 16bit 2Byte Value? %04X\n", a16_byte);
+
+    // Command: Jump to 16 Bit address.
+    registers.pc = a16_byte;
+    printf("Jumping to Address: 0x%04X\n", a16_byte);
+
+    /// NEXT:
+    // Read the memory at the new PC location.
+
+    read_opcode_val(registers.pc);
+
+
+    
+    // Don't need to read the PC 
+    //uint8_t opcode = mmu_read(registers.pc);
+
+    // Rename this to CPU State?
+    //uint8_t opcode = mmu_read(cpu_state.pc);
 }
 
 

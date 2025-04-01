@@ -137,7 +137,7 @@ Write Table: (Intercepting)
     6000 - 7FFF (SWITCH BANK)   => Write        ACTIOH: ROM/RAM Mode 0/1 SWITCH
 
     A000 - BFFF => EXTERNAL RAM
-    A000 - BFFF (EXT RAM)       => READ/ WRITE  ACTION: Writes to External RAM, Reads from External RAM
+    A000 - BFFF (EXT RAM)       => READ/ WRITE  ACTION: Reads from External RAM / Writes to External RAM
 */
 
 
@@ -145,7 +145,7 @@ Write Table: (Intercepting)
 
 
 
-void read_ROM(uint8_t address) {
+void read_ROM(uint8_t address) {       
     // 1. Read ROM in FIXED BANK
     // 2. Read ROM in Switch BANK       (What ever was previously Selected)
 
@@ -276,9 +276,6 @@ void write_intercept(uint16_t address, uint8_t data) {
     */
 
 
-    
-
-
     switch (address){
     case 0x0000 ... 0x1FFF: // NOTICE, DOC SAYS SUGGESTED area is: 0000-00FF
         // Enable/ Disable  => RAM      (IF MBC 3, Enable RTC Registers -- Real Time Clock)
@@ -311,9 +308,6 @@ void write_intercept(uint16_t address, uint8_t data) {
     }
 
 }
-
-
-
 
 
 
@@ -359,9 +353,24 @@ void configure_mbc(Cartridge *cart) {
 
 
 
-// ENTRY POINT from E_CTRL:
+// ENTRY POINT from E_CTRL / MMU:
+
+// Notice, Read memory space is:
+/*
+    {0x0000, 0x7FFF, cart_read, cart_write },           // Read ROM Data, Intercept WRITE functions
+    {0xA000, 0xBFFF, cart_ram_read, cart_ram_write },   // External (Cart) RAM
+*/
+
+// Write Memory Space is much more complex. (Look at top of cart.c file)
+
 
 uint8_t cart_read(uint16_t addr) {
+    // Memory Locations are 16bit
+    // Values stored in those locations are 8bit.
+
+    /// TODO:
+    // Read the memory at either, fixed ROM, or Switchable Bank.
+    // Return the value read.
 
 }
 void cart_write(uint16_t addr, uint8_t val) {
