@@ -18,13 +18,19 @@ void stop_emulation() {
 int main() {
 
     printf(":E_CORE: Starting up Emulator\n");
-    startup_sequence();     // e_ctrl -> Configs, Setup MBC Config, Load ROM, Setup RAM, Initialize CPU,
+    if (startup_sequence() !=0)         // e_ctrl -> Configs, Setup MBC Config, Load ROM, Setup RAM, Initialize CPU,
+    {
+        fprintf(stderr, "Error during startup Sequence. ABORT:\n");
+        //return -2;
+
+    }
+    //startup_sequence();
 
 
     // Actually begin "emulation" (Emulation in quotes cause still testing).
     // Start Main CPU Loop.
 
-    
+
     
 
     

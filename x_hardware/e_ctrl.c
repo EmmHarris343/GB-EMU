@@ -12,7 +12,7 @@
 #include "mmu_interface.h"
 
 
-extern Cartridge cartridge; 
+extern Cartridge cart; 
 
 
 void e_int(void) {
@@ -45,33 +45,55 @@ void e_int(void) {
 //     }
 // }
 
-void startup_sequence() {
+int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
-
-    size_t expected_rom_size = cartridge.config.rom_size;
 
     const char *rom_file = "../rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
     // Need to get th ROMs header first. To know how big the entire Rom file is.
     //get_RomHeader(rom_file);
-    parse_cart_header(rom_file, &cartridge);     // Loads the header, reads the data, parses each setting, sets easy to use flags for each header.
-    decode_cart_features(&cartridge);
-    configure_mbc(&cartridge);  // Load Cart.c's Configure MBC function.
-    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cartridge.header_config.cart_type_code, cartridge.header_config.rom_size_code, cartridge.header_config.ram_size_code);
+    //parse_cart_header(rom_file, &cartridge);     // Loads the header, reads the data, parses each setting, sets easy to use flags for each header.
+    //decode_cart_features(&cartridge);
+    //configure_mbc(&cartridge);  // Load Cart.c's Configure MBC function.
+
+    if (load_headers(rom_file) !=0) {
+        fprintf(stderr, "Error Loading Headers:\n");
+        return -1;
+    }
+
+    if (decode_cart_features() !=0) {
+        fprintf(stderr, "Error Decoding Cartrige Features, from Loaded Headers\n");
+        return -1;
+    }
+
+    if (load_cartridge(rom_file) !=0) {
+        fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
+        return -1;
+    }
+    
+    if (initialize_cartridge() !=0) {
+        fprintf(stderr, "Error Initialize Cartridge Settings:\n");
+        return -1;
+    }
+    
+
+    
+
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
 
     // Load the entire Rom into memory. (Deal with banks after, if any)
-    load_entire_rom(rom_file, cartridge.config.rom_size);
+    //load_entire_rom(rom_file, cartridge.config.rom_size);
     
     // Split into Banks?
     /// TODO: Add Function/ Code for splitting into seperate ROM Banks
-    printf("Rom Bank? %02X\n", cartridge.cart_res.cur_ROM_BANK);
+    printf("Rom Bank? %02X\n", cart.resrce.current_rom_bank);
     
     // Setup the MMU memory Map.
     e_int();
 
     // Pass ROM Entry point INTO the CPU module.
-    uint8_t *rom_entry = cartridge.header_config.entry_point;
+    uint8_t *rom_entry = cart.headers.entry_point;
     
     // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
     cpu_init(rom_entry);

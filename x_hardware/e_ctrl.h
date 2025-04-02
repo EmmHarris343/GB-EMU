@@ -9,7 +9,7 @@
 
 
 
-void startup_sequence();
+int startup_sequence();
 
 
 

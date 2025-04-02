@@ -35,6 +35,8 @@ x_hardware/gb_em
 *.la
 *.lo
 
+# this is just where I threw some code I don't know if I want to keep, don't upload to github.
+x_hardware/*old.c 
 
 
 # Debug files
