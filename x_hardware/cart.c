@@ -131,7 +131,7 @@ int load_cartridge(const char *filename) {
 
 int initialize_cartridge() {
     // Load resources and info, set bank values, ram values, etc
-    printf("What does the Has ram look like? %02X, %d\n", cart.config.has_ram, cart.config.has_ram);
+    //printf("What does the Has ram look like? %02X, %d\n", cart.config.has_ram, cart.config.has_ram);
     if (cart.config.has_ram == 1) {
         cart.resrce.ram_toggle = 0;
     }
@@ -154,15 +154,21 @@ uint8_t read_data(uint16_t addr) {
         case 0x0000 ... 0x3FFF:
             //printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");           
             read_data = cart.resrce.rom_data[addr];
-            printf(":Cart: Data read from ROM (FB) -> %02X\n", read_data);
+            //printf(":Cart: FxB\n");
+            //printf(":Cart: Data read from ROM (FxB) -> %02X\n", read_data);
             return read_data;
+            break;
         case 0x4000 ... 0x7FFF:
             //printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
             read_data = cart.resrce.rom_data[(cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000)];
-            printf(":Cart: Data read from ROM (SB) -> %02X\n", read_data);
+            printf(":Cart: SwB\n");
+            //printf(":Cart: Data read from ROM (SwB) -> %02X\n", read_data);
             return read_data;
-    }
+            break;
+        default:
         return 0xFF;    // If somehow values are out of range for Reading rom Data.
+    }
+        
 }
 
 
@@ -178,9 +184,8 @@ uint8_t cart_read(uint16_t addr) {
     /// TODO:
     // Read the memory at either, fixed ROM, or Switchable Bank.
     // Return the value read.
-    if (read_data(addr) != NULL) {
-        return read_data(addr); // Just pass this back.
-    }
+    return read_data(addr); // Just pass this back.
+    
 }
 void cart_write(uint16_t addr, uint8_t val) {
 

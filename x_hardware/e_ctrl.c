@@ -57,25 +57,31 @@ int startup_sequence() {
     //decode_cart_features(&cartridge);
     //configure_mbc(&cartridge);  // Load Cart.c's Configure MBC function.
 
-    if (load_headers(rom_file) !=0) {
+    if (load_headers(rom_file) != 0) {
         fprintf(stderr, "Error Loading Headers:\n");
         return -1;
     }
 
-    if (decode_cart_features() !=0) {
+    if (decode_cart_features() != 0) {
         fprintf(stderr, "Error Decoding Cartrige Features, from Loaded Headers\n");
         return -1;
     }
 
-    if (load_cartridge(rom_file) !=0) {
+    if (load_cartridge(rom_file) != 0) {
         fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
         return -1;
     }
     
-    if (initialize_cartridge() !=0) {
+    if (initialize_cartridge() != 0) {
         fprintf(stderr, "Error Initialize Cartridge Settings:\n");
         return -1;
     }
+    
+    if (init_loc_ram() != 0) {
+        fprintf(stderr, "Error Initialize LOC RAM:\n");
+        return -1;
+    }
+    
     
 
     
@@ -87,7 +93,7 @@ int startup_sequence() {
     
     // Split into Banks?
     /// TODO: Add Function/ Code for splitting into seperate ROM Banks
-    printf("Rom Bank? %02X\n", cart.resrce.current_rom_bank);
+    //printf("Rom Bank? %02X\n", cart.resrce.current_rom_bank);
     
     // Setup the MMU memory Map.
     e_int();

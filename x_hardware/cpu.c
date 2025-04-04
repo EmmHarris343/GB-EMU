@@ -162,17 +162,17 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
 
 void check_registers() {
     printf("\n:CPU: === Registers === \n");
-    (loc_cpu.F & FLAG_Z) ? printf("  Z Flag set | ") : printf(" - Z Flag NOT set | ");
-    (loc_cpu.F & FLAG_N) ? printf("  N Flag set | ") : printf(" - N Flag NOT set | ");
-    (loc_cpu.F & FLAG_H) ? printf("  H Flag set | ") : printf(" - H Flag NOT set | ");
-    (loc_cpu.F & FLAG_C) ? printf("  C Flag set") : printf(" - C Flag NOT set");
+    (loc_cpu.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
+    (loc_cpu.F & FLAG_N) ? printf("  N Flag set | ") : printf("  N Flag NOT set | ");
+    (loc_cpu.F & FLAG_H) ? printf("  H Flag set | ") : printf("  H Flag NOT set | ");
+    (loc_cpu.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
     printf("\n");
-    printf("  A: 0x%X | ", loc_cpu.A);
-    printf("  B: 0x%X, C: 0x%X | ", loc_cpu.B, loc_cpu.C);
-    printf("  D: 0x%X, E: 0x%X | ", loc_cpu.D, loc_cpu.E);
-    printf("  H: 0x%X, L: 0x%X", loc_cpu.H, loc_cpu.L);
+    printf("  A: 0x%02X\n", loc_cpu.A);
+    printf("  B: 0x%02X, C: 0x%02X\n", loc_cpu.B, loc_cpu.C);
+    printf("  D: 0x%02X, E: 0x%02X\n", loc_cpu.D, loc_cpu.E);
+    printf("  H: 0x%02X, L: 0x%02X\n", loc_cpu.H, loc_cpu.L);
+    printf("  HL Different from H&L ? %04X\n", loc_cpu.HL);
     printf("\n");
-
 }
 
 /// NOTICE: CC Condition codes. 
@@ -188,63 +188,49 @@ cc = A condition code:
 
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
     uint16_t cvrt_byte = (HIGH << 8) | LOW;
-    printf("Cnvrt FROM LIL Endian => LOW: %02X | HIGH %02X Little Endian Output: %04X\n", LOW, HIGH, cvrt_byte);
+    //printf("Cnvrt FROM LIL Endian => LOW: %02X | HIGH %02X Little Endian Output: %04X\n", LOW, HIGH, cvrt_byte);
     return cvrt_byte;
 }
 
-
-void read_addr_val(uint16_t addr_pc) {
-    int len = 2;            // OP code is included in 3 bit lengths.
-    uint8_t value[3];       // Each value will be split into 8bit Values regardless..
-
-    //printf("Fetching %d bytes from PC: 0x%04X\n", len, addr_pc);
-    // value[1] = mmu_read(addr_pc + 1);
-    // printf("value 1, %02X\n", value[1]);
-
-    //mmu_debugger(addr_pc);
-
-    for (int i = 0; i <= len; i++ ) {
-        value[i] = mmu_read(addr_pc + i);
-        //printf("Byte %d @ 0x%04X: %02X\n", i, addr_pc + i, value[i]);
-    }
-
-    uint8_t cpu_opcode = value[0];
-    //printf("Next Op_Code: %02X\n", cpu_opcode);
-
-}
 
 uint8_t get_op_len(uint8_t opcode) {
     //printf(":CPU: ---== Amount of Bytes? ==--- %01X\n\n", opcode_lengths[opcode]);
     return opcode_lengths[opcode];
 }
 
+uint8_t external_read(uint16_t addr_pc) {
+    uint8_t int8_val = 0;
+    int8_val = mmu_read(addr_pc);
+
+    return int8_val;
+}
 
 void step_cpu(uint16_t addr_pc) {
-    printf("Entered Step CPU\n");
+    //printf("Entered Step CPU\n");
     uint8_t op_code = 0;
     uint8_t operand1 = 0;
     uint8_t operand2 = 0;
     
     uint8_t op_code_length = 0;
 
+    
     // Get OP_CODE From the PC_ADDR
+    //printf(":CPU: Step CPU, OP, Length, Operands\n");
     op_code = mmu_read(addr_pc);
-    if (op_code == 0) {         // technically this could be NOP
-        fprintf(stderr, "ERROR -> Failed to Step CPU. (Or landed on NOP..)\n");
-        //return -1;
-    }
-
+    //mmu_debugger(addr_pc);
     op_code_length = get_op_len(op_code);
-    //printf(":CPU: Stepping CPU.. reading from Memory\n");
+    printf(":CPU: OPCODE LEN: %02X ", op_code_length);
+    printf(":CPU: PC Addr: 0x%02X ", addr_pc);
     
     if (op_code_length >= 2) {
-        printf(":CPU: 8Bit Operand\n");
+        printf(":CPU: 8Bit Operand ");
         operand1 = mmu_read(addr_pc + 1);
     }
     if (op_code_length == 3) {
-        printf(":CPU: Second 8Bit Operand\n");
+        printf(":CPU: Second 8Bit Operand ");
         operand2 = mmu_read(addr_pc + 2);
     }
+    printf("\n");
 
     op_instruction.opcode = op_code;
     op_instruction.operand1 = operand1;
@@ -252,7 +238,7 @@ void step_cpu(uint16_t addr_pc) {
     
     //printf(":CPU: Stepping... Opcode: %02X, Op1: %02X, Op2: %02X\n", op_instruction.opcode, op_instruction.operand1, op_instruction.operand2);
 
-    printf(":CPU: Stepping... \n  PC: %04X\n  OPCODE: %02X\n  OP_Length: %02X\n", addr_pc, op_instruction.opcode, op_code_length);
+    //printf(":CPU: Stepping... \n  PC: %04X\n  OPCODE: %02X\n  OP_Length: %02X\n", addr_pc, op_instruction.opcode, op_code_length);
     //printf(":CPU: OP1: %02X OP2: %02X\n", operand1, operand2);
 
     if (execute_instruction(&loc_cpu, op_instruction) != 0) {
@@ -266,13 +252,9 @@ void step_cpu(uint16_t addr_pc) {
 void run_cpu(uint8_t max_steps) {
     printf("::CPU:: Starting CPU test Run. MAX STEPS: %0X\n", max_steps);
     for (int i = 0; i < max_steps; i++) {
-        printf("\n\n");
-        printf("CPU LOOP Line: %d\n", i);
-        printf(":CPU: What is the PC? %02X\n", loc_cpu.PC);
+        printf(":CPU: NEXT CPU, CUR Count: %d\n", i);
         step_cpu(loc_cpu.PC);
-        printf(":CPU: Back from step_cpu, check values\n");
         check_registers();
-        printf("Returned to Run Loop\n");
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
 }

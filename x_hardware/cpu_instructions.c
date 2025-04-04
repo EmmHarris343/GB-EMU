@@ -112,7 +112,7 @@ static void LD_lr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value i
 
 static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("Copy n16 value into r16 Register\n");
-    printf("Values? OP1: %02X OP2: %02X\n", instrc.operand1, instrc.operand2);
+    //printf("Values? OP1: %02X OP2: %02X\n", instrc.operand1, instrc.operand2);
     uint16_t load_n16;
     load_n16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 
@@ -997,8 +997,20 @@ static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
 }
 // LDH a8 instructions:
 static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
-    printf("LDH A [a8] OP code called\n");
-    
+    printf("LDH A [a8] OP code called..\n");
+    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
+    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
+    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
+
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    uint8_t load_h_range = external_read(combined_addr);
+
+    cpu->A = load_h_range;
+
+    cpu->PC +=2; // 
 }
 static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
     printf("LDH [a8] A OP code called\n");
@@ -1094,7 +1106,8 @@ static opcode_t *opcodes[256] = {
 
 int execute_instruction(CPU *cpu, instruction_T instrc) {
     //printf(":CPU_INSTRUCTIONS: cpu->PC: %02X\n", cpu->PC);
-    printf("Execute OPCODE: %02X, at PC: %04X\n", instrc.opcode, cpu->PC);
+    printf(":CPU_INSTRUCTIONS:\n------\n    Execute OPCODE: %02X, at PC: %04X\n", instrc.opcode, cpu->PC);
+    printf("    OP1: %02X, OP2: %02X\n------\n", instrc.operand1, instrc.operand2);
 
     opcodes[instrc.opcode](cpu, instrc);
 

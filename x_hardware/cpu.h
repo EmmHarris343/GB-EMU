@@ -66,6 +66,8 @@ typedef struct {
 void set_flag(int cpu_flag);
 void clear_flag(int cpu_flag);
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
+uint8_t external_read(uint16_t addr_pc);
+
 
 void cpu_init(uint8_t *rom_entry);
 
