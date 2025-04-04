@@ -1,7 +1,7 @@
 cc = gcc
 
 
-CFLAGS = -std=c11 #-Wall 
+CFLAGS = -std=c11 -Wall 
 # -Wextra
 
 # Object files (Not all of these exist)

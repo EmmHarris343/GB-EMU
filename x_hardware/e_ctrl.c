@@ -98,11 +98,15 @@ int startup_sequence() {
     // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
     cpu_init(rom_entry);
 
-
-    test_step_instruction();
-
-
     /// TODO: START CPU Emulation!
+    uint8_t max_steps = 10;
+    run_cpu(max_steps);
+
+    //test_step_instruction();
+
+
+    // Noting left to do, Report success if reached here.
+    return 0;
 }
 
 void reset_sequence() {

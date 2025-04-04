@@ -11,9 +11,9 @@
 
 uint8_t local_rom_entry[3];
 
-CPU_Registers registers;        // Enable (Makes global as well) -- Struct in cpu.h file
+CPU loc_cpu;
 
-
+instruction_T op_instruction;
 
 
 
@@ -30,26 +30,25 @@ CPU_Registers registers;        // Enable (Makes global as well) -- Struct in cp
     
 */
 
-void lookup_opcode_len(uint8_t opcode) {
-
-}
-
-
-
-void decode_opcode(uint8_t curr_addr_val) {
-
-}
-
-
-// Each CPU_STEP is called ..
-
-void cpu_step(void) {
-    //uint8_t opcode = mmu_read(cpu_state.pc);
-    //decode_and_execute(opcode);
-}
-
-
-
+static const uint8_t opcode_lengths[256] = {
+    1,3,1,1, 1,1,2,1, 3,1,1,1, 1,1,2,1,     // 0x00 - 0x0F
+    2,3,1,1, 1,1,2,1, 2,1,1,1, 1,1,2,1,     // 0x10 - 0x1F
+    2,3,1,1, 1,1,2,1, 2,1,1,1, 1,1,2,1,     // 0x20 - 0x2F
+    2,3,1,1, 1,1,2,1, 2,1,1,1, 1,1,2,1,     // 0x30 - 0x3F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x40 - 0x4F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x50 - 0x5F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x60 - 0x6F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x70 - 0x7F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x80 - 0x8F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0x90 - 0x9F
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0xA0 - 0xAF
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,     // 0xB0 - 0xBF
+    1,1,3,3, 3,1,2,1, 1,1,3,1, 3,3,2,1,     // 0xC0 - 0xCF
+    1,1,3,0, 3,1,2,1, 1,1,3,0, 3,0,2,1,     // 0xD0 - 0xDF
+    2,1,1,0, 0,1,2,1, 2,1,3,0, 0,0,2,1,     // 0xE0 - 0xEF
+    2,1,1,1, 0,1,2,1, 2,1,3,1, 0,0,2,1,     // 0xF0 - 0xFF
+    // ... Fill in the rest
+};
 
 
 /// PROBLEM: I thought registers were 0/ 1. But they can hold values. 
@@ -60,28 +59,29 @@ void set_flag(int cpu_flag) {
     switch (cpu_flag) {
         case 0: // Z Flag
             //printf("Set z Flag\n");
-            registers.f |= FLAG_Z;
+            loc_cpu.F |= FLAG_Z;
         case 1: // N Flag
             //printf("Set N Flag\n");
-            registers.f |= FLAG_N;
+            loc_cpu.F |= FLAG_N;
         case 2: // H Flag
             //printf("Set H Flag\n");
-            registers.f |= FLAG_H;
+            loc_cpu.F |= FLAG_H;
         case 3: // C Flag
             //printf("Set C Flag\n");
+            loc_cpu.F |= FLAG_C;
     }
 }
 
 void clear_flag(int cpu_flag) {
     switch (cpu_flag) {
         case 0: // Z Flag
-            registers.f &= ~FLAG_Z;
+            loc_cpu.F &= ~FLAG_Z;
         case 1: // N Flag
-            registers.f &= ~FLAG_N;
+            loc_cpu.F &= ~FLAG_N;
         case 2: // H Flag
-            registers.f &= ~FLAG_H;
+            loc_cpu.F &= ~FLAG_H;
         case 3: // C Flag
-            registers.f &= ~FLAG_C;
+            loc_cpu.F &= ~FLAG_C;
     }
 }
 
@@ -101,6 +101,7 @@ void clear_flag(int cpu_flag) {
 
 void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Original)
 
+    printf(":CPU: Initialization, Setting registers and Settings. For VER: %s\n", "DMG 01");
     // Make Entry point CPU.C Local Variable:
     for (int i = 0; i <= 3; i++ ){
         local_rom_entry[i] = rom_entry[i];
@@ -132,6 +133,10 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
     Carry and half-carry flags are clear (FOR DMG); otherwise, they are both set.
     */
 
+    // Set the operands:
+    op_instruction.opcode = 0;
+    op_instruction.operand1 = 0;
+    op_instruction.operand2 = 0;
 
 
     // Set Flag Registers   (This is actually Registers F)
@@ -141,28 +146,33 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
     clear_flag(3);  // C
 
     // Set the Registers initial state (After Bootrom Pass)
-    registers.a = 0x01;
-    registers.b = 0x00;
-    registers.c = 0x13;
-    registers.d = 0x00;
-    registers.e = 0xD8;
-    registers.h = 0x01;
-    registers.l = 0x4D;
+    
+    loc_cpu.A = 0x01;
+    loc_cpu.B = 0x00;
+    loc_cpu.C = 0x13;
+    loc_cpu.D = 0x00;
+    loc_cpu.E = 0xD8;
+    loc_cpu.H = 0x01;
+    loc_cpu.L = 0x4D;
 
-    registers.pc = 0x0100;
-    registers.sp = 0xFFFE;
+    loc_cpu.PC = 0x0100;
+    loc_cpu.SP = 0xFFFE;
+    printf("Finished init for DMG 01\n");
 }
 
 void check_registers() {
-    printf("Registers:\n");
-    (registers.f & FLAG_Z) ? printf(" - Zero Flag set\n") : printf(" - Zero Flag NOT set\n");
-    (registers.f & FLAG_N) ? printf(" - N Flag set\n") : printf(" - N Flag NOT set\n");
-    (registers.f & FLAG_H) ? printf(" - H Flag set\n") : printf(" - H Flag NOT set\n");
-    (registers.f & FLAG_C) ? printf(" - C Flag set\n") : printf(" - C Flag NOT set\n");
-    printf("A: 0x%X\n", registers.a);
-    printf("B: 0x%X, C: 0x%X\n", registers.b, registers.c);
-    printf("D: 0x%X, E: 0x%X\n", registers.b, registers.c);
-    printf("H: 0x%X, L: 0x%X\n", registers.h, registers.l);
+    printf("\n:CPU: === Registers === \n");
+    (loc_cpu.F & FLAG_Z) ? printf("  Z Flag set | ") : printf(" - Z Flag NOT set | ");
+    (loc_cpu.F & FLAG_N) ? printf("  N Flag set | ") : printf(" - N Flag NOT set | ");
+    (loc_cpu.F & FLAG_H) ? printf("  H Flag set | ") : printf(" - H Flag NOT set | ");
+    (loc_cpu.F & FLAG_C) ? printf("  C Flag set") : printf(" - C Flag NOT set");
+    printf("\n");
+    printf("  A: 0x%X | ", loc_cpu.A);
+    printf("  B: 0x%X, C: 0x%X | ", loc_cpu.B, loc_cpu.C);
+    printf("  D: 0x%X, E: 0x%X | ", loc_cpu.D, loc_cpu.E);
+    printf("  H: 0x%X, L: 0x%X", loc_cpu.H, loc_cpu.L);
+    printf("\n");
+
 }
 
 /// NOTICE: CC Condition codes. 
@@ -183,11 +193,11 @@ uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
 }
 
 
-void read_opcode_val(uint16_t addr_pc) {
+void read_addr_val(uint16_t addr_pc) {
     int len = 2;            // OP code is included in 3 bit lengths.
     uint8_t value[3];       // Each value will be split into 8bit Values regardless..
 
-    printf("Fetching %d bytes from PC: 0x%04X\n", len, addr_pc);
+    //printf("Fetching %d bytes from PC: 0x%04X\n", len, addr_pc);
     // value[1] = mmu_read(addr_pc + 1);
     // printf("value 1, %02X\n", value[1]);
 
@@ -195,64 +205,79 @@ void read_opcode_val(uint16_t addr_pc) {
 
     for (int i = 0; i <= len; i++ ) {
         value[i] = mmu_read(addr_pc + i);
-        printf("Byte %d @ 0x%04X: %02X\n", i, addr_pc + i, value[i]);
+        //printf("Byte %d @ 0x%04X: %02X\n", i, addr_pc + i, value[i]);
     }
 
     uint8_t cpu_opcode = value[0];
-    printf("Next Op_Code: %02X\n", cpu_opcode);
+    //printf("Next Op_Code: %02X\n", cpu_opcode);
 
 }
 
-
-void test_step_instruction() {
-    
-    // GB Startup, Jumps to $0100 (Entry point in header)
-    registers.pc = 0x0100;
-
-    uint8_t init_op = local_rom_entry[0];
-
-    // Usually this Entry point is a NOP, Followed by a Jump instruction. Lets find out.
-    printf("Rom Entry point, First OP_CODE %02x\n", init_op);
-    
-    // First OP Code is:
-    // C3 = JP a16 (3 byte, including OP Code)
-
-    // C3 50 01    ; JP 0x0150
-    // C3 = 1 Byte, 50 = 1 Byte, 01 = 1 Byte.
-
-    printf("What is the Entry point values.. [1] %02X, [2] %02X\n", local_rom_entry[1], local_rom_entry[2]);   
-    uint16_t a16_byte = cnvrt_lil_endian(local_rom_entry[1], local_rom_entry[2]);
-    
-    printf("The 16bit 2Byte Value? %04X\n", a16_byte);
-
-    // Command: Jump to 16 Bit address.
-    registers.pc = a16_byte;
-    printf("Jumping to Address: 0x%04X\n", a16_byte);
-
-    /// NEXT:
-    // Read the memory at the new PC location.
-
-    read_opcode_val(registers.pc);
-
-
-    
-    // Don't need to read the PC 
-    //uint8_t opcode = mmu_read(registers.pc);
-
-    // Rename this to CPU State?
-    //uint8_t opcode = mmu_read(cpu_state.pc);
+uint8_t get_op_len(uint8_t opcode) {
+    //printf(":CPU: ---== Amount of Bytes? ==--- %01X\n\n", opcode_lengths[opcode]);
+    return opcode_lengths[opcode];
 }
 
 
-
-// Manually read from Rom + the Roms OP_CODES.
-void manual_read_CPU(const char *filename, uint8_t *entry_point) {
-    printf("Entry Points: (0)%02X (1)%02X (2)%02X\n", entry_point[0], entry_point[1], entry_point[2]);
-    // BE, 00. Little Endian means. Least significant Byte first.
-
-
+void step_cpu(uint16_t addr_pc) {
+    printf("Entered Step CPU\n");
+    uint8_t op_code = 0;
+    uint8_t operand1 = 0;
+    uint8_t operand2 = 0;
     
-    // Gives FE 11
-    // FE = CP A,r8     (ComPare)       => OP CODE: Subtract the value in r8 from A and set flags accordingly, but don't store the result. This is useful for ComParing values.
+    uint8_t op_code_length = 0;
 
+    // Get OP_CODE From the PC_ADDR
+    op_code = mmu_read(addr_pc);
+    if (op_code == 0) {         // technically this could be NOP
+        fprintf(stderr, "ERROR -> Failed to Step CPU. (Or landed on NOP..)\n");
+        //return -1;
+    }
+
+    op_code_length = get_op_len(op_code);
+    //printf(":CPU: Stepping CPU.. reading from Memory\n");
+    
+    if (op_code_length >= 2) {
+        printf(":CPU: 8Bit Operand\n");
+        operand1 = mmu_read(addr_pc + 1);
+    }
+    if (op_code_length == 3) {
+        printf(":CPU: Second 8Bit Operand\n");
+        operand2 = mmu_read(addr_pc + 2);
+    }
+
+    op_instruction.opcode = op_code;
+    op_instruction.operand1 = operand1;
+    op_instruction.operand2 = operand2;
+    
+    //printf(":CPU: Stepping... Opcode: %02X, Op1: %02X, Op2: %02X\n", op_instruction.opcode, op_instruction.operand1, op_instruction.operand2);
+
+    printf(":CPU: Stepping... \n  PC: %04X\n  OPCODE: %02X\n  OP_Length: %02X\n", addr_pc, op_instruction.opcode, op_code_length);
+    //printf(":CPU: OP1: %02X OP2: %02X\n", operand1, operand2);
+
+    if (execute_instruction(&loc_cpu, op_instruction) != 0) {
+        printf(":CPU: Error Executing CPU instruction!\n");
+    }
+    //printf(":CPU: Finished CPU Step\n");
 }
+
+
+// Basic test of CPU. Max steps makes it so it only runs a few CPU steps at a time. To test output / functionality.
+void run_cpu(uint8_t max_steps) {
+    printf("::CPU:: Starting CPU test Run. MAX STEPS: %0X\n", max_steps);
+    for (int i = 0; i < max_steps; i++) {
+        printf("\n\n");
+        printf("CPU LOOP Line: %d\n", i);
+        printf(":CPU: What is the PC? %02X\n", loc_cpu.PC);
+        step_cpu(loc_cpu.PC);
+        printf(":CPU: Back from step_cpu, check values\n");
+        check_registers();
+        printf("Returned to Run Loop\n");
+    }
+    printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
+}
+
+
+        //printf("\n\n===================\n:CPU: Step Count:(%d / %d) \n", i, max_steps);
+        //check_registers();
+        //printf(":CPU: PC Counter: 0x%04X\n", loc_cpu.PC);

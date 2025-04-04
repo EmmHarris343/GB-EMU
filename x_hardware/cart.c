@@ -12,7 +12,6 @@ Cartridge cart;         // doing *cart means that I need to allocate the memory,
         4. Load ROM Fixed Bank into Memory
         5. Load ROM Switchable Bank into Array
 
-
 */ 
 
 /// TODO: Load Entire ROM into Buffer
@@ -153,14 +152,14 @@ uint8_t read_data(uint16_t addr) {
     uint8_t read_data = 0x0;
     switch (addr){        
         case 0x0000 ... 0x3FFF:
-            printf(":Cart: Matches ROM Bank 00 - Fixed Bank\n");           
+            //printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");           
             read_data = cart.resrce.rom_data[addr];
-            printf(":Cart: Read data from ROM -> %02X\n", read_data);
+            printf(":Cart: Data read from ROM (FB) -> %02X\n", read_data);
             return read_data;
         case 0x4000 ... 0x7FFF:
-            printf(":Cart: Matches ROM Bank 01-NN - Switchable Bank\n");
+            //printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
             read_data = cart.resrce.rom_data[(cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000)];
-            printf(":Cart: Read data from ROM -> %02X\n", read_data);
+            printf(":Cart: Data read from ROM (SB) -> %02X\n", read_data);
             return read_data;
     }
         return 0xFF;    // If somehow values are out of range for Reading rom Data.
@@ -179,14 +178,17 @@ uint8_t cart_read(uint16_t addr) {
     /// TODO:
     // Read the memory at either, fixed ROM, or Switchable Bank.
     // Return the value read.
-    
-    return read_data(addr); // Just pass this back.
+    if (read_data(addr) != NULL) {
+        return read_data(addr); // Just pass this back.
+    }
 }
 void cart_write(uint16_t addr, uint8_t val) {
 
 }
 
 uint8_t cart_ram_read(uint16_t addr) {
+    
+    return 0xFF;
 
 }
 void cart_ram_write(uint16_t addr, uint8_t val) {

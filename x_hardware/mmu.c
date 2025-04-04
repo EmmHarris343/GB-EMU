@@ -48,27 +48,21 @@ void mmu_init(mmu_map_entry *map, int num_entries) {
 }
 
 uint8_t mmu_read(uint16_t addr) {
-    printf(":MMU: Read memory Space %04X\n", addr);
-    printf(":MMU: map size = %d\n", mmu_map_size);
+    //printf(":MMU: Read");
+    //printf(":MMU: map size = %d\n", mmu_map_size);
+    printf(":MMU: Address request: 0x%04X\n", addr);
 
     if (mmu_map == NULL) {
         printf("ERROR: mmu_map is null!\n");
         exit(1);
     }
 
-
-    /// NOTE: 
-    // for (int i = 0; i < mmu_map_size; i++) {
-    //     printf("mmu_map values START: %04X | END: %04X\n", mmu_map[i].start, mmu_map[i].end);
-    //     //printf("mmu_map values END: %04X\n", mmu_map[i].end);
-    // }
-
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             return mmu_map[i].read(addr);
         }
     }
-    return 0xFF;
+    //return 0xFF;
 }
 
 void mmu_write(uint16_t addr, uint8_t val){
