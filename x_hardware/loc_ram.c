@@ -13,8 +13,8 @@ static uint8_t ERAM[ERAM_SIZE];
 int init_loc_ram() {
     printf("Initialize ERAM, WRAM, HRAM..\n");
     memset(HRAM, 0, HRAM_SIZE);
-    memset(ERAM, 0, ERAM_SIZE);
     memset(WRAM, 0, WRAM_SIZE);
+    memset(ERAM, 0, ERAM_SIZE); // This is mostly a route area. Technically NOTHIGN should be written here. If it is, I believe the gameboy would freeze up normally
     
 
     return 0;

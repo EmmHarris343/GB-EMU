@@ -188,6 +188,9 @@ uint8_t cart_read(uint16_t addr) {
     
 }
 void cart_write(uint16_t addr, uint8_t val) {
+    // There is only really 2 fields. 
+    // A write intercept Command.
+    // Storing data into RAM (maybe something to do with clock too). That's it.
 
 }
 

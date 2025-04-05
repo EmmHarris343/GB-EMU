@@ -73,12 +73,12 @@ int startup_sequence() {
     }
     
     if (initialize_cartridge() != 0) {
-        fprintf(stderr, "Error Initialize Cartridge Settings:\n");
+        fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
     
     if (init_loc_ram() != 0) {
-        fprintf(stderr, "Error Initialize LOC RAM:\n");
+        fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
     }
     
@@ -105,7 +105,7 @@ int startup_sequence() {
     cpu_init(rom_entry);
 
     /// TODO: START CPU Emulation!
-    uint8_t max_steps = 10;
+    uint8_t max_steps = 14;
     run_cpu(max_steps);
 
     //test_step_instruction();

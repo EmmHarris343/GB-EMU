@@ -719,12 +719,27 @@ static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 
     // FLAGS: None affected
 }
 static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
+    printf("PUSH_AF, Writes the A value, and the Flags into SP (Stack Pointer) 0x%04X\n", cpu->SP);
+
+    // Decrement SP, 
+    // Copy A => into SP (stack pointer)        NOTE: Don't overwrite the SP's pointer itself, but save it in HRAM or something, Where ever SP is "pointing" to
+    // Decrement SP
+    // Copy F (The 1 or 0s in Flags) Into where the SP, points to (Likely HRAM)
+
+
+    cpu->SP --;
+    external_write(cpu->SP, cpu->A);
+    cpu->SP --;
+    external_write(cpu->SP, cpu->F);
+
+    cpu->PC ++;     // PUSH_AF is only 1 byte.
+
     /*
     This is roughly equivalent to the following imaginary instructions:
         DEC SP
         LD [SP], A
         DEC SP
-        LD [SP], F.Z << 7 | F.N << 6 | F.H << 5 | F.C << 4    
+        LD [SP], F.Z << 7 | F.N << 6 | F.H << 5 | F.C << 4    // NOTE: ONLY! if the FLAG is stored in Bools
     */
 
    // FLAGS: None affected
@@ -987,6 +1002,14 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 /// THE LAST Weird a8 or a16 Instructions:
 // Load a16 instructions
 static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
+    printf("LDH [a16] A, Called => Copy A Register into location of (a16) \n");
+    
+    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    
+    printf(":LDH: a16 Location val %04X\n", a16);
+    external_write(a16, cpu->A);
+
+    cpu->PC +=3;
 
 }
 static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
@@ -997,7 +1020,7 @@ static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
 }
 // LDH a8 instructions:
 static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
-    printf("LDH A [a8] OP code called..\n");
+    printf("LDH A [a8] Called => 0xFF00 + a8 then.. copy into A register\n");
     // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
     // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
     // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
@@ -1013,8 +1036,15 @@ static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
     cpu->PC +=2; // 
 }
 static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [a8] A OP code called\n");
+    printf("LDH [a8] A, Called => Copy A Register into (0xFF00 + a8) \n");
     
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    external_write(combined_addr, cpu->A);
+
+    cpu->PC +=2;    
 }
 
 // Jump a16 instructions:
@@ -1100,7 +1130,7 @@ static opcode_t *opcodes[256] = {
 /* CX */ RET_cc,     POP_r16,       JP_cc_a16,  JP_a16,   CALL_cc_a16, PUSH_r16, ADD_A_r8,   RST_vec,  /* || */ RET_cc,       RET,        JP_cc_a16,   CB_PREFIX, CALL_cc_a16, CALL_a16,  ADC_A_r8,   RST_vec,
 /* DX */ RET_cc,     POP_r16,       JP_cc_a16,  BLANK,    CALL_cc_a16, PUSH_r16, SUB_A_r8,   RST_vec,  /* || */ RET_cc,       RETI,       JP_cc_a16,   BLANK,     CALL_cc_a16, BLANK,     SBC_A_r8,   RST_vec,
 /* EX */ LDH_p_a8_A,  POP_r16,      LDH_p_C_A,  BLANK,   BLANK,        PUSH_r16, AND_A_r8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_r8,   RST_vec,
-/* FX */ LDH_A_p_a8,  POP_r16,      LDH_A_p_C,  DI,      BLANK,        PUSH_r16, OR_A_r8,    RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
+/* FX */ LDH_A_p_a8,  POP_r16,      LDH_A_p_C,  DI,      BLANK,        PUSH_AF, OR_A_r8,    RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
 
 

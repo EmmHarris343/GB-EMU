@@ -171,7 +171,6 @@ void check_registers() {
     printf("  B: 0x%02X, C: 0x%02X\n", loc_cpu.B, loc_cpu.C);
     printf("  D: 0x%02X, E: 0x%02X\n", loc_cpu.D, loc_cpu.E);
     printf("  H: 0x%02X, L: 0x%02X\n", loc_cpu.H, loc_cpu.L);
-    printf("  HL Different from H&L ? %04X\n", loc_cpu.HL);
     printf("\n");
 }
 
@@ -198,6 +197,10 @@ uint8_t get_op_len(uint8_t opcode) {
     return opcode_lengths[opcode];
 }
 
+void external_write(uint16_t addr, uint8_t write_val) {
+    mmu_write(addr, write_val);
+}
+
 uint8_t external_read(uint16_t addr_pc) {
     uint8_t int8_val = 0;
     int8_val = mmu_read(addr_pc);
@@ -220,6 +223,7 @@ void step_cpu(uint16_t addr_pc) {
     //mmu_debugger(addr_pc);
     op_code_length = get_op_len(op_code);
     printf(":CPU: OPCODE LEN: %02X ", op_code_length);
+    printf(":CPU: SP Addr: 0x%02X ", loc_cpu.SP);
     printf(":CPU: PC Addr: 0x%02X ", addr_pc);
     
     if (op_code_length >= 2) {

@@ -31,10 +31,10 @@ Does NOT control RAM, HRAM, External Ram or Timer.
 
 
 
-// Global Memory:
-uint8_t WRAM[WRAM_size];
-uint8_t HRAM[HRAM_size];
-uint8_t VRAM[VRAM_size];
+// Global Memory: DO NOT NEED THIS HERE!
+// uint8_t WRAM[WRAM_size];
+// uint8_t HRAM[HRAM_size];
+// uint8_t VRAM[VRAM_size];
 
 uint8_t memory_map[M_MAP_size];
 
@@ -64,11 +64,11 @@ uint8_t mmu_read(uint16_t addr) {
     return read_8bit_val;
 }
 
-void mmu_write(uint16_t addr, uint8_t val){
-    printf(":MMU: Write to memory Space: %04X, Value: %02X", addr, val);
+void mmu_write(uint16_t addr, uint8_t write_val){
+    printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
-            mmu_map[i].write(addr, val);
+            mmu_map[i].write(addr, write_val);
         }
     }
 }
