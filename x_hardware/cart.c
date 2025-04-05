@@ -14,11 +14,23 @@ Cartridge cart;         // doing *cart means that I need to allocate the memory,
 
 */ 
 
-/// TODO: Load Entire ROM into Buffer
+/// TODO: WRITE INTERCEPTS:
+/*
 
-/// TODO: Decode Headers to figure out ROM size and Banks (If Any)
+Write Table: (Intercepting)
+    0000 - 3FFF => FIXED BANK
+    0000 - 3FFF (FIXED BANK)    => READ         ACTION: Returns Data in the FIXED BANK ROM.
+    0000 - 1FFF (Fixed bank)    => Write        ACTION: Enable/ Disable RAM
+    2000 - 3FFF (Fixed Bank)    => Write        ACTION: ROM Bank Switch
 
+    4000 - 7FFF => SWITCH BANK
+    4000 - 7FFF (FIXED BANK)    => READ         ACTION: Returns Data in the currently Selected, Switchable ROM BANK
+    4000 - 5FFF (Switch BANK)   => Write        ACTION: RAM Bank Switch
+    6000 - 7FFF (SWITCH BANK)   => Write        ACTIOH: ROM/RAM Mode 0/1 SWITCH
 
+    A000 - BFFF => EXTERNAL RAM
+    A000 - BFFF (EXT RAM)       => READ/ WRITE  ACTION: Reads from External RAM / Writes to External RAM
+*/
 
 // Load cartridge Settings.
 
@@ -147,6 +159,13 @@ int initialize_cartridge() {
 }
 
 
+void execute_ROM_BSWTCH(uint8_t Bank_num) {
+    // Take the provided Bank_num. Use it to change the current ROM Bank.
+    cart.resrce.current_rom_bank = Bank_num;
+    printf("Switched ROM Bank to: 0x%02X, %d\n", Bank_num, Bank_num);
+
+}
+
 
 uint8_t read_data(uint16_t addr) {
     uint8_t read_data = 0x0;
@@ -171,8 +190,31 @@ uint8_t read_data(uint16_t addr) {
         
 }
 
+// This is realistically, going to be RAM space. (maybe other I guess)
+void write_data(uint16_t addr) {
+
+}
 
 
+void write_intercept(uint16_t addr, uint8_t write_value) {
+    switch(addr) {
+        case 0x0000 ... 0x1FFF:
+            // Ram Enable
+            printf("Enable ROM\n");
+            break;
+        case 0x2000 ... 0x3FFF:
+            // ROM "file" Bank Switch
+            execute_ROM_BSWTCH(write_value);
+            break;
+        case 0x4000 ... 0x5FFF:
+            // RAM Bank Switch
+            break;
+        case 0x6000 ... 0x7FFF:
+            // ROM/RAM Mode 0/1 Switch
+            break;
+    }
+
+}
 
 
 // Entry point from MMU:
@@ -191,6 +233,15 @@ void cart_write(uint16_t addr, uint8_t val) {
     // There is only really 2 fields. 
     // A write intercept Command.
     // Storing data into RAM (maybe something to do with clock too). That's it.
+
+    if (addr >= 0x000 && addr <= 0x7FFF) {
+        printf(":cart: Intercepting Write instruction\n");
+        write_intercept(addr, val);
+    }
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        printf(":cart: Inside External RAM Write Space\n");
+
+    }
 
 }
 
