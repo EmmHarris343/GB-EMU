@@ -384,7 +384,8 @@ static void INC_hr8(CPU *cpu, instruction_T instrc) {    // Increment High bit R
             (cpu->H == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
             break;
     }
-    clear_flag(1);     // Sub Flag always cleared for INC.
+    clear_flag(1);      // Sub Flag always cleared for INC.
+    cpu->PC ++;         // this is only 1 Byte.
 
     // Flags: Z 0 H -
     // Z = Set if result is 0.
@@ -529,33 +530,42 @@ static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit 
 }
 // Full INC/DEC 16 bit Registers (BC, DE, HL):
 static void INC_r16(CPU *cpu, instruction_T instrc) {
+    printf("INC r16, Increment the r16 (BC, DE, HL, SP) (No flags changed, 16bit registers are usually pointers)\n");
 
-    //uint8_t register_id = (opcode >> 4) + 1;        // Shift opcode value RIGHT by 4 places, and add one. 
-    /*
-        Soooo.... If opcode value is: 
-        1101 1100 (Shift it right by 4) ->  == 0000 1101 
-        0000 1101 = 0x0D
-        0x0D +1 = 0x0E 
-        0x0E == 0000 1110
-    */
-    // cycle_oam_bug(gb, register_id);              // Cycle oam bug? Why.. need to find out later..    
-    // gb->registers[register_id]++;                // 
+    switch (instrc.opcode) {
+        case 0x03: cpu->BC ++; break;
+        case 0x13: cpu->DE ++; break;
+        case 0x23: cpu->HL ++; break;
+        case 0x33: cpu->SP ++; break;
+    }
 
-
-
+    cpu->PC ++;         // this is only 1 Byte.
 
     // FLAGS: NONE AFFECTED
 }
 static void DEC_r16(CPU *cpu, instruction_T instrc) {
-    //uint8_t register_id = (opcode >> 4) + 1;        // This is doing the same as INC_r16. (Why is it shifting it over, to get the actual Register ID?)
-    // cycle_oam_bug(gb, register_id);              // Does some junk, to cycle this bug, so it doesn't happen (I assume)
-    //gb->registers[register_id]--;                 // The actual DEC, --.. (In the gb->registers[<registers_ids>] )
+    printf("INC r16, Increment the r16 (BC, DE, HL, SP) (No flags changed)\n");
 
-    // 
-    
+    switch (instrc.opcode) {
+        case 0x0B: cpu->BC --; break;
+        case 0x1B: cpu->DE --; break;
+        case 0x2B: cpu->HL --; break;
+        case 0x3B: cpu->SP --; break;
+    }
+
+    cpu->PC ++;         // This is only 1 Byte.
 
     // FLAGS: NONE AFFECTED
+
+    /// NOTE: For other GM Emulation example. Might be easier.
+    // gb->registers[register_code] ++ or --.. Kind of simple.
 }
+
+
+
+
+
+/// REFACTOR: Clean up this code if it's not needed:
 // INC / Dec SP:
 static void INC_SP(CPU *cpu, instruction_T instrc) {
     
