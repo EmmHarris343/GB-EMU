@@ -229,6 +229,11 @@ static void LD_SP_HL(CPU *cpu, instruction_T instrc) {
 
 // Jump instructions
 static void JP_HL(CPU *cpu, instruction_T instrc) {    // Copy Address in HL to PC
+    printf("Jump to Address in HL\n");
+
+    cpu->PC = cpu->HL;      // Not sure if this is in wrong order.. Might be..
+
+
     // Bytes 1
     // Cycles 1
     // Flags Changed, none
@@ -359,41 +364,164 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec.
 
 // Increment / Decrement Registers:
 static void INC_hr8(CPU *cpu, instruction_T instrc) {    // Increment High bit Register  (++ => B, D, H)
-    // Flags: Z 0 H -
+    printf("Increment High Register 8bit val\n");
+    uint8_t og_reg_val = 0;
 
+    switch (instrc.opcode) {
+        case 0x04:
+            ((cpu->B & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3    
+            cpu->B ++;
+            (cpu->B == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+        case 0x14:
+            ((cpu->D & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->D ++;
+            (cpu->D == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+        case 0x24:
+            ((cpu->H & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->H ++;
+            (cpu->H == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+    }
+    clear_flag(1);     // Sub Flag always cleared for INC.
+
+    // Flags: Z 0 H -
     // Z = Set if result is 0.
     // N = 0
     // H = Set if overflow from bit 3. 
 }
 static void INC_lr8(CPU *cpu, instruction_T instrc) {    // Increment lower bit Register (++ => C, E, L)
-    // Flags: Z 0 H -
+    printf("Increment Low Register 8bit val\n");
+       
+    switch (instrc.opcode) {
+        case 0xC0:
+            ((cpu->C & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->C ++;
+            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
+            break;
+        case 0xC1:
+            ((cpu->E & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->E ++;
+            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
+            break;
+        case 0xC2:
+            ((cpu->L & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->L ++;
+            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
+            break;
+        case 0xC3:
+            ((cpu->A & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->A ++;
+            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
+            break;
+    }
 
+    clear_flag(1);      // Set subtraction Flag always set.
+    cpu->PC ++;         // this is only 1 Byte.
+
+    // Flags: Z 0 H -
     // Z = Set if result is 0.
     // N = 0
     // H = Set if overflow from bit 3. 
 }
-static void DEC_hr8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
-    // Flags: Z 1 H -       The one is the subtraction flag. Saying yes, there was subtraction
 
+static void DEC_hr8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
+    printf("Decrement High Register 8bit val\n");
+       
+    switch (instrc.opcode) {
+        case 0x05:
+            (cpu->B == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->B --;
+            (cpu->B == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+        case 0x15:
+            (cpu->D <= 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->D --;
+            (cpu->D == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+        case 0x25:
+            (cpu->H == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->H --;
+            (cpu->H == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+    }
+
+    set_flag(1);        // Set subtraction Flag always set.
+    cpu->PC ++;         // this is only 1 Byte.
+
+
+    // Flags: Flags: Z 1 H - 
     // Z = Set if result is 0.
-    // N = 1
+    // N = 1    // Subtraction flag always set.
     // H = Set if borrow from bit 4.
 }
 static void DEC_lr8(CPU *cpu, instruction_T instrc) {    // Decrement lower bit Register (-- => C, E, L)
-    // Flags: Z 1 H -       The one is the subtraction flag. Saying yes, there was subtraction
+    printf("Decrement Low Register 8bit val\n");
+       
+    switch (instrc.opcode) {
+        case 0xD0:
+            (cpu->C == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->C --;
+            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD1:
+            (cpu->E == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->E --;
+            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD2:
+            (cpu->L == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->L --;
+            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD3:
+            (cpu->A == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->A --;
+            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+    }
 
+    set_flag(1);        // Set subtraction Flag always set.
+    cpu->PC ++;         // this is only 1 Byte.
+
+
+    // Flags: Flags: Z 1 H - 
     // Z = Set if result is 0.
-    // N = 1
+    // N = 1    // Subtraction flag always set.
     // H = Set if borrow from bit 4.
 }
 // Inc/ Dec, HL value inside pointer [ ]
-static void INC_p_HL(CPU *cpu, instruction_T instrc) {      // Increment 16 bit HL register, In Pointer ++ HL
+static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL register, The Value In Pointer ++ HL
+    printf("INC [HL] (Val pointed to by HL)\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    ((hl_val & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    
+    hl_val ++;
+    (hl_val == 0) ? set_flag(0) : clear_flag(0);                // Set/Clear (Z) Zero Flag.
+    external_write(cpu->HL, hl_val);
+
+    clear_flag(1);      // Clear subtraction flag (N)
+    cpu->PC ++;         // this is only 1 Byte.
+
 
     // Z = Set if result is 0.
-    // N = 1
+    // N = 0
     // H = Set if borrow from bit 4.
 }
-static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit HL in register, In Pointer -- HL
+static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit HL in register, The Value In Pointer -- HL
+    printf("INC [HL] (Val pointed to by HL)\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    (hl_val == 0) ? set_flag(2) : clear_flag(2);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    
+    hl_val --;
+    (hl_val == 0) ? set_flag(0) : clear_flag(0);            // Set/Clear (Z) Zero Flag.
+    external_write(cpu->HL, hl_val);
+
+    set_flag(1);        // Set subtraction flag (N)
+    cpu->PC ++;         // this is only 1 Byte.
 
     // Z = Set if result is 0.
     // N = 1
