@@ -744,7 +744,38 @@ static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF 
 
    // FLAGS: None affected
 }
+
+
+
+
 static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16 into the Stack.
+    // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
+
+    /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
+
+    switch (instrc.opcode) {
+        case 0xC5:    // BC to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->B);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->C);
+            break;
+        case 0xD5:    // DE to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->D);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->E);
+            break;
+        case 0xE5:    // HL to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->H);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->L);
+            break;
+    }
+
+    cpu->PC ++; // Push r16 is only 1 byte.
+
     /*
     This is roughly equivalent to the following imaginary instructions:
         DEC SP
@@ -1129,8 +1160,8 @@ static opcode_t *opcodes[256] = {
 /* BX */ OR_A_r8,    OR_A_r8,       OR_A_r8,    OR_A_r8,  OR_A_r8,     OR_A_r8,  OR_A_r8,    OR_A_r8,  /* || */ CP_A_r8,      CP_A_r8,    CP_A_r8,     CP_A_r8,   CP_A_r8,     CP_A_r8,   CP_A_r8,    CP_A_r8,
 /* CX */ RET_cc,     POP_r16,       JP_cc_a16,  JP_a16,   CALL_cc_a16, PUSH_r16, ADD_A_r8,   RST_vec,  /* || */ RET_cc,       RET,        JP_cc_a16,   CB_PREFIX, CALL_cc_a16, CALL_a16,  ADC_A_r8,   RST_vec,
 /* DX */ RET_cc,     POP_r16,       JP_cc_a16,  BLANK,    CALL_cc_a16, PUSH_r16, SUB_A_r8,   RST_vec,  /* || */ RET_cc,       RETI,       JP_cc_a16,   BLANK,     CALL_cc_a16, BLANK,     SBC_A_r8,   RST_vec,
-/* EX */ LDH_p_a8_A,  POP_r16,      LDH_p_C_A,  BLANK,   BLANK,        PUSH_r16, AND_A_r8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_r8,   RST_vec,
-/* FX */ LDH_A_p_a8,  POP_r16,      LDH_A_p_C,  DI,      BLANK,        PUSH_AF, OR_A_r8,    RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
+/* EX */ LDH_p_a8_A, POP_r16,      LDH_p_C_A,  BLANK,    BLANK,        PUSH_r16, AND_A_r8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_r8,   RST_vec,
+/* FX */ LDH_A_p_a8, POP_r16,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_r8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
 
 

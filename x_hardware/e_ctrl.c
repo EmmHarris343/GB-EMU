@@ -105,7 +105,7 @@ int startup_sequence() {
     cpu_init(rom_entry);
 
     /// TODO: START CPU Emulation!
-    uint8_t max_steps = 14;
+    uint8_t max_steps = 20;
     run_cpu(max_steps);
 
     //test_step_instruction();
