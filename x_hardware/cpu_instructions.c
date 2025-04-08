@@ -187,6 +187,14 @@ static void LD_r8_p_HL(CPU *cpu, instruction_T instrc) {       // Copy data insi
 //// Accumulator related LOAD instructions:
 
 static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
+    printf("LD [r16] A, Copy value in Register A, into the value pointer by 16bit Register\n");
+    switch (instrc.opcode) {
+        case 0x02:
+            external_write(cpu->BC, cpu->A);
+        case 0x12:
+            external_write(cpu->DE, cpu->A);
+    }
+        cpu->PC++;
     
 }
 static void LD_p_n16_A(CPU *cpu, instruction_T instrc) {
@@ -214,7 +222,7 @@ static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {
 
 // WONKY LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
-    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL");
+    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
     // Likely no flags changed I imagine..
 
     uint8_t a_val = cpu->A;
@@ -225,7 +233,7 @@ static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
     cpu->PC ++;
 }
 static void LD_p_HLD_A(CPU *cpu, instruction_T instrc) {
-    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL");
+    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL\n");
  
     uint8_t a_val = cpu->A;
     external_write(cpu->HL, a_val); 
@@ -234,7 +242,7 @@ static void LD_p_HLD_A(CPU *cpu, instruction_T instrc) {
     cpu->PC --;
 }
 static void LD_A_p_HLI(CPU *cpu, instruction_T instrc) {
-    printf("LD A [HLI], Copy value pointed from HL, into A register, then Increment HL");
+    printf("LD A [HLI], Copy value pointed from HL, into A register, then Increment HL\n");
     uint8_t hl_val = external_read(cpu->HL);
     cpu->A = hl_val;
 
@@ -242,7 +250,7 @@ static void LD_A_p_HLI(CPU *cpu, instruction_T instrc) {
     cpu->PC ++;
 }
 static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
-    printf("LD A [HLD], Copy value pointed from HL, into A register, then Decrement HL");
+    printf("LD A [HLD], Copy value pointed from HL, into A register, then Decrement HL\n");
 
     uint8_t hl_val = external_read(cpu->HL);
     cpu->A = hl_val;
