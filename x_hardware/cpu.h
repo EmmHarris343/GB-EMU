@@ -56,6 +56,11 @@ typedef struct {
 
 } CPU;
 
+typedef struct {
+    uint8_t halt;
+    uint8_t pause;
+    uint8_t stop;
+} CPU_STATE;
 
 
 
@@ -72,7 +77,7 @@ void external_write(uint16_t addr, uint8_t write_val);
 
 void cpu_init(uint8_t *rom_entry);
 
-void run_cpu(uint8_t max_steps);
+void run_cpu(int max_steps);
 
 
 // The AF, Specifically the F CPU Register. - This is each individual flag

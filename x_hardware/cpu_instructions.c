@@ -16,13 +16,14 @@
 
 typedef void opcode_t(CPU *cpu, instruction_T instrc);
 
-
+extern CPU_STATE cpu_status;
 
 
 // INTERUPT Instructions:
 // HALT!
 static void HALT(CPU *cpu, instruction_T instrc) {      // Likely completely HALT / kill the system.
     printf("HALT Called. Exit Now.. (Guessing)\n");
+    cpu_status.halt = 1;
 }
 // DI?
 static void DI(CPU *cpu, instruction_T instrc) {
@@ -46,6 +47,7 @@ static void NOP(CPU *cpu, instruction_T instrc) {                    // Placehol
 
 // STOP
 static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like Pause.
+    
 
 }
 
@@ -317,7 +319,7 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
     // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
     // NOTE: int8_t != uint8_t  THESE ARE VERY DIFFERNT! (Alows for -negative and +positive values)
 
-    printf("CPU_INSTRUCTIONS: Relative Jump\n");
+    printf("JR cc e8, Relative Jump, Conditional\n");
 
     int8_t e_signed_offset;       // e = signed 8bit register. This is required. Becaues it needs to be able to have Negative or positive Values.
     e_signed_offset = (int8_t)instrc.operand1;
@@ -330,25 +332,32 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
                 printf("Z flag not set, JR NZ e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->PC += e_signed_offset;
             }
+            else cpu->PC +=2;
             break;
         case 0x28:
             if (cpu->F & FLAG_Z) { 
                 printf("Z Set, JR Z e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->PC += e_signed_offset;
             }
+            else cpu->PC +=2;
             break;
         case 0x30:
             if (!(cpu->F & FLAG_C)) { 
                 printf("C Not Set, JR NC e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->PC += e_signed_offset;
             }
+            else cpu->PC +=2;
             break;
         case 0x38:
             if (cpu->F & FLAG_C) { 
                 printf("C Set, JR C e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->PC += e_signed_offset;
             }
+            else cpu->PC +=2;
             break;
+        default:
+            printf("ERROR, JR CC did not match ANY OPCODES.. should abort.\n");
+            cpu->PC +=2;
     }
 
     // Note. This is basically the same as jr_cc_n16 ... but... For clarity I'm spliting up the functions.
@@ -378,6 +387,29 @@ static void JR_cc_n16(CPU *cpu, instruction_T instrc) {    // Relative Jump to 1
 
 // Subroutine Instructions:
 static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
+    // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
+
+    // Call n16 is like "Go to subroutine at n16. And remember to come back here".
+    // The [remember to come back here] is done by stack pointers. 
+    
+    // The RET will later "Pop two bytes from the stack", then jump back to the save PC.
+
+
+    /*
+    The TL;DR
+    Save where this instruction was called from (IE the PC + 3) into the SP (Stack pointer).
+    Then jump to the location inside operand 1/ 2 of (the n16 Value).
+
+    That will usually be a set of instructions. Or just one instruction.
+
+    Eventually RET will be called, where it will use the PC that was saved in the SP. 
+    To jump back to just AFTER this call was executed.
+
+    Kind of like .........| ..>>continuing..................
+                          | ^^<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<..
+                          |>>..>>>>>> lalalalallal executing.. RET ^^
+    */
+
 
 }
 static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 if condition cc is met.
@@ -385,6 +417,8 @@ static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 
 }
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
     // This is basically a POP PC instruction (If such an instruction existed). See POP r16 for an explanation of how POP works.
+
+    
 
     // FLAGS: None affected
 }
@@ -1280,6 +1314,10 @@ static void JP_a16(CPU *cpu, instruction_T instrc) {
 
 // Calls a16:
 static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {
+    printf("Call CC a16\n");
+
+
+
 
 }
 static void CALL_a16(CPU *cpu, instruction_T instrc) {

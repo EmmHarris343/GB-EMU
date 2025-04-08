@@ -1,6 +1,6 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 #include <stdint.h>
 
 #include "cpu.h"
@@ -14,6 +14,8 @@ uint8_t local_rom_entry[3];
 CPU loc_cpu;
 
 instruction_T op_instruction;
+
+CPU_STATE cpu_status;
 
 
 
@@ -253,14 +255,17 @@ void step_cpu(uint16_t addr_pc) {
 
 
 // Basic test of CPU. Max steps makes it so it only runs a few CPU steps at a time. To test output / functionality.
-void run_cpu(uint8_t max_steps) {
+void run_cpu(int max_steps) {
     printf("::CPU:: Starting CPU test Run. MAX STEPS: %0X\n", max_steps);
     for (int i = 0; i < max_steps; i++) {
         printf(":CPU: NEXT CPU, CUR Count: %d\n", i);
         step_cpu(loc_cpu.PC);
         check_registers();
+        //if (cpu_status.halt == 1) i = max_steps;
+        if (cpu_status.halt == 1) break;
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
+    
 }
 
 
