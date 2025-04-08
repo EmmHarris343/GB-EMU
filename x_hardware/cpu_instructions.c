@@ -1,6 +1,6 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 #include <stdint.h>
 
 #include "cpu_instructions.h"
@@ -40,6 +40,7 @@ static void EI(CPU *cpu, instruction_T instrc) {
 static void NOP(CPU *cpu, instruction_T instrc) {                    // Placeholder..
     // DO NOTHING
     printf("NOP Called. DO Nothing..\n");
+    cpu->PC ++; // Do nothing, just advance the PC
 }
 
 // STOP
@@ -90,11 +91,11 @@ static void LD_hr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value i
         case 0x06:
             cpu->B = instrc.operand1;
             break;
-        case 0x07:
-            cpu->C = instrc.operand1;
-            break;
-        case 0x08:
+        case 0x16:
             cpu->D = instrc.operand1;
+            break;
+        case 0x26:
+            cpu->H = instrc.operand1;
             break;
     }
     cpu->PC += 2;
@@ -102,7 +103,20 @@ static void LD_hr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value i
 }
 
 static void LD_lr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value into LR (Low) 8 byte Register IE: C, E, L
-    
+    printf("copy n8 Value (8bit rom/ram data), into LR (Low Range Byte, C, E, L.. etc)\n");
+    switch (instrc.opcode) {
+        case 0x0E:
+            cpu->C = instrc.operand1;
+            break;
+        case 0x1E:
+            cpu->E = instrc.operand1;
+            break;
+        case 0x2E:
+            cpu->L = instrc.operand1;
+            break;
+    }
+    cpu->PC += 2;
+    // No flags affected
 }
 
 

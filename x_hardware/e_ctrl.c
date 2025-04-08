@@ -1,6 +1,6 @@
 #include "e_ctrl.h"
 
-#include "rom_fetch.h"
+// #include "rom_fetch.h"
 #include "cart.h"
 #include "loc_ram.h"
 
@@ -8,7 +8,7 @@
 #include "ppu.h"
 #include "oam.h"
 #include "apu.h"
-#include "mmu.h"
+// #include "mmu.h"
 #include "mmu_interface.h"
 
 
@@ -48,7 +48,9 @@ void e_int(void) {
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
 
-    const char *rom_file = "../rom/pkmn_red.gb";
+    //const char *rom_file = "../rom/pkmn_red.gb";
+    const char *rom_file = "../rom/cpu-individual/06-ld_r,r.gb";
+    // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
     // Need to get th ROMs header first. To know how big the entire Rom file is.
@@ -105,7 +107,7 @@ int startup_sequence() {
     cpu_init(rom_entry);
 
     /// TODO: START CPU Emulation!
-    uint8_t max_steps = 20;
+    uint8_t max_steps = 30;
     run_cpu(max_steps);
 
     //test_step_instruction();
