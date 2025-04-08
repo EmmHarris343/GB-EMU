@@ -1,3 +1,4 @@
+#include "cpu.h"
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
 // #include <stdlib.h>
@@ -210,19 +211,46 @@ static void LDH_A_p_n16(CPU *cpu, instruction_T instrc) {
 static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {
     
 }
-// LD/ Load (A) with Increment and Decrement Instructions:
+
+// WONKY LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL");
+    // Likely no flags changed I imagine..
+
+    uint8_t a_val = cpu->A;
+    external_write(cpu->HL, a_val);
+
+    // Increment HL & the PC By one.
+    cpu->HL ++;
+    cpu->PC ++;
 }
 static void LD_p_HLD_A(CPU *cpu, instruction_T instrc) {
-    
-}
-static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL");
+ 
+    uint8_t a_val = cpu->A;
+    external_write(cpu->HL, a_val); 
+
+    cpu->HL --;
+    cpu->PC --;
 }
 static void LD_A_p_HLI(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD A [HLI], Copy value pointed from HL, into A register, then Increment HL");
+    uint8_t hl_val = external_read(cpu->HL);
+    cpu->A = hl_val;
+
+    cpu->HL --;
+    cpu->PC ++;
 }
+static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
+    printf("LD A [HLD], Copy value pointed from HL, into A register, then Decrement HL");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    cpu->A = hl_val;
+
+    cpu->HL --;
+    cpu->PC ++;
+}
+
 
 
 
