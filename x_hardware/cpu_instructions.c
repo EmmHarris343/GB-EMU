@@ -1,5 +1,5 @@
 #include "cpu.h"
-#include <numeric>
+//#include <numeric>
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
 // #include <stdlib.h>
@@ -284,45 +284,61 @@ static void LD_SP_HL(CPU *cpu, instruction_T instrc) {
 static void JP_HL(CPU *cpu, instruction_T instrc) {    // Copy Address in HL to PC
     printf("Jump to Address in HL\n");
 
-    cpu->PC = cpu->HL;      // Not sure if this is in wrong order.. Might be..
-
-
-    // Bytes 1
-    // Cycles 1
-    // Flags Changed, none
-
-    // Jump to address in HL; effectively, copy the value in register HL into PC.
-    // COPY HL into PC
-}
-static void JP_n16(CPU *cpu, instruction_T instrc) {                // Copy Address into PC from n16 value
-
+    cpu->PC = cpu->HL;
+    // Copy HL into PC.
+    // Bytes: 1
+    // No Flags changed.
 }
 
-// JR (Relative Jump) Instructions:                 //  NOTE: Must be within -128 bytes and 127 bytes from current address in PC
-static void JP_cc_n16(CPU *cpu, instruction_T instrc) {             // Copy address into PC from n16 value.. IF conditions met.
+/// NOTE: Technically n16 == a16 in this case. Clarity of the OP Table. Naming these only a16, a8 instructions.
 
+// Jump a16 instructions:
+static void JP_a16(CPU *cpu, instruction_T instrc) {
+    printf("Jump to a16 (possibly n16) Address\n");
+    cpu->PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 }
+static void JP_cc_a16(CPU *cpu, instruction_T instrc) {    
+    int proceed = 0;
+
+    switch(instrc.opcode) {
+        case 0xC2:
+            if (!(cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xD2:
+            if (!(cpu->F & FLAG_C)) proceed = 1;
+            break;
+        case 0xCA:
+            if ((cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xDA:
+            if ((cpu->F & FLAG_C)) proceed = 1;
+            break;
+    }
+    if (proceed) cpu->PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+
+    // 3 Bytes
+    // No flags Changed
+}
+
+
+
 static void JR_e8(CPU *cpu, instruction_T instrc) {
-    // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
-    // NOTE: int8_t != uint8_t  THESE ARE VERY DIFFERNT! (Alows for -negative and +positive values)
 
-    int8_t e_address;       // e = signed 8bit register. This is required. Becaues it needs to be able to have Negative or positive Values.
-
-    // Note. This is basically the same as jr_n16 ... but... For clarity I'm spliting up the functions.
-
+    int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
+    e_signed_offset = (int8_t)instrc.operand1;
+    cpu->PC += e_signed_offset;
+ 
+    printf("Relative jump to: +- %02X\n", e_signed_offset);
+    
 
     // Cycles 3
     // Bytes 2
     // Flags Changed, none
-
 }
 static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
-    // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
-    // NOTE: int8_t != uint8_t  THESE ARE VERY DIFFERNT! (Alows for -negative and +positive values)
-
     printf("JR cc e8, Relative Jump, Conditional\n");
 
-    int8_t e_signed_offset;       // e = signed 8bit register. This is required. Becaues it needs to be able to have Negative or positive Values.
+    int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instrc.operand1;
 
 
@@ -361,32 +377,10 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
             cpu->PC +=2;
     }
 
-    // Note. This is basically the same as jr_cc_n16 ... but... For clarity I'm spliting up the functions.
-
     // Cycles: 3 taken / 2 untaken
     // Bytes: 2
     // Flags Changed, None
 }
-static void JR_n16(CPU *cpu, instruction_T instrc) {   // Relative Jump to 16 byte address (Must be close enough)
-
-
-    // Cycles 3
-    // Bytes 2
-    // Flags Changed, none
-
-    // The address is encoded as a signed 8-bit offset from the address immediately following the JR instruction, so the target address n16 must be between -128 and 127 bytes away. For example:
-    // Example: 
-    // JR Label  ; no-op; encoded offset of 0
-    // JR Label  ; infinite loop; encoded offset of -2
-}
-static void JR_cc_n16(CPU *cpu, instruction_T instrc) {    // Relative Jump to 16 Byte Address (Must be close enough). As long as CC Conditions met.
-    // Relative Jump to address n16 if condition cc is met.
-    // THIS IS two bytes, becaues it's a + or - amount from current position.
-    // Cycles: 3 taken / 2 untaken
-    // Bytes: 2
-    // Flags Changed, None
-}
-
 
 
 // Subroutine Instructions:
@@ -491,16 +485,47 @@ static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subro
     cpu->SP ++;
 
     cpu->PC = cnvrt_lil_endian(low_byte, high_byte);
-
-
-
-
     
-
+    // Bytes: 1
     // FLAGS: None affected
 }
 static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subroutine if condition CC is met
+    int proceed = 0;
+
+    switch (instrc.opcode) {
+        case 0xC0:
+            // Z flag is NOT set.
+            if (!(cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xD0:
+            // C flag is NOT set.
+            if (!(cpu->F & FLAG_C)) proceed = 1;
+            break;
+        case 0xC8:
+            // Z flag IS set.
+            if ((cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xD8:
+            // C flag IS set.
+            if ((cpu->F & FLAG_C)) proceed = 1;
+            break;
+    }
+
+    if (proceed) {
+        // TL;DR : Populate the PC from the SP.
+        uint8_t low_byte = external_read(cpu->SP);
+        cpu->SP ++;
+        uint8_t high_byte = external_read(cpu->SP);
+        cpu->SP ++;
+
+        cpu->PC = cnvrt_lil_endian(low_byte, high_byte);
+    }
+    else {
+        printf("CALL cc Conditions are NOT met. Skipping..\n");
+        cpu->PC ++;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
+    }  
     
+    // Bytes: 1
     // FLAGS: None affected
 }
 static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subroutine and enable I-nterupts.
@@ -1377,17 +1402,11 @@ static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
     cpu->PC +=2;    
 }
 
-// Jump a16 instructions:
-static void JP_cc_a16(CPU *cpu, instruction_T instrc) {         // This is first instruction in ROM (I am using).
-    // JP NZ a16
 
-    
-}
-static void JP_a16(CPU *cpu, instruction_T instrc) {
-    printf(":CPU_INSTRUCTIONS: OpCode: C3 => Jump to Value\n");
-    uint16_t jumpto_byte = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-    cpu->PC = jumpto_byte;
-}
+
+
+
+
 
 // Calls a16:
 static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {
