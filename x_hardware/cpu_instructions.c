@@ -8,11 +8,42 @@
 #include "cpu_instructions.h"
 
 
+/// TODO: Make the CPU Flags easier to read.
+/*
+IE: 
+#define FLAG_Z 0x80 OR ... 0, 1, 2, 3 etc 
+#define FLAG_N 0x40
+#define FLAG_H 0x20
+#define FLAG_C 0x10
 
-//typedef void opcode_t(CPU *cpu, instruction_T instrc);
-//extern CPU *loc_cpu;
+then I can do: 
+set_flag(FLAG_Z);
+clear_flag(FLAG_Z);
 
-//extern instruction_T op_instruction;
+Instead of:
+set_flag(0)... as I have no idea what the number refers to.. So it makes it not very readable..
+*/
+
+
+/// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier... 
+void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
+    // Clear the bits we're modifying
+    if (affect_Z) clear_flag(0);  // Z always cleared on LD HL, SP+e8
+    if (affect_N) clear_flag(1);  // N always cleared on addition
+
+    // Half carry: bit 3 overflow into bit 4
+    if (((a & 0xF) + (b & 0xF)) > 0xF)
+        set_flag(2);  // H
+    else
+        clear_flag(2);
+
+    // Full carry: bit 7 overflow into bit 8
+    if ((uint16_t)a + (uint16_t)b > 0xFF)
+        set_flag(3);  // C
+    else
+        clear_flag(3);
+}
+
 
 
 typedef void opcode_t(CPU *cpu, instruction_T instrc);
@@ -292,11 +323,116 @@ static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
     
 }
 static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in SP + (8bit (e) SIGNED int) into HL Register
-    
+    printf("LD HL, (SP + e8). Overwrite the address (SP + e8) into the HL Register\n");
+
+    // Add the signed value e8 to SP and copy the result in HL.
+
+    // OVERWRITES the HL Register.
+
+    int8_t e_signed_offset = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +- 
+    cpu->HL = (cpu->SP + e_signed_offset);                  // SET HL to the Calulated +- n16 value.
+
+    uint8_t SP_LOW = cpu->SP & 0xFF;                        // This is first 8Bits. (Instead of full 16).
+    uint8_t e8_flag_calc = (uint8_t)e_signed_offset;        // For easy Calculations, change back into uint8_t (Unsigned)
+
+    // 
+    clear_flag(0);
+    clear_flag(1);
+
+    if (((SP_LOW & 0xF) + (e8_flag_calc & 0xF)) > 0xF)       // IF combined the (first 4 bits) of each is GREATER than 4 bits.
+        set_flag(2);    // Set H Flag
+    else
+        clear_flag(2);  // Clear H Flag
+
+    if ((SP_LOW + e8_flag_calc) > 0xFF)                      // If combined, the values are greater than 8 Bits.
+        set_flag(3);    // Set C Flag
+    else
+        clear_flag(3);  // Clear C Flag
+
+    cpu->PC += 2;
+
+    // Bytes = 2
+    /*
+    Flags:
+    Z = 0
+    N = 0
+    H = Set if overflow from bit 3.
+    C = Set if overflow from bit 7.
+    */
 }
 static void LD_SP_HL(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD_SP_HL, Copy the Value in HL directly into the SP\n");
+
+    cpu->PC ++;
+
+    // Bytes = 1
+    // No flags effected
 }
+
+// Load a16 instructions
+static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
+    printf("LD [a16] A, Called => Copy 8bit A Register into 8bit value located in [a16]\n");
+    
+    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    
+    printf(":LD: a16 Location val %04X\n", a16);
+    external_write(a16, cpu->A);
+    
+    cpu->PC +=3;
+
+    // Bytes = 3
+    // No flags affected
+}
+static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
+    printf("LD A [a16], Copy 8bit value in [a16] into Register A\n");
+    // Copy the value in RAM pointed to by a16. Into Register A
+    
+    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+
+    cpu->A = external_read(a16);
+
+    cpu->PC += 3;
+    // Bytes = 3
+    // No flags affected
+}
+
+
+// LDH a8 instructions:
+static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
+    printf("LDH A [a8] Called => Copy value in (0xFF00 + a8) into A register\n");
+    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
+    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
+    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
+
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    uint8_t load_h_range = external_read(combined_addr);
+
+    cpu->A = load_h_range;
+
+    cpu->PC +=2; // 
+}
+static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
+    printf("LDH [a8] A, Called => Copy A Register value into 8bit value located at (0xFF00 + a8) \n");
+    
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    external_write(combined_addr, cpu->A);
+
+    cpu->PC +=2;    
+}
+
+
+
+
+
+
+
+
 
 
 // Jump instructions
@@ -772,11 +908,19 @@ static void DEC_r16(CPU *cpu, instruction_T instrc) {
 /// REFACTOR: Clean up this code if it's not needed:
 // INC / Dec SP:
 static void INC_SP(CPU *cpu, instruction_T instrc) {
-    
+    printf("INC_SP\n");
+    cpu->SP ++;
+    cpu->PC ++;
+
+    // Bytes = 1
     // FLAGS: NONE AFFECTED
 }
 static void DEC_SP(CPU *cpu, instruction_T instrc) {
+    printf("DEC_SP\n");
+    cpu->SP --;
+    cpu->PC ++;
 
+    // Bytes = 1
     // FLAGS: NONE AFFECTED
 }
 
@@ -1372,52 +1516,7 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 
 
 
-/// THE LAST Weird a8 or a16 Instructions:
-// Load a16 instructions
-static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [a16] A, Called => Copy A Register into location of (a16) \n");
-    
-    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-    
-    printf(":LDH: a16 Location val %04X\n", a16);
-    external_write(a16, cpu->A);
 
-    cpu->PC +=3;
-
-}
-static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
-    
-}
-
-
-// LDH a8 instructions:
-static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
-    printf("LDH A [a8] Called => 0xFF00 + a8 then.. copy into A register\n");
-    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
-    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
-    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
-
-    uint8_t a8 = instrc.operand1;
-    uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
-    uint8_t load_h_range = external_read(combined_addr);
-
-    cpu->A = load_h_range;
-
-    cpu->PC +=2; // 
-}
-static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [a8] A, Called => Copy A Register into (0xFF00 + a8) \n");
-    
-    uint8_t a8 = instrc.operand1;
-    uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
-    external_write(combined_addr, cpu->A);
-
-    cpu->PC +=2;    
-}
 
 
 
