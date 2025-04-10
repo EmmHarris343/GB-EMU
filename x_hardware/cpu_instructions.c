@@ -335,7 +335,7 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
             else cpu->PC +=2;
             break;
         case 0x28:
-            if (cpu->F & FLAG_Z) { 
+            if (cpu->F & FLAG_Z) {
                 printf("Z Set, JR Z e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->PC += e_signed_offset;
             }
@@ -392,7 +392,26 @@ static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     // Call n16 is like "Go to subroutine at n16. And remember to come back here".
     // The [remember to come back here] is done by stack pointers. 
     
-    // The RET will later "Pop two bytes from the stack", then jump back to the save PC.
+    // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
+    uint16_t pc_loc = (cpu->PC + 3);
+
+    uint8_t split_addr_LOW = pc_loc & 0xFF;
+    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF; 
+
+    // YES Low byte First WHEN it's incrementing.. / reading.
+    // BUT, because it's Decrementing the SP, High Byte first.
+    
+    // Push return address onto stack (high byte first)
+    cpu->SP --; 
+    external_write(cpu->SP, split_addr_HIGH);
+    cpu->SP --;
+    external_write(cpu->SP, split_addr_LOW);
+    
+
+    // Next jump to Location:
+    cpu->PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+
+    // DO not assign PC to anything.
 
 
     /*
