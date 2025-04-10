@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <numeric>
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
 // #include <stdlib.h>
@@ -367,6 +368,8 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
     // Flags Changed, None
 }
 static void JR_n16(CPU *cpu, instruction_T instrc) {   // Relative Jump to 16 byte address (Must be close enough)
+
+
     // Cycles 3
     // Bytes 2
     // Flags Changed, none
@@ -378,6 +381,7 @@ static void JR_n16(CPU *cpu, instruction_T instrc) {   // Relative Jump to 16 by
 }
 static void JR_cc_n16(CPU *cpu, instruction_T instrc) {    // Relative Jump to 16 Byte Address (Must be close enough). As long as CC Conditions met.
     // Relative Jump to address n16 if condition cc is met.
+    // THIS IS two bytes, becaues it's a + or - amount from current position.
     // Cycles: 3 taken / 2 untaken
     // Bytes: 2
     // Flags Changed, None
@@ -397,7 +401,7 @@ static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     uint16_t pc_loc = (cpu->PC + 3);
 
     uint8_t split_addr_LOW = pc_loc & 0xFF;
-    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF; 
+    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
 
     // YES Low byte First WHEN it's incrementing.. / reading.
     // BUT, because it's Decrementing the SP, High Byte first.
@@ -433,7 +437,48 @@ static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 
 }
 static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 if condition cc is met.
+    printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
 
+
+
+    int proceed = 0;
+
+    switch (instrc.opcode) {
+        case 0xC4:
+            // Z flag is NOT set.
+            if (!(cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xD4:
+            // C flag is NOT set.
+            if (!(cpu->F & FLAG_C)) proceed = 1;
+            break;
+        case 0xCC:
+            // Z flag IS set.
+            if ((cpu->F & FLAG_Z)) proceed = 1;
+            break;
+        case 0xCD:
+            // C flag IS set.
+            if ((cpu->F & FLAG_C)) proceed = 1;
+            break;
+    }
+
+    if (proceed) {
+        uint16_t pc_loc = (cpu->PC + 3);
+
+        uint8_t split_addr_LOW = pc_loc & 0xFF;
+        uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
+
+        cpu->SP --; 
+        external_write(cpu->SP, split_addr_HIGH);
+        cpu->SP --;
+        external_write(cpu->SP, split_addr_LOW);
+
+        cpu->PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    }
+    else {
+        printf("CALL cc Conditions are NOT met. Skipping..\n");
+        cpu->PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
+    }   
 }
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
     printf("Ret Called, 'RETurn from subroutine..' ... ' Populate the PC stored in the SP\n");
