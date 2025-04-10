@@ -387,6 +387,7 @@ static void JR_cc_n16(CPU *cpu, instruction_T instrc) {    // Relative Jump to 1
 
 // Subroutine Instructions:
 static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
+    printf("CALL_n16 Called, 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
     // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
 
     // Call n16 is like "Go to subroutine at n16. And remember to come back here".
@@ -435,7 +436,19 @@ static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 
 
 }
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
+    printf("Ret Called, 'RETurn from subroutine..' ... ' Populate the PC stored in the SP\n");
     // This is basically a POP PC instruction (If such an instruction existed). See POP r16 for an explanation of how POP works.
+
+    // TL;DR : Populate the PC from the SP.
+    uint8_t low_byte = external_read(cpu->SP);
+    cpu->SP ++;
+    uint8_t high_byte = external_read(cpu->SP);
+    cpu->SP ++;
+
+    cpu->PC = cnvrt_lil_endian(low_byte, high_byte);
+
+
+
 
     
 
