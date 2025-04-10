@@ -155,11 +155,12 @@ static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
 
     cpu->PC += 3;
 
+    // Bytes: 3
     // Flags: None Affected
-
 }
 
 
+// Not sure what this is supposed to do...
 static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("Load 16bit data, into pointer in 16bit Register.\n");
     printf("Values? OP1: %02X OP2: %02X", instrc.operand1, instrc.operand2);
@@ -267,9 +268,27 @@ static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
 
 // LD/Load (weird) SP instructions:
 static void LD_SP_n16(CPU *cpu, instruction_T instrc) {
+    printf("LD_SP_n16 Overwrite the stack pointer, with value in n16.\n");
+
+    // Overwrites the stack pointer with the value in the operands.
+    cpu->SP = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    cpu->PC += 3;
+
+    // Bytes = 3
+    // No Flags affected
     
 }
-static void LD_p_n16_SP(CPU *cpu, instruction_T instrc) {
+static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
+    printf("LD [n16] SP, Write SP_Low & SP_High Bytes, into the [a16] and [a16+1] memory locations\n");
+
+    uint16_t n16_addr = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    uint8_t SP_LOW = cpu->SP & 0xFF;
+    uint8_t SP_HIGH = (cpu->SP >> 8) & 0xFF;
+
+    external_write(n16_addr, SP_LOW);
+    external_write(n16_addr + 1, SP_HIGH);
+
+    cpu->PC ++;
     
 }
 static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in SP + (8bit (e) SIGNED int) into HL Register
@@ -321,7 +340,7 @@ static void JP_cc_a16(CPU *cpu, instruction_T instrc) {
 }
 
 
-
+// Relative Jumps: e8
 static void JR_e8(CPU *cpu, instruction_T instrc) {
 
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
@@ -433,8 +452,6 @@ static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 if condition cc is met.
     printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
 
-
-
     int proceed = 0;
 
     switch (instrc.opcode) {
@@ -474,6 +491,7 @@ static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 
         cpu->PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
     }   
 }
+
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
     printf("Ret Called, 'RETurn from subroutine..' ... ' Populate the PC stored in the SP\n");
     // This is basically a POP PC instruction (If such an instruction existed). See POP r16 for an explanation of how POP works.
@@ -1370,9 +1388,8 @@ static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
 static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
     
 }
-static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
 
-}
+
 // LDH a8 instructions:
 static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
     printf("LDH A [a8] Called => 0xFF00 + a8 then.. copy into A register\n");
