@@ -1651,26 +1651,29 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 #define LD_X_Y(X, Y) \
 static void LD_##X##_##Y(CPU *cpu, instruction_T instrc) \
 { \
-    printf(":CPU_INSTRUCTIONS: LD r8 to r8\n");\
+    printf("LD r8 to r8\n");\
     cpu->X = cpu-> Y;\
     cpu->PC += 1;\
-    printf("x, y");\
 }
-//gb->x = gb->y;
 
-
-
+// Maps to: 
+// LD B, [HL]
 #define LD_X_DHL(X) \
 static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD_X_DHL");\
+    printf("LD r8, [HL]");\
+    cpu->X = external_read(cpu->HL);\
+    cpu->PC += 1;\
 }
 
-
+// Maps to: 
+// LD [HL], B
 #define LD_DHL_Y(Y) \
 static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD_DHL_Y");\
+    printf("LD [HL], r8");\
+    external_write(cpu->HL, cpu->Y);\
+    cpu->PC += 1;\
 }
 
 
