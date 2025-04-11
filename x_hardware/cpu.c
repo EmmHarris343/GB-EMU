@@ -224,19 +224,19 @@ void step_cpu(uint16_t addr_pc) {
     op_code = mmu_read(addr_pc);
     //mmu_debugger(addr_pc);
     op_code_length = get_op_len(op_code);
-    printf(":CPU: OPCODE LEN: %02X ", op_code_length);
-    printf(":CPU: SP Addr: 0x%02X ", loc_cpu.SP);
-    printf(":CPU: PC Addr: 0x%02X ", addr_pc);
+    // printf(":CPU: OPCODE LEN: %02X ", op_code_length);
+    // printf(":CPU: SP Addr: 0x%02X ", loc_cpu.SP);
+    // printf(":CPU: PC Addr: 0x%02X ", addr_pc);
     
     if (op_code_length >= 2) {
-        printf(":CPU: 8Bit Operand ");
+        // printf(":CPU: 8Bit Operand ");
         operand1 = mmu_read(addr_pc + 1);
     }
     if (op_code_length == 3) {
-        printf(":CPU: Second 8Bit Operand ");
+        // printf(":CPU: Second 8Bit Operand ");
         operand2 = mmu_read(addr_pc + 2);
     }
-    printf("\n");
+    // printf("\n");
 
     op_instruction.opcode = op_code;
     op_instruction.operand1 = operand1;
@@ -256,11 +256,11 @@ void step_cpu(uint16_t addr_pc) {
 
 // Basic test of CPU. Max steps makes it so it only runs a few CPU steps at a time. To test output / functionality.
 void run_cpu(int max_steps) {
-    printf("::CPU:: Starting CPU test Run. MAX STEPS: %0X\n", max_steps);
+    printf(":CPU: RUN_CPU Started. Running test run: MAX STEPS: %0X\n", max_steps);
     for (int i = 0; i < max_steps; i++) {
-        printf(":CPU: NEXT CPU, CUR Count: %d\n", i);
+        printf("\n[STEP %03d]", i);
         step_cpu(loc_cpu.PC);
-        check_registers();
+        //check_registers();
         //if (cpu_status.halt == 1) i = max_steps;
         if (cpu_status.halt == 1) break;
     }

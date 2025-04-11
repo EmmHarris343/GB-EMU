@@ -48,7 +48,7 @@ void mmu_init(mmu_map_entry *map, int num_entries) {
 }
 
 uint8_t mmu_read(uint16_t addr) {
-    printf(":MMU: Read 0x%04X\n", addr);
+    //printf(":MMU: Read 0x%04X\n", addr);
     uint8_t read_8bit_val = 0x00;
     if (mmu_map == NULL) {
         printf("ERROR: mmu_map is null!\n");
@@ -65,7 +65,7 @@ uint8_t mmu_read(uint16_t addr) {
 }
 
 void mmu_write(uint16_t addr, uint8_t write_val){
-    printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
+    //printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             mmu_map[i].write(addr, write_val);

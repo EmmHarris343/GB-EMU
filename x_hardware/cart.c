@@ -152,6 +152,11 @@ int initialize_cartridge() {
         cart.resrce.fixed_b_addr = 0x0;
         cart.resrce.calcd_switch_addr = (cart.resrce.current_rom_bank * 0x4000);     // Not confident I want to use this.
     }
+    else {
+        // Is a test ROM / Tiny ROM (IE Tetris)
+        cart.resrce.current_rom_bank = 1;           // This is a work around. This makes it calculate 0x4000 = extended rom bank.
+
+    }
 
     return 0;
 
@@ -180,7 +185,7 @@ uint8_t read_data(uint16_t addr) {
         case 0x4000 ... 0x7FFF:
             //printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
             read_data = cart.resrce.rom_data[(cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000)];
-            printf(":Cart: SwB\n");
+            printf(":Cart: SwB Read\n");
             //printf(":Cart: Data read from ROM (SwB) -> %02X\n", read_data);
             return read_data;
             break;

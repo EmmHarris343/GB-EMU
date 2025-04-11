@@ -61,6 +61,17 @@ void dump_tilemap_text() {
 }
 
 
+void dump_hram_test() {
+    printf("Printing what's in HRAM..\n");
+    uint8_t wram_val = 0x00;
+    uint16_t wram_location = 0xC000;
+    for (int w = 0; w < 16; w++) {
+        wram_val = external_read(wram_location);
+        printf("ADDR: 0x%04X | 0x%02X | W%d\n", wram_location, wram_val, w);
+        wram_location ++;
+    }
+}
+
 
 // void e_run(void) {
 //     while (1) {
@@ -132,8 +143,13 @@ int startup_sequence() {
     cpu_init(rom_entry);
 
     /// TODO: START CPU Emulation!
-    int max_steps = 30000;
+    //int max_steps = 86;       // This will complete the random ROM test.
+
+    int max_steps = 86;
     run_cpu(max_steps);
+
+    dump_hram_test();
+
 
     //test_step_instruction();
 

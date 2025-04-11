@@ -25,12 +25,21 @@ int init_loc_ram() {
 
 // WRAM
 uint8_t loc_wram_read(uint16_t addr) {
-    printf(":loc_ram: Hit WRAM Read!\n");
-    return 0xFF;
-
+    //printf(":loc_ram: Hit WRAM Read!\n");
+    if (addr < 0xC000 || addr > 0xCFFF) {
+        printf("loc_ram: WRAM invalid Read!\n");
+        // Invalid
+        return 0xFF;
+    }
+    return WRAM[addr - 0xC000];
 }
 void loc_wram_write(uint16_t addr, uint8_t val) {
-
+    printf(":loc_ram: Hit WRAM WRITE!\n");
+    if (addr < 0xC000 || addr > 0xCFFF) {
+        // Invalid
+        return;
+    }
+    WRAM[addr - 0xC000] = val;
 }
 
 // ERAM
@@ -45,7 +54,7 @@ void loc_eram_write(uint16_t addr, uint8_t val) {
 
 // HRAM
 uint8_t loc_hram_read(uint16_t addr) {
-    printf(":loc_ram: Hit HRAM Read!\n");
+    //printf(":loc_ram: Hit HRAM Read!\n");
     if (addr < 0xFF80 || addr > 0xFFFE) {
         // Invalid
         return 0xFF;
@@ -54,7 +63,7 @@ uint8_t loc_hram_read(uint16_t addr) {
 
 }
 void loc_hram_write(uint16_t addr, uint8_t val) {
-    printf(":loc_ram: Hit HRAM WRITE!\n");
+    //printf(":loc_ram: Hit HRAM WRITE!\n");
     if (addr < 0xFF80 || addr > 0xFFFE) {
         // Invalid
         return;
