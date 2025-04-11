@@ -105,6 +105,8 @@ static void NOP(CPU *cpu, instruction_T instrc) {                    // Placehol
 
 // STOP
 static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like Pause.
+    printf("STOP Called, not setup HALT\n");
+    cpu_status.halt = 1;
     
 
 }
@@ -112,6 +114,9 @@ static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like
 // BLANK
 static void BLANK(CPU *cpu, instruction_T instrc) {      // Do nothing, basically NOP, but for clarity don't write it like that.
     // DO NOTHING - Not even any command.
+    // This shouldn't Even be called.
+    printf("BLANK Called, This should never be called. Halting\n");
+    cpu_status.halt = 1;
 }
 
 static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points to Table 2 in the OP_CODE Map
@@ -125,6 +130,8 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
     // IE: RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
+    printf("CB Prefix Called, not setup HALT\n");
+    cpu_status.halt = 1;    
 }
 
 
@@ -134,17 +141,6 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
 
 
-
-// Load instructions
-/// NOTICE: Moved LD r8 r8 to the macro function
-// static void LD_r8_r8(uint8_t *gb, uint8_t opcode) {     // This is insanely Common instruction. B => C, A=> L, C=>D etc. Which is copied 40 + times in CPU instructions. 
-
-// }
-
-// THIS 1 Instruction don't actually use. Cause it needs extra logic. (I think...)
-// static void ld_r8_n8(uint8_t *gb, uint8_t opcode) {
-    
-// }
 
 static void LD_hr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value into HR (High) 8 byte Register IE: B, D, H
     printf("LD HR, n8.                 ; EXP: HR <- n8    ..    Reg.H <- n8\n");
@@ -179,11 +175,6 @@ static void LD_lr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value i
     cpu->PC += 2;
     // No flags affected
 }
-
-
-// static void LD_r16_r16(CPU *cpu, instruction_T instrc) {       // Simple Instruction. Copy Data from 16byte Register into 16Byte Register. BC => HL. HL => BC etc
-    
-// }
 
 static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("LD r16 n16. Copy n16 value into r16 Register\n");
@@ -229,16 +220,22 @@ static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
 
 // Pointed to HL Instructions:
 static void LD_p_HL_r8(CPU *cpu, instruction_T instrc) {       // This might be a little complicated cause it needs to know, which range. HR, or LR (B, D, H) or (C, E, L)
-    
+    printf("LD [HL] r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;        
 }
 
 
 static void LD_p_HL_n8(CPU *cpu, instruction_T instrc) {       // Copy data from n8, into where HL is being pointed to
-    
+    printf("LD [HL] n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;            
+
+    // Bytes = 2
+    // No flags Affected
 }
 
 static void LD_r8_p_HL(CPU *cpu, instruction_T instrc) {       // Copy data inside HL (that is being pointed to it) Into Register r8 (Needs to know range. HR, or LR (B, D, H) or (C, E, L))
-    
+    printf("LD r8 [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;        
 }
 
 
@@ -260,32 +257,38 @@ static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
     cpu->PC++;
 }
 static void LD_p_n16_A(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD [n16], A. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void LD_A_p_r16(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD A, [r16]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void LD_A_p_n16(CPU *cpu, instruction_T instrc) {
-    
+    printf("LD A, [n16]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 // LDH (A) Load Instructions
 static void LDH_p_n16_A(CPU *cpu, instruction_T instrc) {
-    
+    printf("LDH [n16], A. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void LDH_p_C_A(CPU *cpu, instruction_T instrc) {
-    
+    printf("LDH [C], A. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void LDH_A_p_n16(CPU *cpu, instruction_T instrc) {
-    
+    printf("LDH A, [n16]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {
-    
+    printf("LDH A, [C]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 
 // WONKY LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
-    // Likely no flags changed I imagine..
 
     uint8_t a_val = cpu->A;
     external_write(cpu->HL, a_val);
@@ -542,7 +545,7 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
         case 0x20:                  // JR, NZ e8
             // (cpu->F & FLAG_Z) ? /* NOP */  : /* Jump */ 
             if (!(cpu->F & FLAG_Z)) { 
-                printf("%s JR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, instrc.operand1, KNRM);
+                printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, instrc.operand1, KNRM);
                 cpu->PC += e_signed_offset;
             }
             else cpu->PC +=2;
@@ -580,7 +583,7 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 
 
 // Subroutine Instructions:
-static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
+static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
     printf("CALL_n16 Called, 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
     // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
 
@@ -626,7 +629,7 @@ static void CALL_n16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 
 
 }
-static void CALL_cc_n16(CPU *cpu, instruction_T instrc) {   // Call address n16 if condition cc is met.
+static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {   // Call address n16 if condition cc is met.
     printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
 
     int proceed = 0;
@@ -725,11 +728,13 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
 }
 static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subroutine and enable I-nterupts.
     // This is basically equivalent to executing EI then RET, meaning that IME is set right after this instruction.
-    
+    printf("RETI. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec. This is a shorter and faster equivalent to CALL for suitable values of vec.
-
+    printf("RST_vec. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 
@@ -1016,7 +1021,8 @@ static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     cpu->PC++;  // Advance the PC by only 1 (As no immediates or operands are provided)
 }
 static void CP_A_p_HL(CPU *cpu, instruction_T instrc) {     // ComPare -> value in pointer HL to A
-
+    printf("CP A, [HL]. ComPare Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in n8 to A
     printf("CP A, n8. ComPare, values in 8bit value (n8) to A\n");
@@ -1057,7 +1063,8 @@ static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
 
 // Special CPL instruction:
 static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT
-
+    printf("CPL. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 
 
@@ -1065,6 +1072,8 @@ static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumu
 static void DAA(CPU *cpu, instruction_T instrc) {
     
     // DAA => Decimal Adjust Accumulator.
+    printf("DAA. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 
     /*
         FLAGS:
@@ -1078,7 +1087,8 @@ static void DAA(CPU *cpu, instruction_T instrc) {
 
 // Add/ Subtract Inscructions:
 static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 into A           (NOTICE there is a lot of these instructions, Maybe simplfy it if possible.)
-    
+    printf("ADD A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1088,15 +1098,18 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     */
 }
 static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed by HL into A
-
+    printf("ADD A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: SEE add_A_r8
 }
 static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
-
+    printf("ADD A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: SEE add_A_r8
 }
 static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
-
+    printf("ADD HL, r16. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = --
@@ -1106,11 +1119,13 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
     */
 }
 static void ADD_HL_SP(CPU *cpu, instruction_T instrc) {     // Add the value in SP to HL
-
+    printf("ADD HL, SP. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: SEE ADD_HL_r16
 }
 static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int. So technically same as sp_n16
-
+    printf("ADD SP, e8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
 
     /*
@@ -1124,7 +1139,8 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int. 
 
 // Special ADC Add instructions:
 static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
-
+    printf("ADC A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1134,11 +1150,13 @@ static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
     */
 }
 static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-
+    printf("ADC A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see adc_A_r8
 }
 static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-
+    printf("ADC A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see adc_A_r8
 }
 
@@ -1147,7 +1165,8 @@ static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
 
 // Subtraction Instructions:
 static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
-
+    printf("SUB A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1157,18 +1176,21 @@ static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values i
     */
 }
 static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
-
+    printf("SUB A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See sub_aAr8
 }
 static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
-
+    printf("SUB A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See sub_A_r8
 }
 
 
 // Special SBC (Sub with the cary flag):
 static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
-
+    printf("SBC A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1178,11 +1200,13 @@ static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
     */
 }
 static void SBC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-
+    printf("SBC A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see sbc_a_r8    
 }
 static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-
+    printf("SBC A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see sbc_a_r8    
 }
 
@@ -1192,6 +1216,10 @@ static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
 
 
 static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF from the stack.
+    printf("POP AF Registers from SP.\n");
+
+    printf("POP AF. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
     This is roughly equivalent to the following imaginary instructions:
         LD F, [SP]  ; See below for individual flags
@@ -1209,7 +1237,10 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
     */
 }
 static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
-    printf("POP r16 register. POP Is weird... need to do something thinking\n");
+    printf("POP r16 register from SP.\n");
+    printf("POP r16. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     /*
     This is roughly equivalent to the following imaginary instructions:
         LD LOW(r16), [SP]   ; C, E or L
@@ -1218,6 +1249,7 @@ static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 
         INC SP
     */
 
+    // Bytes = ??
     // FLAGS: None affected
 }
 static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
@@ -1236,15 +1268,8 @@ static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF 
 
     cpu->PC ++;     // PUSH_AF is only 1 byte.
 
-    /*
-    This is roughly equivalent to the following imaginary instructions:
-        DEC SP
-        LD [SP], A
-        DEC SP
-        LD [SP], F.Z << 7 | F.N << 6 | F.H << 5 | F.C << 4    // NOTE: ONLY! if the FLAG is stored in Bools
-    */
-
-   // FLAGS: None affected
+    // Bytes = 1
+    // FLAGS: None affected
 }
 
 
@@ -1276,24 +1301,31 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
             break;
     }
 
-    cpu->PC ++; // Push r16 is only 1 byte.
+    cpu->PC ++;
 
-    /*
-    This is roughly equivalent to the following imaginary instructions:
-        DEC SP
-        LD [SP], HIGH(r16)  ; B, D or H
-        DEC SP
-        LD [SP], LOW(r16)   ; C, E or L
-    */
-
+    // Bytes = 1
     // FLAGS: None affected
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 // Bitwise Logic Instructions:
 // And instructions:
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
+    printf("AND A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
 
     /*
         FLAGS:
@@ -1304,16 +1336,19 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     */
 }
 static void AND_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitwise AND between the byte pointed to by HL and A
-
+    printf("AND A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: AND A, r8
 }
 static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value n8 and A
-
+    printf("AND A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: AND A, r8
 }
 // OR Instructions:
 static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value in r8 and A
-
+    printf("AND A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1323,16 +1358,19 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
     */
 }
 static void OR_A_p_HL(CPU *cpu, instruction_T instrc) {     // Set A to the bitwise OR between the byte pointed to by HL and A
-
+    printf("OR A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: OR_A_r8
 }
 static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value n8 and A
-
+    printf("OR A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: OR_A_r8   
 }
 // XOR Instructions:
 static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value in r8 and A
-
+    printf("XOR A, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1342,16 +1380,27 @@ static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     */
 }
 static void XOR_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitwise XOR between the byte pointed to by HL and A
-
+    printf("XOR A, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: XOR_A_r8
 }
 static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value n8 and A
-
+    printf("XOR A, n8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see: XOR_A_r8
 }
 
+
+
+
+
+
+
 // Bit Flag instructions:
 static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8m set the zero flag if bit not set
+    printf("BIT u3, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     /*
         FLAGS:
         Z = Set if the select bit is 0
@@ -1361,23 +1410,36 @@ static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in re
     */
 }
 static void BIT_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
+    printf("BIT u3, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See BIT_u3_r8
 }
 static void RES_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
+    printf("RES u3, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 static void RES_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
+    printf("RES u3, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 static void SET_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+    printf("SET u3, r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+    printf("SET u3, [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: None affected
 }
 
 // Weird Bitshift Instructions
 static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate bits in register r8 left, through the carry flag
+    printf("RL r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1387,9 +1449,13 @@ static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate bits in re
     */
 }
 static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL left, through the carry flag
+    printf("RL [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See RL_r8
 }
 static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate register A left, through the carry flag
+    printf("RLA. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1399,6 +1465,8 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     */
 }
 static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate registers r8 left
+    printf("RLC r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = 0
@@ -1408,14 +1476,18 @@ static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate registers 
     */
 }
 static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by HL left
+    printf("RLC [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See RLC_r8
 
 }
 static void RLCA(CPU *cpu, instruction_T instrc) {          //Rotate Register a left
-
+    printf("RLCA. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 }
 static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r8 right, through the carry flag
-
+    printf("RR r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = 0
@@ -1425,10 +1497,13 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
     */
 }
 static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL right, through the carry flag
-
+    printf("rR [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: see RR_r8
 }
 static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A <- Right. through the carry flag
+    printf("RRA. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = 0
@@ -1438,6 +1513,9 @@ static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     */
 }
 static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate register r8 <- Right
+    printf("RRC r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     //          r8           Flags
     //  -> b7-> ... -> b0 --> [C]
     // ^<--------------<--
@@ -1450,15 +1528,22 @@ static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate register r
     */
 }
 static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by HL <- Right
+    printf("RRC [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     // FLAGS: See RRC r8
 
 }
 static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate register A <- Right
     printf("RRCA Command, 'Rotate register A right?' hmmm\n");
+    printf("RRCA. Called, not setup HALT\n");
+    cpu_status.halt = 1;
 
 
 }
 static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically register r8
+    printf("SLA r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1468,9 +1553,14 @@ static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithm
     */
 }
 static void SLA_P_HL(CPU *cpu, instruction_T instrc) {      //  Shift Left Arithmetically the byte pointed to by HL.
+    printf("SLA [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // Flags: SEE SLA r8
 }
 static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arithmetically Register r8 (bit 7, of r8 is unchanged)
+    printf("SRA r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1480,9 +1570,13 @@ static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arith
     */
 }
 static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL (Bit 7 of the byte pointed to by HL is unchanged)
+    printf("SRA [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // Flags: See SRA_r8
 }
 static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logically register r8
+    printf("SRL r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1492,9 +1586,13 @@ static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logic
     */    
 }
 static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logically the byte pointed to by HL
+    printf("SLR [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See SRL_r8
 }
 static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones
+    printf("SWAP r8. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1504,12 +1602,16 @@ static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 
     */    
 }
 static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
+    printf("SWAP [HL]. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     // FLAGS: See SWAP_r8
 
 }
 
 // Carry Flag Instructions:
 static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
+    printf("CCF. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = --
@@ -1519,6 +1621,8 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
     */     
 }
 static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
+    printf("SCF. Called, not setup HALT\n");
+    cpu_status.halt = 1;
     /*
         FLAGS:
         Z = --
@@ -1536,21 +1640,6 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 
 
 
-
-
-
-
-// Calls a16:
-static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {
-    printf("Call CC a16\n");
-
-
-
-
-}
-static void CALL_a16(CPU *cpu, instruction_T instrc) {
-
-}
 
 
 
@@ -1574,14 +1663,14 @@ static void LD_##X##_##Y(CPU *cpu, instruction_T instrc) \
 #define LD_X_DHL(X) \
 static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
 { \
-    printf("b");\
+    printf("LD_X_DHL");\
 }
 
 
 #define LD_DHL_Y(Y) \
 static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
 { \
-    printf("C");\
+    printf("LD_DHL_Y");\
 }
 
 
@@ -1621,7 +1710,6 @@ static opcode_t *opcodes[256] = {
 
 int execute_instruction(CPU *cpu, instruction_T instrc) {
     printf(" PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->PC, instrc.opcode, instrc.operand1, instrc.operand2);
-    //printf("    OP1: %02X, OP2: %02X\n\n", instrc.operand1, instrc.operand2);
 
     opcodes[instrc.opcode](cpu, instrc);
 

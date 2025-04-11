@@ -85,7 +85,7 @@ int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
 
     //const char *rom_file = "../rom/pkmn_red.gb";
-    const char *rom_file = "../rom/cpu-individual/06-ld_r,r.gb";
+    const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
     // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
@@ -145,7 +145,7 @@ int startup_sequence() {
     /// TODO: START CPU Emulation!
     //int max_steps = 86;       // This will complete the random ROM test.
 
-    int max_steps = 86;
+    int max_steps = 300;
     run_cpu(max_steps);
 
     dump_hram_test();
