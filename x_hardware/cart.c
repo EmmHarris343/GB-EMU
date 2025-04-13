@@ -205,7 +205,7 @@ void write_intercept(uint16_t addr, uint8_t write_value) {
     switch(addr) {
         case 0x0000 ... 0x1FFF:
             // Ram Enable
-            printf("Enable ROM\n");
+            printf("Enable RAM\n");
             break;
         case 0x2000 ... 0x3FFF:
             // ROM "file" Bank Switch

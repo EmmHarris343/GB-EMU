@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <sys/types.h>
 //#include <numeric>
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
@@ -6,6 +7,18 @@
 #include <stdint.h>
 
 #include "cpu_instructions.h"
+
+
+
+/// TODO: Make Flags easier to Use and more readable. /// BAD: set_flag(2), clear_flag(1)
+/*
+
+cpu->F.Z = 0;
+cpu->F.N = 0;
+cpu->F.H = 0;
+cpu->F.C = 0;
+
+*/
 
 
 #define KNRM  "\x1B[0m"
@@ -16,6 +29,9 @@
 #define KMAG  "\x1B[35m"
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
+
+
+
 
 /*
     printf("%sred\n", KRED);
@@ -674,7 +690,7 @@ static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {   // Call address n16 
 
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
     printf("Ret Called, 'RETurn from subroutine..' ... ' Populate the PC stored in the SP\n");
-    // This is basically a POP PC instruction (If such an instruction existed). See POP r16 for an explanation of how POP works.
+    // This RETurns back to the PC saved in the Stack Pointer (SP) from the CALL function.
 
     // TL;DR : Populate the PC from the SP.
     uint8_t low_byte = external_read(cpu->SP);
@@ -1502,8 +1518,29 @@ static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     // FLAGS: see RR_r8
 }
 static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A <- Right. through the carry flag
-    printf("RRA. Called, not setup HALT\n");
-    cpu_status.halt = 1;
+    printf("RRA. Called.            ;   Rotate Register A (bit) RIGHT <-- through Flag C.\n");
+    //cpu_status.halt = 1;
+
+    uint8_t a_reg = cpu->A;                         // Snapshot A register.
+    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;   // Bit 4, C carry flag.
+    uint8_t new_carry = (cpu->A & 0x1);             // Bit 0, before shift
+
+    uint8_t shifted_a_reg = (a_reg >> 1) | (og_carry << 7);
+
+    cpu->A = shifted_a_reg;
+    if (new_carry > 0) {
+        set_flag(3);
+    }else {
+        clear_flag(3);
+    }
+
+    clear_flag(0);
+    clear_flag(1);
+    clear_flag(2);
+    // Take bit 0, move it to "carry flag".
+    // Shift entire 8bit right by 1.
+    // Set previous Carry flag to bit 7.
+
     /*
         FLAGS:
         Z = 0
@@ -1661,7 +1698,7 @@ static void LD_##X##_##Y(CPU *cpu, instruction_T instrc) \
 #define LD_X_DHL(X) \
 static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD r8, [HL]");\
+    printf("LD r8, [HL]\n");\
     cpu->X = external_read(cpu->HL);\
     cpu->PC += 1;\
 }
@@ -1671,7 +1708,7 @@ static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
 #define LD_DHL_Y(Y) \
 static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD [HL], r8");\
+    printf("LD [HL], r8\n");\
     external_write(cpu->HL, cpu->Y);\
     cpu->PC += 1;\
 }
