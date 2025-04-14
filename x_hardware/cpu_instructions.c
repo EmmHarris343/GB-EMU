@@ -156,7 +156,9 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
 
 
-
+// -----------------------------------------------
+/// SECTION:
+// LD High Register, LD Low Register instructions
 
 static void LD_hr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value into HR (High) 8 byte Register IE: B, D, H
     printf("LD HR, n8.                 ; EXP: HR <- n8    ..    Reg.H <- n8\n");
@@ -257,8 +259,9 @@ static void LD_r8_p_HL(CPU *cpu, instruction_T instrc) {       // Copy data insi
 
 
 
-
-//// Accumulator related LOAD instructions:
+// -----------------------------------------------
+/// SECTION:
+// LD Acculator (A Register) instructions
 
 static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
     printf("LD [r16] A.               ; EXP: [DE] <- A \n");
@@ -284,7 +287,8 @@ static void LD_A_p_n16(CPU *cpu, instruction_T instrc) {
     printf("LD A, [n16]. Called, not setup HALT\n");
     cpu_status.halt = 1;
 }
-// LDH (A) Load Instructions
+
+// LDH (A) Load Instructions        -- THESE I MIGHT HAVE TURN INTO MACRO!
 static void LDH_p_n16_A(CPU *cpu, instruction_T instrc) {
     printf("LDH [n16], A. Called, not setup HALT\n");
     cpu_status.halt = 1;
@@ -351,6 +355,10 @@ static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
 
 
 
+// -----------------------------------------------
+/// SECTION:
+// LD w/ SP instructions
+// LDH instructions
 
 // LD/Load (weird) SP instructions:
 static void LD_SP_n16(CPU *cpu, instruction_T instrc) {
@@ -467,7 +475,7 @@ static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
 
     cpu->A = load_h_range;
 
-    cpu->PC +=2; // 
+    cpu->PC +=2;
 }
 static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
     printf("LDH [a8] A, Called => Copy A Register value into 8bit value located at (0xFF00 + a8) \n");
@@ -488,7 +496,9 @@ static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
 
 
 
-
+// -----------------------------------------------
+/// SECTION:
+// JUMPs and Relative Jumps (JRs)
 
 // Jump instructions
 static void JP_HL(CPU *cpu, instruction_T instrc) {    // Copy Address in HL to PC
@@ -598,7 +608,12 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 }
 
 
-// Subroutine Instructions:
+// -----------------------------------------------
+/// SECTION:
+// Subroutine instrucitons.
+// CALL, RET, RETI, RST_vec
+
+
 static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
     printf("CALL_n16 Called, 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
     // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
@@ -762,9 +777,10 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec.
 
 
 
+// -----------------------------------------------
+/// SECTION:
+// Increment & Decrement Instructions:
 
-
-// Increment / Decrement Registers:
 static void INC_hr8(CPU *cpu, instruction_T instrc) {    // Increment High bit Register  (++ => B, D, H)
     printf("INC_hr8.               ; EXP: Reg.H ++\n");
     uint8_t og_reg_val = 0;
@@ -965,9 +981,10 @@ static void DEC_r16(CPU *cpu, instruction_T instrc) {
 }
 
 
+// -----------------------------------------------
+/// SECTION:
+// CP. ComPARE Instructios:
 
-
-// ComPARE Instructios:
 static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in pointer HL to A
     // Depending on the OP Code, it changes WHICH instruction is compared.
     printf("CP A, r8.               ; EXP: ComPare (cpu->A - r8_reg) --> Set Flags \n");
@@ -1102,8 +1119,10 @@ static void DAA(CPU *cpu, instruction_T instrc) {
     */
 }
 
+// -----------------------------------------------
+/// SECTION:
+// Add and ADC Instructions
 
-// Add/ Subtract Inscructions:
 static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 into A           (NOTICE there is a lot of these instructions, Maybe simplfy it if possible.)
     printf("ADD A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1161,7 +1180,7 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int. 
     */
 }
 
-// Special ADC Add instructions:
+// ADC Add instructions:
 static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
     printf("ADC A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1189,8 +1208,11 @@ static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
 
 
 
+// -----------------------------------------------
+/// SECTION:
+// SUBtraction 
+// SBC (sub with cary flag)
 
-// Subtraction Instructions:
 static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
     printf("SUB A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1215,9 +1237,7 @@ static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
     cpu_status.halt = 1;
     // FLAGS: See sub_A_r8
 }
-
-
-// Special SBC (Sub with the cary flag):
+// SBC (Sub with the cary flag):
 static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
     printf("SBC A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1245,8 +1265,9 @@ static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
 
 
 
-/// STACK Manipulation Instructions:
-
+// -----------------------------------------------
+/// SECTION:
+// Station Manipulation, POP, PUSH
 
 static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF from the stack.
     printf("POP AF Registers from SP.\n");
@@ -1308,8 +1329,6 @@ static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF 
 }
 
 
-
-
 static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16 into the Stack.
     // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
 
@@ -1349,14 +1368,10 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
 
 
 
+// -----------------------------------------------
+/// SECTION:
+// Bitwise, AND, OR XOR instructions.
 
-
-
-
-
-
-// Bitwise Logic Instructions:
-// And instructions:
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
     printf("AND A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1439,9 +1454,354 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
 
 
+// -----------------------------------------------
+/// SECTION:
+// Bitshift and ROTATE instructions
+
+// NON-PREFIXED
+static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A -> Right. Through the carry flag. b8 ---> b0 <> [carry flag]
+    printf("RRA. Called.            ;   Rotate Register A (bit) RIGHT --> through Flag C.\n");
+
+    uint8_t a_reg = cpu->A;                             // Snapshot A register.
+    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;       // Bit 4, C carry flag.
+    uint8_t new_carry = (cpu->A & 0x1);                 // Bit 0, before shift
+
+    uint8_t shifted_a_reg = (a_reg >> 1) | (og_carry << 7);
+
+    cpu->A = shifted_a_reg;
+    if (new_carry > 0) {
+        set_flag(3);
+    }else {
+        clear_flag(3);
+    }
+
+    clear_flag(0);
+    clear_flag(1);
+    clear_flag(2);
+
+    cpu->PC++;
+}
+
+static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A right. b8 ---> b0
+    printf("RRCA Command, 'Rotate register A right?' hmmm\n");
+    printf("RRCA. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    /*
+      ┏━━━━━━━ A ━━━━━━━┓   ┏━ Flags ━┓
+    ┌─╂→ b7 → ... → b0 ─╂─┬─╂→   C    ┃
+    │ ┗━━━━━━━━━━━━━━━━━┛ │ ┗━━━━━━━━━┛
+    └─────────────────────┘
+    */
+}
 
 
+static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate register A Left. Through the carry flag <---
+    printf("RLA. Rotate Register A Left (through carry flag).\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    // Rotate register A left, through the carry flag.
+
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+
+static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left.
+    printf("RLCA. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    /*
+    ┏━ Flags ━┓   ┏━━━━━━━ A ━━━━━━━┓
+    ┃    C   ←╂─┬─╂─ b7 ← ... ← b0 ←╂─┐
+    ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━┛ │
+                └─────────────────────┘
+    */
+
+}
+
+
+
+/// NOTICE:
+// These Rotate Byte Instructions are in PREFIXED instruction sets.
+
+static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Register r8 left, through the carry flag. <---
+    printf("RL r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL left, through the carry flag. <---
+    printf("RL [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See RL_r8
+}
+
+
+
+/// NOTICE:
+// These are only in the PREFIXED instruction set!
+
+static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers r8 Left. <---
+    printf("RLC r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by [HL] left. <---
+    printf("RLC [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See RLC_r8
+
+}
+static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r8 Right. Through the carry flag. -->
+    printf("RR r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    uint8_t *assigned_register = NULL;      // Set this to say, cpu->B, cpu->C, cpu->E etc..
+
+    /// NOTICE: THIS IS PREFIXED Instruction, so this approach isn't actually correct...
+    switch (instrc.opcode) {
+        case 0x18: 
+            // This is RR B (0x18)
+            assigned_register = &cpu->B;
+            break;
+    }
+    
+    if (assigned_register == NULL) {
+        // ERROR, invalid opcode or missing case.
+        return;
+    }
+
+    uint8_t data_snapshot = *assigned_register;                  // Snapshot of Data
+    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;               // Bit 4, C carry flag.
+    uint8_t new_carry = (cpu->A & 0x1);                         // Bit 0, before shift
+
+    uint8_t rotated_byte = (data_snapshot >> 1) | (og_carry << 7);
+
+    
+    *assigned_register = rotated_byte;
+
+
+    if (new_carry > 0) {
+        set_flag(3);
+    }else {
+        clear_flag(3);
+    }
+
+    clear_flag(0);
+    clear_flag(1);
+    clear_flag(2);
+
+    cpu->PC++;     
+
+
+
+
+    /*
+        FLAGS:
+        Z = 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by [HL] Right. Through the carry flag. -->
+    printf("rR [HL]. Called         ; Rotate byte in [HL] RIGHT\n");
+
+
+    uint8_t data_snapshot = external_read(cpu->HL);     // Snapshot of Data pointed BY HL
+    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;               // Bit 4, C carry flag.
+    uint8_t new_carry = (cpu->A & 0x1);                         // Bit 0, before shift
+
+    uint8_t rotated_byte = (data_snapshot >> 1) | (og_carry << 7);
+
+    external_write(cpu->HL, rotated_byte);
+    if (new_carry > 0) {
+        set_flag(3);
+    }else {
+        clear_flag(3);
+    }
+
+    clear_flag(0);
+    clear_flag(1);
+    clear_flag(2);
+
+    cpu->PC++;    
+
+    // FLAGS: see RR_r8
+}
+static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r8 Right. -->
+    printf("RRC r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    //          r8           Flags
+    //  -> b7-> ... -> b0 --> [C]
+    // ^<--------------<--
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by [HL] Right. -->
+    printf("RRC [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    // FLAGS: See RRC r8
+
+}
+
+
+
+
+/// NOTICE: These are PREFIXED instructions: 
+// SHIFT left & right Arithmetically.
+
+static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically Register r8.  <--
+    printf("SLA r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void SLA_P_HL(CPU *cpu, instruction_T instrc) {      //  Shift Left Arithmetically the byte pointed to by [HL]. <--
+    printf("SLA [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // Flags: SEE SLA r8
+}
+static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arithmetically Register r8. -->
+    printf("SRA r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */
+}
+static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL. --> 
+    printf("SRA [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // Flags: See SRA_r8
+}
+static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logically Register r8. -->
+    printf("SRL r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = Set according to result
+    */    
+}
+static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logically the byte pointed to by [HL]. -->
+    printf("SLR [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See SRL_r8
+}
+
+
+
+
+// (PREFIXED Instructions sets)
+// Swap, Complement Carry Flag. Set Carry Flag.
+static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
+    printf("SWAP r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = 0
+        C = 0
+    */    
+}
+static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
+    printf("SWAP [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See SWAP_r8
+
+}
+
+// Carry Flag Instructions:
+static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
+    printf("CCF. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = --
+        N = 0
+        H = 0
+        C = Inverted
+    */     
+}
+static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
+    printf("SCF. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = --
+        N = 0
+        H = 0
+        C = 1
+    */
+}
+
+
+
+// -----------------------------------------------
+/// SECTION:
 // Bit Flag instructions:
+
+
+/// NOTICE: PREFIXED Instruction Sets:
+
 static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8m set the zero flag if bit not set
     printf("BIT u3, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -1489,255 +1849,6 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 
 
 
-// Bitshift and ROTATE instructions
-static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate bits in register r8 left, through the carry flag
-    printf("RL r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL left, through the carry flag
-    printf("RL [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See RL_r8
-}
-static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate register A left, through the carry flag
-    printf("RLA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate registers r8 left
-    printf("RLC r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by HL left
-    printf("RLC [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See RLC_r8
-
-}
-static void RLCA(CPU *cpu, instruction_T instrc) {          //Rotate Register A left
-    printf("RLCA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-}
-static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r8 right, through the carry flag
-    printf("RR r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL right, through the carry flag
-    printf("rR [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see RR_r8
-}
-static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A <- Right. through the carry flag
-    printf("RRA. Called.            ;   Rotate Register A (bit) RIGHT <-- through Flag C.\n");
-    //cpu_status.halt = 1;
-
-    uint8_t a_reg = cpu->A;                         // Snapshot A register.
-    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;   // Bit 4, C carry flag.
-    uint8_t new_carry = (cpu->A & 0x1);             // Bit 0, before shift
-
-    uint8_t shifted_a_reg = (a_reg >> 1) | (og_carry << 7);
-
-    cpu->A = shifted_a_reg;
-    if (new_carry > 0) {
-        set_flag(3);
-    }else {
-        clear_flag(3);
-    }
-
-    clear_flag(0);
-    clear_flag(1);
-    clear_flag(2);
-
-    cpu->PC++;
-
-    // Take bit 0, move it to "carry flag".
-    // Shift entire 8bit right by 1.
-    // Set previous Carry flag to bit 7.
-
-
-    // Bytes = 1
-    /*
-        FLAGS:
-        Z = 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate register r8 <- Right
-    printf("RRC r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    //          r8           Flags
-    //  -> b7-> ... -> b0 --> [C]
-    // ^<--------------<--
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by HL <- Right
-    printf("RRC [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    // FLAGS: See RRC r8
-
-}
-static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A <- Rights
-    printf("RRCA Command, 'Rotate register A right?' hmmm\n");
-    printf("RRCA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-
-}
-static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically register r8
-    printf("SLA r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void SLA_P_HL(CPU *cpu, instruction_T instrc) {      //  Shift Left Arithmetically the byte pointed to by HL.
-    printf("SLA [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // Flags: SEE SLA r8
-}
-static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arithmetically Register r8 (bit 7, of r8 is unchanged)
-    printf("SRA r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
-}
-static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL (Bit 7 of the byte pointed to by HL is unchanged)
-    printf("SRA [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // Flags: See SRA_r8
-}
-static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logically Register r8
-    printf("SRL r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */    
-}
-static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logically the byte pointed to by HL
-    printf("SLR [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See SRL_r8
-}
-
-
-
-
-
-// Swap, Complement Carry Flag. Set Carry Flag.
-static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones
-    printf("SWAP r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = 0
-    */    
-}
-static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
-    printf("SWAP [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See SWAP_r8
-
-}
-
-// Carry Flag Instructions:
-static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
-    printf("CCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = --
-        N = 0
-        H = 0
-        C = Inverted
-    */     
-}
-static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
-    printf("SCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = --
-        N = 0
-        H = 0
-        C = 1
-    */
-}
 
 
 
