@@ -1373,12 +1373,26 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
 // Bitwise, AND, OR XOR instructions.
 
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
-    printf("AND A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    
-    cpu_status.halt = 1;
+    printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
+    // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
 
 
+    // Ok... 
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t AND_result = (cpu->A & *reg_table[op_index]);
+
+    cpu->A = AND_result;
+
+    (AND_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleard
+    set_flag(2);    // Always set
+    clear_flag(3);  // Always cleared.
+
+    cpu->PC ++;
+
+    // Bytes = 1
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1388,15 +1402,38 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     */
 }
 static void AND_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitwise AND between the byte pointed to by HL and A
-    printf("AND A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("AND A, [HL]. Called.            ; Bitwise AND. 1&1 = 1, rest =0. From Value in [HL]\n");
+
+    uint8_t AND_result = (cpu->A & external_read(cpu->HL));
+    cpu->A = AND_result;
+
+    // One liner:       cpu->A &= external_read(cpu->HL)
+
+    (AND_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleard
+    set_flag(2);    // Always set
+    clear_flag(3);  // Always cleared.
+
+    cpu->PC ++;
+    // Bytes = 1
     // FLAGS: see: AND A, r8
 }
 static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value n8 and A
-    printf("AND A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("AND A, n8. Called.              ; Bitwise AND. 1&1 = 1, rest =0. From immediate value (n8)\n");
+
+    uint8_t AND_result = (cpu->A & instrc.operand1);
+    cpu->A = AND_result;
+
+    // One liner:       cpu->A &= instrc.operand1;
+
+    (AND_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleard
+    set_flag(2);    // Always set
+    clear_flag(3);  // Always cleared.
+
+    cpu->PC += 2;
+
+    // Bytes = 2;
     // FLAGS: see: AND A, r8
 }
 // OR Instructions:
@@ -1404,6 +1441,7 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
     printf("AND A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1497,7 +1535,7 @@ static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
 }
 
 
-static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate register A Left. Through the carry flag <---
+static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A Left. Through the carry flag <---
     printf("RLA. Rotate Register A Left (through carry flag).\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
@@ -1584,10 +1622,12 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
 
     uint8_t *assigned_register = NULL;      // Set this to say, cpu->B, cpu->C, cpu->E etc..
 
+    /// TODO: NOT FINISHED. This code will NOT! work!
+
     /// NOTICE: THIS IS PREFIXED Instruction, so this approach isn't actually correct...
     switch (instrc.opcode) {
         case 0x18: 
-            // This is RR B (0x18)
+            // This is RR B (0x18) -- PREFIXED!
             assigned_register = &cpu->B;
             break;
     }
