@@ -62,15 +62,19 @@ void set_flag(int cpu_flag) {
         case 0: // Z Flag
             //printf("Set z Flag\n");
             loc_cpu.F |= FLAG_Z;
+            break;
         case 1: // N Flag
             //printf("Set N Flag\n");
             loc_cpu.F |= FLAG_N;
+            break;
         case 2: // H Flag
             //printf("Set H Flag\n");
             loc_cpu.F |= FLAG_H;
+            break;
         case 3: // C Flag
             //printf("Set C Flag\n");
             loc_cpu.F |= FLAG_C;
+            break;
     }
 }
 
@@ -78,12 +82,16 @@ void clear_flag(int cpu_flag) {
     switch (cpu_flag) {
         case 0: // Z Flag
             loc_cpu.F &= ~FLAG_Z;
+            break;
         case 1: // N Flag
             loc_cpu.F &= ~FLAG_N;
+            break;
         case 2: // H Flag
             loc_cpu.F &= ~FLAG_H;
+            break;
         case 3: // C Flag
             loc_cpu.F &= ~FLAG_C;
+            break;
     }
 }
 

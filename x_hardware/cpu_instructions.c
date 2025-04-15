@@ -1375,9 +1375,6 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
     printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
     // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
-
-
-    // Ok... 
     uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
 
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -1410,9 +1407,9 @@ static void AND_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitw
     // One liner:       cpu->A &= external_read(cpu->HL)
 
     (AND_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleard
+    clear_flag(1);  // ALways cleared
     set_flag(2);    // Always set
-    clear_flag(3);  // Always cleared.
+    clear_flag(3);  // Always cleared
 
     cpu->PC ++;
     // Bytes = 1
@@ -1427,9 +1424,9 @@ static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     // One liner:       cpu->A &= instrc.operand1;
 
     (AND_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleard
+    clear_flag(1);  // ALways cleared
     set_flag(2);    // Always set
-    clear_flag(3);  // Always cleared.
+    clear_flag(3);  // Always cleared
 
     cpu->PC += 2;
 
@@ -1438,9 +1435,22 @@ static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 }
 // OR Instructions:
 static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value in r8 and A
-    printf("AND A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("AND A, r8. Called.          ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
+    // If varbiale one bit(x) = 1, OR variable 2 bit(x) = 1. RESULT = One. 
+    // ONLY will give result bit(x) 0. if BOTH variable 1 & variable 2 = 0. IE 0&0
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t OR_result = (cpu->A | *reg_table[op_index]);
+
+    cpu->A = OR_result;
+
+    (OR_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleared
+    clear_flag(2);  // Always cleared
+    clear_flag(3);  // Always cleared
+
+    cpu->PC ++;
 
     /*
         FLAGS:
@@ -1451,22 +1461,58 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
     */
 }
 static void OR_A_p_HL(CPU *cpu, instruction_T instrc) {     // Set A to the bitwise OR between the byte pointed to by HL and A
-    printf("OR A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("OR A, [HL]. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
+    uint8_t OR_result = (cpu->A | external_read(cpu->HL));
+    cpu->A = OR_result;
+
+    // One liner:       cpu->A &= external_read(cpu->HL)
+
+    (OR_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleared
+    clear_flag(2);  // Always cleared
+    clear_flag(3);  // Always cleared
+
+    cpu->PC ++;
+
+
     // FLAGS: see: OR_A_r8
 }
 static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value n8 and A
-    printf("OR A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("OR A, n8. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
+    uint8_t OR_result = (cpu->A | instrc.operand1);
+    cpu->A = OR_result;
+
+    // One liner:       cpu->A &= external_read(cpu->HL)
+
+    (OR_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleared
+    clear_flag(2);  // Always cleared
+    clear_flag(3);  // Always cleared
+
+    cpu->PC += 2;
+
+
     // FLAGS: see: OR_A_r8   
 }
 // XOR Instructions:
 static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value in r8 and A
-    printf("XOR A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("XOR A, r8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t XOR_result = (cpu->A ^ *reg_table[op_index]);
+
+    cpu->A = XOR_result;
+
+
+    (XOR_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleared
+    clear_flag(2);  // Always cleared
+    clear_flag(3);  // Always cleared
+
+
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1476,15 +1522,35 @@ static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     */
 }
 static void XOR_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitwise XOR between the byte pointed to by HL and A
-    printf("XOR A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see: XOR_A_r8
+    printf("XOR A, [HL]. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
+
+    uint8_t XOR_result = (cpu->A ^ external_read(cpu->HL));
+    cpu->A = XOR_result;
+
+    // One liner:       cpu->A &= external_read(cpu->HL)
+
+    (XOR_result == 0) ? set_flag(0) : clear_flag(0);
+    clear_flag(1);  // ALways cleared
+    clear_flag(2);  // Always cleared
+    clear_flag(3);  // Always cleared
+
+    cpu->PC ++;
 }
 static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value n8 and A
-    printf("XOR A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("XOR A, n8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
+
+    uint8_t XOR_result = (cpu->A ^ instrc.operand1);
+    cpu->A = XOR_result;
+
+    // One liner:       cpu->A &= external_read(cpu->HL)
+
+    (XOR_result == 0) ? set_flag(0) : clear_flag(0);    // Z condition.
+    clear_flag(1);  // N ALways cleared
+    clear_flag(2);  // C Always cleared
+    clear_flag(3);  // H Always cleared
+
+    cpu->PC += 2;
+
     // FLAGS: see: XOR_A_r8
 }
 
