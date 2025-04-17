@@ -1121,12 +1121,31 @@ static void DAA(CPU *cpu, instruction_T instrc) {
 
 // -----------------------------------------------
 /// SECTION:
-// Add and ADC Instructions
+// ADD and ADC Instructions
 
 static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 into A           (NOTICE there is a lot of these instructions, Maybe simplfy it if possible.)
-    printf("ADD A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("ADD A, r8. Called.          ; Add value in r8 To A, (Then set flags).\n");
+
+    // Table calculates WHICH register is called, based on the OP code provided.
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+    uint8_t op_r8 = *reg_table[op_index];
+    
+    uint8_t add_result = (cpu->A + *reg_table[op_index]);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 1;
+
+
+    // Bytes = 2
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1136,16 +1155,37 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     */
 }
 static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed by HL into A
-    printf("ADD A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: SEE add_A_r8
+    printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into A\n");
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t add_result = (cpu->A + hl_val);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 1;
+
+
+    // Bytes = 1
 }
 static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
     printf("ADD A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: SEE add_A_r8
+    uint8_t n8_val = instrc.operand1;
+    uint8_t add_result = (cpu->A + n8_val);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 2;
+
+    // Bytes = 2
 }
 static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
     printf("ADD HL, r16. Called, not setup.\n");
@@ -1165,7 +1205,7 @@ static void ADD_HL_SP(CPU *cpu, instruction_T instrc) {     // Add the value in 
     cpu_status.halt = 1;
     // FLAGS: SEE ADD_HL_r16
 }
-static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int. So technically same as sp_n16
+static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     printf("ADD SP, e8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
@@ -1185,6 +1225,11 @@ static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
     printf("ADC A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1217,6 +1262,10 @@ static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values i
     printf("SUB A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1242,6 +1291,9 @@ static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
     printf("SBC A, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2024,14 +2076,14 @@ static opcode_t *opcodes[256] = {
 /* 5X*/  LD_D_B,     LD_D_C,        NOP,        LD_D_E,   LD_D_H,      LD_D_L,   LD_D_DHL,   LD_D_A,   /* || */ LD_E_B,       LD_E_C,     LD_E_D,      NOP,       LD_E_H,      LD_E_L,    LD_E_DHL,   LD_E_A,
 /* 6X */ LD_H_B,     LD_H_C,        LD_H_D,     LD_H_E,   NOP,         LD_H_L,   LD_H_DHL,   LD_H_A,   /* || */ LD_L_B,       LD_L_C,     LD_L_D,      LD_L_E,    LD_L_H,      NOP,       LD_L_DHL,   LD_L_A,
 /* 7X */ LD_DHL_B,   LD_DHL_C,      LD_DHL_D,   LD_DHL_E, LD_DHL_H,    LD_DHL_L, HALT,       LD_DHL_A, /* || */ LD_A_B,       LD_A_C,     LD_A_D,      LD_A_E,    LD_A_H,      LD_A_L,    LD_A_DHL,   NOP,
-/* 8X */ ADD_A_r8,   ADD_A_r8,      ADD_A_r8,   ADD_A_r8, ADD_A_r8,    ADD_A_r8, ADD_A_r8,   ADD_A_r8, /* || */ ADC_A_r8,     ADC_A_r8,   ADC_A_r8,    ADC_A_r8,  ADC_A_r8,    ADC_A_r8,  ADC_A_r8,   ADC_A_r8,  
-/* 9X */ SUB_A_r8,   SUB_A_r8,      SUB_A_r8,   SUB_A_r8, SUB_A_r8,    SUB_A_r8, SUB_A_r8,   SUB_A_r8, /* || */ SBC_A_r8,     SBC_A_r8,   SBC_A_r8,    SBC_A_r8,  SBC_A_r8,    SBC_A_r8,  SBC_A_r8,   SBC_A_r8,
-/* AX */ AND_A_r8,   AND_A_r8,      AND_A_r8,   AND_A_r8, AND_A_r8,    AND_A_r8, AND_A_r8,   AND_A_r8, /* || */ XOR_A_r8,     XOR_A_r8,   XOR_A_r8,    XOR_A_r8,  XOR_A_r8,    XOR_A_r8,  XOR_A_r8,   XOR_A_r8,
-/* BX */ OR_A_r8,    OR_A_r8,       OR_A_r8,    OR_A_r8,  OR_A_r8,     OR_A_r8,  OR_A_r8,    OR_A_r8,  /* || */ CP_A_r8,      CP_A_r8,    CP_A_r8,     CP_A_r8,   CP_A_r8,     CP_A_r8,   CP_A_r8,    CP_A_r8,
-/* CX */ RET_cc,     POP_r16,       JP_cc_a16,  JP_a16,   CALL_cc_a16, PUSH_r16, ADD_A_r8,   RST_vec,  /* || */ RET_cc,       RET,        JP_cc_a16,   CB_PREFIX, CALL_cc_a16, CALL_a16,  ADC_A_r8,   RST_vec,
-/* DX */ RET_cc,     POP_r16,       JP_cc_a16,  BLANK,    CALL_cc_a16, PUSH_r16, SUB_A_r8,   RST_vec,  /* || */ RET_cc,       RETI,       JP_cc_a16,   BLANK,     CALL_cc_a16, BLANK,     SBC_A_r8,   RST_vec,
-/* EX */ LDH_p_a8_A, POP_r16,      LDH_p_C_A,  BLANK,    BLANK,        PUSH_r16, AND_A_r8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_r8,   RST_vec,
-/* FX */ LDH_A_p_a8, POP_r16,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_r8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
+/* 8X */ ADD_A_r8,   ADD_A_r8,      ADD_A_r8,   ADD_A_r8, ADD_A_r8,    ADD_A_r8, ADD_A_p_HL,   ADD_A_r8, /* || */ ADC_A_r8,     ADC_A_r8,   ADC_A_r8,    ADC_A_r8,  ADC_A_r8,    ADC_A_r8,  ADC_A_p_HL,   ADC_A_r8,  
+/* 9X */ SUB_A_r8,   SUB_A_r8,      SUB_A_r8,   SUB_A_r8, SUB_A_r8,    SUB_A_r8, SUB_A_p_HL,   SUB_A_r8, /* || */ SBC_A_r8,     SBC_A_r8,   SBC_A_r8,    SBC_A_r8,  SBC_A_r8,    SBC_A_r8,  SBC_A_p_HL,   SBC_A_r8,
+/* AX */ AND_A_r8,   AND_A_r8,      AND_A_r8,   AND_A_r8, AND_A_r8,    AND_A_r8, AND_A_p_HL,   AND_A_r8, /* || */ XOR_A_r8,     XOR_A_r8,   XOR_A_r8,    XOR_A_r8,  XOR_A_r8,    XOR_A_r8,  XOR_A_p_HL,   XOR_A_r8,
+/* BX */ OR_A_r8,    OR_A_r8,       OR_A_r8,    OR_A_r8,  OR_A_r8,     OR_A_r8,  OR_A_p_HL,    OR_A_r8,  /* || */ CP_A_r8,      CP_A_r8,    CP_A_r8,     CP_A_r8,   CP_A_r8,     CP_A_r8,   CP_A_p_HL,    CP_A_r8,
+/* CX */ RET_cc,     POP_r16,       JP_cc_a16,  JP_a16,   CALL_cc_a16, PUSH_r16, ADD_A_n8,   RST_vec,  /* || */ RET_cc,       RET,        JP_cc_a16,   CB_PREFIX, CALL_cc_a16, CALL_a16,  ADC_A_n8,   RST_vec,
+/* DX */ RET_cc,     POP_r16,       JP_cc_a16,  BLANK,    CALL_cc_a16, PUSH_r16, SUB_A_n8,   RST_vec,  /* || */ RET_cc,       RETI,       JP_cc_a16,   BLANK,     CALL_cc_a16, BLANK,     SBC_A_n8,   RST_vec,
+/* EX */ LDH_p_a8_A, POP_r16,      LDH_p_C_A,  BLANK,    BLANK,        PUSH_r16, AND_A_n8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_n8,   RST_vec,
+/* FX */ LDH_A_p_a8, POP_AF,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_n8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
 
 
