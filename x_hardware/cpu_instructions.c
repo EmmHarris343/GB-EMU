@@ -1230,11 +1230,12 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     int8_t e_val = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +- 
     uint8_t add_result = (cpu->A + e_val);
 
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    // NOTE: ADD_SP_e8  Z and N aare always cleared.
+    clear_flag(0); // Z Flag Cleared
+    clear_flag(1); // N Flag Cleared (Subtraction)
     ((cpu->A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
     (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
+    
 
     cpu->A = add_result;
     cpu->PC += 2;
@@ -1242,16 +1243,25 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     // Bytes = 2
 }
 static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
-    printf("ADD HL, r16. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("ADD HL, r16. Called.\n");
 
-}
-static void ADD_HL_SP(CPU *cpu, instruction_T instrc) {     // Add the value in SP to HL
-    printf("ADD HL, SP. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    uint16_t *reg16_table[4] = {
+        &cpu->BC, &cpu->DE, &cpu->HL, &cpu->SP
+    };
+    uint8_t register_index = (instrc.opcode >> 4) & 0x03;       
+    uint16_t op_r16 = *reg16_table[register_index];                   // The calculated "Source" Register, from the OPCODE.    
+    uint16_t hl_val = cpu->HL;
 
+    uint32_t add_result = (hl_val + op_r16);
+    uint16_t final_result = (uint16_t)add_result;
+
+    // Z FLAG UNCHANGED, Do not set, or clear.
+    clear_flag(1);  // N Flag Cleared (Subtraction)
+    ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    
+    cpu->HL = final_result;
+    cpu->PC ++;
 }
 
 // Full INC/DEC 16 bit Registers (BC, DE, HL):
