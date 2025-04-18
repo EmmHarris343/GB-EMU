@@ -694,10 +694,7 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     clear_flag(1);  // N Flag (Subtraction)
 
     cpu->A = final_8bit;
-    cpu->PC += 1;
-
-
-    // Bytes = 2
+    cpu->PC ++;
 
     /*
         FLAGS:
@@ -719,7 +716,7 @@ static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed
     clear_flag(1);  // N Flag (Subtraction)
 
     cpu->A = final_8bit;
-    cpu->PC += 1;
+    cpu->PC ++ ;
 
     // Bytes = 1
 }
@@ -741,7 +738,7 @@ static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
     // Bytes = 2
 }
 // ADC Add instructions:
-static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
+static void ADC_A_r8(CPU *cpu, instruction_T instrc) {
     printf("ADC A, r8.                  ; Add the value in r8 PLUS the carry flag to Register A \n");
 
     // Yes, A + r8 + Carry Flag. -- If it rolls over. That's ok, track it with the Carry Flag.
@@ -770,7 +767,7 @@ static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
 
     // Bytes = 1
 }
-static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {
+static void ADC_A_p_HL(CPU *cpu, instruction_T instrc) {
     printf("ADC A, [HL]. Called, not setup.\n");
 
     uint8_t hl_val = external_read(cpu->HL);
@@ -788,7 +785,7 @@ static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {
     cpu->A = final_8bit;
     cpu->PC ++;
 }
-static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {
+static void ADC_A_n8(CPU *cpu, instruction_T instrc) {
     printf("ADC A, n8. Called, not setup.\n");
 
     uint8_t n8_val = instrc.operand1;
@@ -808,7 +805,7 @@ static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {
 }
 
 // SUB / SBC Instructions:
-static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
+static void SUB_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
     printf("SUB A, r8. Called.              ; Sub Value in Register A, by r8 value\n");
 
     uint8_t *reg_table[8] = {
@@ -959,7 +956,11 @@ static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     // This has + carry, as it checks if the whole result underflowed
     (reg_a < (n8 + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
     set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC += 2;
     
+    // Bytes = 2
 }
 
 // Increment & Decrement Instructions:
