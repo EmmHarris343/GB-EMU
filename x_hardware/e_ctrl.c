@@ -40,29 +40,29 @@ void e_int(void) {
 
 // This dumps ASCII characters written on the Screen/ LCD of the Gameboy. By passing most of the PPU.
 // IE: Writes to console text that is in VRAM for the LCD.
-void dump_tilemap_text() {
-    uint16_t tilemap_start = 0x9800;
-    uint16_t tilemap_end = 0x9800 + 32 * 18; // Typical visible screen size
+// void dump_tilemap_text() {
+//     uint16_t tilemap_start = 0x9800;
+//     uint16_t tilemap_end = 0x9800 + 32 * 18; // Typical visible screen size
 
-    printf("=== Tile Map Output ===\n");
+//     printf("=== Tile Map Output ===\n");
 
-    for (int y = 0; y < 18; y++) {
-        for (int x = 0; x < 32; x++) {
-            //uint8_t tile = memory[tilemap_start + y * 32 + x];
-            uint8_t tile = external_read((tilemap_start + y * 32 + x));
-            if (tile >= 0x20 && tile <= 0x7F) {
-                putchar(tile);  // Printable ASCII range
-            } else {
-                putchar('.');   // Unrecognized tile
-            }
-        }
-        putchar('\n');
-    }
-}
+//     for (int y = 0; y < 18; y++) {
+//         for (int x = 0; x < 32; x++) {
+//             //uint8_t tile = memory[tilemap_start + y * 32 + x];
+//             uint8_t tile = external_read((tilemap_start + y * 32 + x));
+//             if (tile >= 0x20 && tile <= 0x7F) {
+//                 putchar(tile);  // Printable ASCII range
+//             } else {
+//                 putchar('.');   // Unrecognized tile
+//             }
+//         }
+//         putchar('\n');
+//     }
+// }
 
 
 void dump_hram_test() {
-    printf("Printing what's in HRAM..\n");
+    printf("Printing what's in WRAM..\n");
     uint8_t wram_val = 0x00;
     uint16_t wram_location = 0xC000;
     for (int w = 0; w < 16; w++) {

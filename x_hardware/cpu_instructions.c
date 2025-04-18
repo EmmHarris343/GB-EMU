@@ -118,7 +118,6 @@ static void NOP(CPU *cpu, instruction_T instrc) {                    // Placehol
     printf("NOP Called. Just Advance PC\n");
     cpu->PC ++; // Do nothing, just advance the PC
 }
-
 // STOP
 static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like Pause.
     printf("STOP Called, not setup HALT\n");
@@ -126,15 +125,53 @@ static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like
     
 
 }
-
+// DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
+static void DAA(CPU *cpu, instruction_T instrc) {
+    
+    // DAA => Decimal Adjust Accumulator.
+    printf("DAA. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+}
 // BLANK
 static void BLANK(CPU *cpu, instruction_T instrc) {      // Do nothing, basically NOP, but for clarity don't write it like that.
     // DO NOTHING - Not even any command.
     // This shouldn't Even be called.
-    printf("BLANK Called, This should never be called. Halting\n");
+    printf("%sBLANK Called, This should never be called. Halting%s\n", KRED, KNRM);
     cpu_status.halt = 1;
 }
 
+// Carry Flag Instructions:
+static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
+    printf("CCF. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = --
+        N = 0
+        H = 0
+        C = Inverted
+    */     
+}
+static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
+    printf("SCF. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+        FLAGS:
+        Z = --
+        N = 0
+        H = 0
+        C = 1
+    */
+}
+
+
+
+// This is the PREFIXED Instructions... Or rather the entry point to them.
+// Haven't setup yet. But, take the sub opcode or something?
+// Then point to the --> Specific PREFIXED Instruction?
 static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points to Table 2 in the OP_CODE Map
 
     printf("CB Prefix call.... blehhhhh was hoping this would be later... bleh\nI don't know how this works or data works. \n");
@@ -152,8 +189,12 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
 
 
-
-
+// -----------------------------------------------
+//
+///                    NOTICE:
+// ==---- Starting main OP Code instructions ----==
+//
+// -----------------------------------------------
 
 
 // -----------------------------------------------
@@ -225,8 +266,6 @@ static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     // Flags: None Affected
 }
 
-
-// Not sure what this is supposed to do...
 static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("Load 16bit data, into pointer in 16bit Register.\n");
     printf("Values? OP1: %02X OP2: %02X", instrc.operand1, instrc.operand2);
@@ -306,7 +345,7 @@ static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {
     cpu_status.halt = 1;
 }
 
-// WONKY LD/ Load (A) with Increment and Decrement to HL after.
+// LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
 
@@ -352,15 +391,65 @@ static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
     // Bytes = 1
     // Flags not affected
 }
+// Load Register A & a16 instructions
+static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
+    printf("LD [a16] A, Called => Copy 8bit A Register into 8bit value located in [a16]\n");
+    
+    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    
+    printf(":LD: a16 Location val %04X\n", a16);
+    external_write(a16, cpu->A);
+    
+    cpu->PC +=3;
+
+    // Bytes = 3
+    // No flags affected
+}
+static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
+    printf("LD A [a16], Copy 8bit value in [a16] into Register A\n");
+    // Copy the value in RAM pointed to by a16. Into Register A
+    
+    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+
+    cpu->A = external_read(a16);
+
+    cpu->PC += 3;
+    // Bytes = 3
+    // No flags affected
+}
+
+// LDH a8 instructions:
+static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
+    printf("LDH A [a8] Called => Copy value in (0xFF00 + a8) into A register\n");
+    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
+    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
+    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
+
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    uint8_t load_h_range = external_read(combined_addr);
+
+    cpu->A = load_h_range;
+
+    cpu->PC +=2;
+}
+static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
+    printf("LDH [a8] A, Called => Copy A Register value into 8bit value located at (0xFF00 + a8) \n");
+    
+    uint8_t a8 = instrc.operand1;
+    uint16_t combined_addr = 0xFF00 + a8;
+
+    printf(":LDH: Combined val %04X\n", combined_addr);
+    external_write(combined_addr, cpu->A);
+
+    cpu->PC +=2;    
+}
 
 
-
-// -----------------------------------------------
 /// SECTION:
-// LD w/ SP instructions
-// LDH instructions
-
-// LD/Load (weird) SP instructions:
+// LD Stack manipulation Instructions:
 static void LD_SP_n16(CPU *cpu, instruction_T instrc) {
     printf("LD_SP_n16 Overwrite the stack pointer, with value in n16.\n");
 
@@ -424,76 +513,51 @@ static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in 
     */
 }
 static void LD_SP_HL(CPU *cpu, instruction_T instrc) {
-    printf("LD_SP_HL, Copy the Value in HL directly into the SP\n");
+    printf("LD_SP_HL.                   ; Copy register HL into register SP\n");
 
+    cpu->SP = cpu->HL;  // 
     cpu->PC ++;
 
     // Bytes = 1
     // No flags effected
 }
 
-// Load a16 instructions
-static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
-    printf("LD [a16] A, Called => Copy 8bit A Register into 8bit value located in [a16]\n");
-    
-    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-    
-    printf(":LD: a16 Location val %04X\n", a16);
-    external_write(a16, cpu->A);
-    
-    cpu->PC +=3;
 
-    // Bytes = 3
-    // No flags affected
-}
-static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
-    printf("LD A [a16], Copy 8bit value in [a16] into Register A\n");
-    // Copy the value in RAM pointed to by a16. Into Register A
-    
-    uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 
-    cpu->A = external_read(a16);
+/// SECTION:
+// MACRO'D LD instructions. Covers LD, r8, r8. LD X, [HL]. LD [HL], B
 
-    cpu->PC += 3;
-    // Bytes = 3
-    // No flags affected
+// This is LD from Register --> Register
+#define LD_X_Y(X, Y) \
+static void LD_##X##_##Y(CPU *cpu, instruction_T instrc) \
+{ \
+    printf("LD r8 to r8\n");\
+    cpu->X = cpu-> Y;\
+    cpu->PC += 1;\
 }
 
-
-// LDH a8 instructions:
-static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
-    printf("LDH A [a8] Called => Copy value in (0xFF00 + a8) into A register\n");
-    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
-    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
-    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
-
-    uint8_t a8 = instrc.operand1;
-    uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
-    uint8_t load_h_range = external_read(combined_addr);
-
-    cpu->A = load_h_range;
-
-    cpu->PC +=2;
-}
-static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [a8] A, Called => Copy A Register value into 8bit value located at (0xFF00 + a8) \n");
-    
-    uint8_t a8 = instrc.operand1;
-    uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
-    external_write(combined_addr, cpu->A);
-
-    cpu->PC +=2;    
+// LD B, [HL]
+#define LD_X_DHL(X) \
+static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
+{ \
+    printf("LD r8, [HL]\n");\
+    cpu->X = external_read(cpu->HL);\
+    cpu->PC += 1;\
 }
 
+// LD [HL], B
+#define LD_DHL_Y(Y) \
+static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
+{ \
+    printf("LD [HL], r8\n");\
+    external_write(cpu->HL, cpu->Y);\
+    cpu->PC += 1;\
+}
 
-
-
-
-
+/* NOP */   LD_X_Y(B,C) LD_X_Y(B,D) LD_X_Y(B,E) LD_X_Y(B,H) LD_X_Y(B,L) LD_X_DHL(B) LD_X_Y(B,A) LD_X_Y(C,B) /* NOP */   LD_X_Y(C,D) LD_X_Y(C,E) LD_X_Y(C,H) LD_X_Y(C,L) LD_X_DHL(C) LD_X_Y(C,A)
+LD_X_Y(D,B) LD_X_Y(D,C) /* NOP */   LD_X_Y(D,E) LD_X_Y(D,H) LD_X_Y(D,L) LD_X_DHL(D) LD_X_Y(D,A) LD_X_Y(E,B) LD_X_Y(E,C) LD_X_Y(E,D) /* NOP */   LD_X_Y(E,H) LD_X_Y(E,L) LD_X_DHL(E) LD_X_Y(E,A)
+LD_X_Y(H,B) LD_X_Y(H,C) LD_X_Y(H,D) LD_X_Y(H,E) /* NOP */   LD_X_Y(H,L) LD_X_DHL(H) LD_X_Y(H,A) LD_X_Y(L,B) LD_X_Y(L,C) LD_X_Y(L,D) LD_X_Y(L,E) LD_X_Y(L,H) /* NOP */   LD_X_DHL(L) LD_X_Y(L,A)
+LD_DHL_Y(B) LD_DHL_Y(C) LD_DHL_Y(D) LD_DHL_Y(E) LD_DHL_Y(H) LD_DHL_Y(L) /* NOP */   LD_DHL_Y(A) LD_X_Y(A,B) LD_X_Y(A,C) LD_X_Y(A,D) LD_X_Y(A,E) LD_X_Y(A,H) LD_X_Y(A,L) LD_X_DHL(A) /* NOP */
 
 
 // -----------------------------------------------
@@ -540,7 +604,6 @@ static void JP_cc_a16(CPU *cpu, instruction_T instrc) {
     // No flags Changed
 }
 
-
 // Relative Jumps: e8
 static void JR_e8(CPU *cpu, instruction_T instrc) {
 
@@ -562,10 +625,6 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
     e_signed_offset = (int8_t)instrc.operand1;
 
     uint16_t jr_addr_test = (cpu->PC + e_signed_offset);
-
-
-    printf(" --- Diag: what is the size of E in the int8 value. %d\n", e_signed_offset);
-    printf(" --- Diag: What is the value of PC + the E offset? 0x%04X\n", jr_addr_test);
 
     switch (instrc.opcode) {
         case 0x20:                  // JR, NZ e8
@@ -608,11 +667,591 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 }
 
 
+
 // -----------------------------------------------
+/// SECTION:
+// ADD ADC, SUB, SBC, INC, DEC, CP
+// 8-Bit arithmetic instructions:
+
+// ADD/ ADC Instructions:
+static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 into A
+    printf("ADD A, r8. Called.          ; Add value in r8 into Register A\n");
+
+    // Table calculates WHICH register is called, based on the OP code provided.
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+    uint8_t op_r8 = *reg_table[op_index];
+    
+    uint8_t add_result = (cpu->A + *reg_table[op_index]);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 1;
+
+
+    // Bytes = 2
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = Set if overflow bit 3
+        C = Set if overflow bit 7
+    */
+}
+static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed by HL into A
+    printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into Register A\n");
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t add_result = (cpu->A + hl_val);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 1;
+
+
+    // Bytes = 1
+}
+static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
+    printf("ADD A, n8. Called.              ; Add immediate value to Register A\n");
+    uint8_t n8_val = instrc.operand1;
+    uint8_t add_result = (cpu->A + n8_val);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 2;
+
+    // Bytes = 2
+}
+// ADC Add instructions:
+static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
+    printf("ADC A, r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 0
+        H = Set if overflow bit 3.
+        C = Set if overflow bit 7
+    */
+}
+static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
+    printf("ADC A, [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: see adc_A_r8
+}
+static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
+    printf("ADC A, n8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: see adc_A_r8
+}
+
+// SUB / SBC Instructions:
+static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
+    printf("SUB A, r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 1
+        H = Set if borrow from bit 4
+        C = Set if borrow (i.e. if r8 > A).
+    */
+}
+static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
+    printf("SUB A, [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See sub_aAr8
+}
+static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
+    printf("SUB A, n8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: See sub_A_r8
+}
+// SBC (Sub with the cary flag):
+static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
+    printf("SBC A, r8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t op_index = (instrc.opcode & 0x07);
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        N = 1
+        H = Set if borrow from bit 4
+        C = Set if borrow (i.e. if (r8 + carry) > A)
+    */
+}
+static void SBC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
+    printf("SBC A, [HL]. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: see sbc_a_r8    
+}
+static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
+    printf("SBC A, n8. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    // FLAGS: see sbc_a_r8    
+}
+
+// Increment & Decrement Instructions:
+static void INC_hr8(CPU *cpu, instruction_T instrc) {    // Increment High bit Register  (++ => B, D, H)
+    printf("INC_hr8.               ; EXP: Reg.H ++\n");
+    uint8_t og_reg_val = 0;
+
+
+    /// TODO: Put Registers into Table. To clean up code!
+
+    switch (instrc.opcode) {
+        case 0x04:
+            ((cpu->B & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3    
+            cpu->B ++;
+            (cpu->B == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+        case 0x14:
+            ((cpu->D & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->D ++;
+            (cpu->D == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+        case 0x24:
+            ((cpu->H & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->H ++;
+            (cpu->H == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+            break;
+    }
+    clear_flag(1);      // Sub Flag always cleared for INC.
+    cpu->PC ++;         // this is only 1 Byte.
+
+    // Flags: Z 0 H -
+    // Z = Set if result is 0.
+    // N = 0
+    // H = Set if overflow from bit 3. 
+}
+static void INC_lr8(CPU *cpu, instruction_T instrc) {    // Increment lower bit Register (++ => C, E, L)
+    printf("INC_lr8.               ; EXP: Reg.C ++\n");
+       
+    switch (instrc.opcode) {
+        case 0x0C:
+            ((cpu->C & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->C ++;
+            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
+            break;
+        case 0x1C:
+            ((cpu->E & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->E ++;
+            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
+            break;
+        case 0x2C:
+            ((cpu->L & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->L ++;
+            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
+            break;
+        case 0x3C:
+            ((cpu->A & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+            cpu->A ++;
+            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
+            break;
+    }
+
+    clear_flag(1);      // Set subtraction Flag always set.
+    cpu->PC ++;         // this is only 1 Byte.
+
+    // Flags: Z 0 H -
+    // Z = Set if result is 0.
+    // N = 0
+    // H = Set if overflow from bit 3. 
+}
+// Decrement Instructions
+static void DEC_hr8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
+    printf("DEC_hr8.               ; EXP: Reg.H --\n");
+       
+    switch (instrc.opcode) {
+        case 0x05:
+            (cpu->B == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->B --;
+            (cpu->B == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+        case 0x15:
+            (cpu->D <= 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->D --;
+            (cpu->D == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+        case 0x25:
+            (cpu->H == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+            cpu->H --;
+            (cpu->H == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+            break;
+    }
+
+    set_flag(1);        // Set subtraction Flag always set.
+    cpu->PC ++;
+
+
+    // Bytes = 1
+}
+static void DEC_lr8(CPU *cpu, instruction_T instrc) {    // Decrement lower bit Register (-- => C, E, L)
+    printf("DEC_lr8.               ; EXP: Reg.C --\n");
+       
+    switch (instrc.opcode) {
+        case 0xD0:
+            (cpu->C == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->C --;
+            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD1:
+            (cpu->E == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->E --;
+            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD2:
+            (cpu->L == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->L --;
+            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+        case 0xD3:
+            (cpu->A == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
+            cpu->A --;
+            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
+            break;
+    }
+
+    set_flag(1);        // Set subtraction Flag always set.
+    cpu->PC ++;         // this is only 1 Byte.
+
+    // Bytes = 1
+}
+// Inc/ Dec, HL value inside pointer [ ]
+static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL register, The Value In Pointer ++ HL
+    printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    ((hl_val & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    
+    hl_val ++;
+    (hl_val == 0) ? set_flag(0) : clear_flag(0);                // Set/Clear (Z) Zero Flag.
+    external_write(cpu->HL, hl_val);
+
+    clear_flag(1);      // Clear subtraction flag (N)
+    cpu->PC ++;
+
+    // Bytes = 1
+}
+static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit HL in register, The Value In Pointer -- HL
+    printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
+    // NOTE, technically this is INC_p_r16. But there is not other time that happens. Except for [HL].. SO NVM!
+
+    uint8_t hl_val = external_read(cpu->HL);
+    (hl_val == 0) ? set_flag(2) : clear_flag(2);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    
+    hl_val --;
+    (hl_val == 0) ? set_flag(0) : clear_flag(0);            // Set/Clear (Z) Zero Flag.
+    external_write(cpu->HL, hl_val);
+
+    set_flag(1);        // Set subtraction flag (N)
+    cpu->PC ++;
+
+    // Bytes = 1
+}
+
+// CP. ComPARE Instructions:
+static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in pointer HL to A
+    // Depending on the OP Code, it changes WHICH instruction is compared.
+    printf("CP A, r8.               ; EXP: ComPare (cpu->A - r8_reg) --> Set Flags \n");
+
+    uint8_t op_c_reg = instrc.opcode;
+    uint8_t r8_reg = 0;
+    
+    switch (op_c_reg) {
+        case 0xB8:
+            r8_reg = cpu->B;        // B8 = CP A, B
+            break;
+        case 0xB9:
+            r8_reg = cpu->C;        // B9 = CP A, C
+            break;
+        case 0xBA:
+            r8_reg = cpu->D;        // BA = CP A, D
+            break;
+        case 0xBB:
+            r8_reg = cpu->E;        // BB = CP A, E
+            break;
+        case 0xBC:
+            r8_reg = cpu->H;        // BC = CP A, H
+            break;
+        case 0xBD:
+            r8_reg = cpu->L;        // BC = CP A, L
+            break;
+        case 0xBF:
+            r8_reg = cpu->A;        // I want to say this is NOP, but maybe it does something weird with the CPU Flags.
+            break;
+    }
+
+    
+    
+    // A - r8
+    
+    uint8_t result = (cpu->A - r8_reg);
+    //cpu->A
+
+
+    if (result == 0)
+        set_flag(0);
+    else 
+        clear_flag(0);
+    
+    set_flag(1);    // Set Subtraction Flag
+
+    if ((cpu->A & 0x0F) < (r8_reg & 0x0F))
+        set_flag(2);
+    else
+        clear_flag(2);
+
+    if (cpu->A < r8_reg)
+        set_flag(3);
+    else
+        clear_flag(3);
+
+    cpu->PC++;
+
+    // Bytes = 1
+}
+static void CP_A_p_HL(CPU *cpu, instruction_T instrc) {     // ComPare -> value in pointer HL to A
+    printf("CP A, [HL]. ComPare Called, not setup HALT\n");
+    cpu_status.halt = 1;
+}
+static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in n8 to A
+    printf("CP A, n8. ComPare, values in 8bit value (n8) to A\n");
+    // A - r8
+    uint8_t n8_val = instrc.operand1;
+    uint8_t result = (cpu->A - instrc.operand1);
+
+
+    printf("Result of ComPare (a n8)? %02X\n", result);
+
+    if (result == 0)
+        set_flag(0);
+    else 
+        clear_flag(0);
+    
+    set_flag(1);    // Set Subtraction Flag
+
+    if ((cpu->A & 0x0F) < (n8_val & 0x0F))
+        set_flag(2);
+    else
+        clear_flag(2);
+
+    if (cpu->A < n8_val)
+        set_flag(3);
+    else
+        clear_flag(3);
+
+   cpu->PC += 2;
+
+   // Bytes = 2
+}
+
+
+// -----------------------------------------------
+/// SECTION:
+// Stack Manipulation, ADD, INC, DEC, LD, POP, PUSH
+
+// ADD Stack manipulation Instructions:
+// Special SP / e8 ADD function.
+static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
+    printf("ADD SP, e8. Called, not setup.\n");
+
+    int8_t e_val = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +- 
+    uint8_t add_result = (cpu->A + e_val);
+
+    // Z Flag. 
+    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    ((cpu->A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction)
+
+    cpu->A = add_result;
+    cpu->PC += 2;
+
+    // Bytes = 2
+}
+static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
+    printf("ADD HL, r16. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+}
+static void ADD_HL_SP(CPU *cpu, instruction_T instrc) {     // Add the value in SP to HL
+    printf("ADD HL, SP. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+}
+
+// Full INC/DEC 16 bit Registers (BC, DE, HL):
+static void INC_r16(CPU *cpu, instruction_T instrc) {
+    printf("INC r16.               ; EXP: BC ++\n");
+
+    switch (instrc.opcode) {
+        case 0x03: cpu->BC ++; break;
+        case 0x13: cpu->DE ++; break;
+        case 0x23: cpu->HL ++; break;
+        case 0x33: cpu->SP ++; break;       // Notice this is technically STACK MANIPULATION. INC_SP
+    }
+
+    cpu->PC ++;         // this is only 1 Byte.
+
+    // Bytes = 1
+    // FLAGS: NONE AFFECTED
+}
+static void DEC_r16(CPU *cpu, instruction_T instrc) {
+    printf("DEC r16.               ; EXP: BC --\n");
+
+    switch (instrc.opcode) {
+        case 0x0B: cpu->BC --; break;
+        case 0x1B: cpu->DE --; break;
+        case 0x2B: cpu->HL --; break;
+        case 0x3B: cpu->SP --; break;       // Notice this is technically STACK MANIPULATION. DEC_SP
+    }
+
+    cpu->PC ++;         // This is only 1 Byte.
+
+    // Bytes = 1
+    // FLAGS: NONE AFFECTED
+
+}
+
+
+
+
+
+static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF from the stack.
+    printf("POP AF Registers from SP.\n");
+
+    printf("POP AF. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+    /*
+    This is roughly equivalent to the following imaginary instructions:
+        LD F, [SP]  ; See below for individual flags
+        INC SP
+        LD A, [SP]
+        INC SP
+    */
+
+    /*
+        FLAGS:
+        Z = Set from bit 7 of the popped low Byte
+        N = Set from bit 6 of the popped low Byte
+        H = Set from bit 5 of the popped low Byte
+        C = Set from bit 4 of the popped low Byte
+    */
+}
+static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
+    printf("POP r16 register from SP.\n");
+    printf("POP r16. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    /*
+    This is roughly equivalent to the following imaginary instructions:
+        LD LOW(r16), [SP]   ; C, E or L
+        INC SP
+        LD HIGH(r16), [SP]  ; B, D or H
+        INC SP
+    */
+
+    // Bytes = ??
+    // FLAGS: None affected
+}
+static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
+    printf("PUSH_AF, Writes the A value, and the Flags into SP (Stack Pointer) 0x%04X\n", cpu->SP);
+
+    // Decrement SP, 
+    // Copy A => into SP (stack pointer)        NOTE: Don't overwrite the SP's pointer itself, but save it in HRAM or something, Where ever SP is "pointing" to
+    // Decrement SP
+    // Copy F (The 1 or 0s in Flags) Into where the SP, points to (Likely HRAM)
+
+
+    cpu->SP --;
+    external_write(cpu->SP, cpu->A);
+    cpu->SP --;
+    external_write(cpu->SP, cpu->F);
+
+    cpu->PC ++;     // PUSH_AF is only 1 byte.
+
+    // Bytes = 1
+    // FLAGS: None affected
+}
+
+
+static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16 into the Stack.
+    // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
+
+    /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
+
+    switch (instrc.opcode) {
+        case 0xC5:    // BC to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->B);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->C);
+            break;
+        case 0xD5:    // DE to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->D);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->E);
+            break;
+        case 0xE5:    // HL to stack
+            cpu->SP --;
+            external_write(cpu->SP, cpu->H);
+            cpu->SP --;
+            external_write(cpu->SP, cpu->L);
+            break;
+    }
+
+    cpu->PC ++;
+
+    // Bytes = 1
+    // FLAGS: None affected
+}
+
+
 /// SECTION:
 // Subroutine instrucitons.
 // CALL, RET, RETI, RST_vec
-
 
 static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
     printf("CALL_n16 Called, 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
@@ -773,653 +1412,6 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec.
 
 
 
-
-
-
-
-// -----------------------------------------------
-/// SECTION:
-// Increment & Decrement Instructions:
-
-static void INC_hr8(CPU *cpu, instruction_T instrc) {    // Increment High bit Register  (++ => B, D, H)
-    printf("INC_hr8.               ; EXP: Reg.H ++\n");
-    uint8_t og_reg_val = 0;
-
-    switch (instrc.opcode) {
-        case 0x04:
-            ((cpu->B & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3    
-            cpu->B ++;
-            (cpu->B == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
-            break;
-        case 0x14:
-            ((cpu->D & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->D ++;
-            (cpu->D == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
-            break;
-        case 0x24:
-            ((cpu->H & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->H ++;
-            (cpu->H == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
-            break;
-    }
-    clear_flag(1);      // Sub Flag always cleared for INC.
-    cpu->PC ++;         // this is only 1 Byte.
-
-    // Flags: Z 0 H -
-    // Z = Set if result is 0.
-    // N = 0
-    // H = Set if overflow from bit 3. 
-}
-static void INC_lr8(CPU *cpu, instruction_T instrc) {    // Increment lower bit Register (++ => C, E, L)
-    printf("INC_lr8.               ; EXP: Reg.C ++\n");
-       
-    switch (instrc.opcode) {
-        case 0x0C:
-            ((cpu->C & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->C ++;
-            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
-            break;
-        case 0x1C:
-            ((cpu->E & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->E ++;
-            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set (Z) Zero Flag
-            break;
-        case 0x2C:
-            ((cpu->L & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->L ++;
-            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
-            break;
-        case 0x3C:
-            ((cpu->A & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
-            cpu->A ++;
-            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/ Clear (Z) Zero Flag
-            break;
-    }
-
-    clear_flag(1);      // Set subtraction Flag always set.
-    cpu->PC ++;         // this is only 1 Byte.
-
-    // Flags: Z 0 H -
-    // Z = Set if result is 0.
-    // N = 0
-    // H = Set if overflow from bit 3. 
-}
-
-static void DEC_hr8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
-    printf("DEC_hr8.               ; EXP: Reg.H --\n");
-       
-    switch (instrc.opcode) {
-        case 0x05:
-            (cpu->B == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
-            cpu->B --;
-            (cpu->B == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
-            break;
-        case 0x15:
-            (cpu->D <= 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
-            cpu->D --;
-            (cpu->D == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
-            break;
-        case 0x25:
-            (cpu->H == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
-            cpu->H --;
-            (cpu->H == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
-            break;
-    }
-
-    set_flag(1);        // Set subtraction Flag always set.
-    cpu->PC ++;         // this is only 1 Byte.
-
-
-    // Flags: Flags: Z 1 H - 
-    // Z = Set if result is 0.
-    // N = 1    // Subtraction flag always set.
-    // H = Set if borrow from bit 4.
-}
-static void DEC_lr8(CPU *cpu, instruction_T instrc) {    // Decrement lower bit Register (-- => C, E, L)
-    printf("DEC_lr8.               ; EXP: Reg.C --\n");
-       
-    switch (instrc.opcode) {
-        case 0xD0:
-            (cpu->C == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
-            cpu->C --;
-            (cpu->C == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
-            break;
-        case 0xD1:
-            (cpu->E == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
-            cpu->E --;
-            (cpu->E == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
-            break;
-        case 0xD2:
-            (cpu->L == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
-            cpu->L --;
-            (cpu->L == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
-            break;
-        case 0xD3:
-            (cpu->A == 0) ? set_flag(2) : clear_flag(2);    // Set/Clear H borrow flag from bit 4.
-            cpu->A --;
-            (cpu->A == 0) ? set_flag(0) : clear_flag(0);    // Set/Clear (Z) Zero Flag
-            break;
-    }
-
-    set_flag(1);        // Set subtraction Flag always set.
-    cpu->PC ++;         // this is only 1 Byte.
-
-
-    // Flags: Flags: Z 1 H - 
-    // Z = Set if result is 0.
-    // N = 1    // Subtraction flag always set.
-    // H = Set if borrow from bit 4.
-}
-// Inc/ Dec, HL value inside pointer [ ]
-static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL register, The Value In Pointer ++ HL
-    printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
-
-    uint8_t hl_val = external_read(cpu->HL);
-    ((hl_val & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
-    
-    hl_val ++;
-    (hl_val == 0) ? set_flag(0) : clear_flag(0);                // Set/Clear (Z) Zero Flag.
-    external_write(cpu->HL, hl_val);
-
-    clear_flag(1);      // Clear subtraction flag (N)
-    cpu->PC ++;         // this is only 1 Byte.
-
-
-    // Z = Set if result is 0.
-    // N = 0
-    // H = Set if borrow from bit 4.
-}
-static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit HL in register, The Value In Pointer -- HL
-    printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
-    // NOTE, technically this is INC_p_r16. But there is not other time that happens. Except for [HL].. SO NVM!
-
-    uint8_t hl_val = external_read(cpu->HL);
-    (hl_val == 0) ? set_flag(2) : clear_flag(2);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
-    
-    hl_val --;
-    (hl_val == 0) ? set_flag(0) : clear_flag(0);            // Set/Clear (Z) Zero Flag.
-    external_write(cpu->HL, hl_val);
-
-    set_flag(1);        // Set subtraction flag (N)
-    cpu->PC ++;         // this is only 1 Byte.
-
-    // Z = Set if result is 0.
-    // N = 1
-    // H = Set if borrow from bit 4.
-}
-// Full INC/DEC 16 bit Registers (BC, DE, HL):
-static void INC_r16(CPU *cpu, instruction_T instrc) {
-    printf("INC r16.               ; EXP: BC ++\n");
-
-    switch (instrc.opcode) {
-        case 0x03: cpu->BC ++; break;
-        case 0x13: cpu->DE ++; break;
-        case 0x23: cpu->HL ++; break;
-        case 0x33: cpu->SP ++; break;
-    }
-
-    cpu->PC ++;         // this is only 1 Byte.
-
-    // FLAGS: NONE AFFECTED
-}
-static void DEC_r16(CPU *cpu, instruction_T instrc) {
-    printf("DEC r16.               ; EXP: BC --\n");
-
-    switch (instrc.opcode) {
-        case 0x0B: cpu->BC --; break;
-        case 0x1B: cpu->DE --; break;
-        case 0x2B: cpu->HL --; break;
-        case 0x3B: cpu->SP --; break;
-    }
-
-    cpu->PC ++;         // This is only 1 Byte.
-
-    // FLAGS: NONE AFFECTED
-
-    /// NOTE: For other GM Emulation example. Might be easier.
-    // gb->registers[register_code] ++ or --.. Kind of simple.
-}
-
-
-// -----------------------------------------------
-/// SECTION:
-// CP. ComPARE Instructios:
-
-static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in pointer HL to A
-    // Depending on the OP Code, it changes WHICH instruction is compared.
-    printf("CP A, r8.               ; EXP: ComPare (cpu->A - r8_reg) --> Set Flags \n");
-
-    uint8_t op_c_reg = instrc.opcode;
-    uint8_t r8_reg = 0;
-    
-    switch (op_c_reg) {
-        case 0xB8:
-            r8_reg = cpu->B;        // B8 = CP A, B
-            break;
-        case 0xB9:
-            r8_reg = cpu->C;        // B9 = CP A, C
-            break;
-        case 0xBA:
-            r8_reg = cpu->D;        // BA = CP A, D
-            break;
-        case 0xBB:
-            r8_reg = cpu->E;        // BB = CP A, E
-            break;
-        case 0xBC:
-            r8_reg = cpu->H;        // BC = CP A, H
-            break;
-        case 0xBD:
-            r8_reg = cpu->L;        // BC = CP A, L
-            break;
-        case 0xBF:
-            r8_reg = cpu->A;        // I want to say this is NOP, but maybe it does something weird with the CPU Flags.
-            break;
-    }
-
-    
-    
-    // A - r8
-    
-    uint8_t result = (cpu->A - r8_reg);
-    //cpu->A
-
-    printf("Result of ComPare? %02X", result);
-
-    if (result == 0)
-        set_flag(0);
-    else 
-        clear_flag(0);
-    
-    set_flag(1);    // Set Subtraction Flag
-
-    if ((cpu->A & 0x0F) < (r8_reg & 0x0F))
-        set_flag(2);
-    else
-        clear_flag(2);
-
-    if (cpu->A < r8_reg)
-        set_flag(3);
-    else
-        clear_flag(3);
-
-    // Thiss should work. But.. maybe not.. we'll see...
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 1
-        H = Set if borrow from bit 4
-        C = Set if borrow (IE: if r8 > A)
-    */
-
-    cpu->PC++;  // Advance the PC by only 1 (As no immediates or operands are provided)
-}
-static void CP_A_p_HL(CPU *cpu, instruction_T instrc) {     // ComPare -> value in pointer HL to A
-    printf("CP A, [HL]. ComPare Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in n8 to A
-    printf("CP A, n8. ComPare, values in 8bit value (n8) to A\n");
-    // A - r8
-    uint8_t n8_val = instrc.operand1;
-    uint8_t result = (cpu->A - instrc.operand1);
-
-
-    printf("Result of ComPare (a n8)? %02X\n", result);
-
-    if (result == 0)
-        set_flag(0);
-    else 
-        clear_flag(0);
-    
-    set_flag(1);    // Set Subtraction Flag
-
-    if ((cpu->A & 0x0F) < (n8_val & 0x0F))
-        set_flag(2);
-    else
-        clear_flag(2);
-
-    if (cpu->A < n8_val)
-        set_flag(3);
-    else
-        clear_flag(3);
-
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 1
-        H = Set if borrow from bit 4
-        C = Set if borrow (IE: if r8 > A)
-    */
-   cpu->PC += 2;  // Advance the PC by 2 (1 Byte OP, 1 Byte Operand)
-}
-
-// Special CPL instruction:
-static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT
-    printf("CPL. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-}
-
-
-// DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
-static void DAA(CPU *cpu, instruction_T instrc) {
-    
-    // DAA => Decimal Adjust Accumulator.
-    printf("DAA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    /*
-        FLAGS:
-        Z = ???
-        N = --
-        H = ???
-        C = ???
-    */
-}
-
-// -----------------------------------------------
-/// SECTION:
-// ADD and ADC Instructions
-
-static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 into A           (NOTICE there is a lot of these instructions, Maybe simplfy it if possible.)
-    printf("ADD A, r8. Called.          ; Add value in r8 To A, (Then set flags).\n");
-
-    // Table calculates WHICH register is called, based on the OP code provided.
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A };
-    uint8_t op_index = (instrc.opcode & 0x07);
-
-    uint8_t op_r8 = *reg_table[op_index];
-    
-    uint8_t add_result = (cpu->A + *reg_table[op_index]);
-
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    ((cpu->A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
-
-    cpu->A = add_result;
-    cpu->PC += 1;
-
-
-    // Bytes = 2
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = Set if overflow bit 3
-        C = Set if overflow bit 7
-    */
-}
-static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed by HL into A
-    printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into A\n");
-    uint8_t hl_val = external_read(cpu->HL);
-    uint8_t add_result = (cpu->A + hl_val);
-
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    ((cpu->A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
-
-    cpu->A = add_result;
-    cpu->PC += 1;
-
-
-    // Bytes = 1
-}
-static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
-    printf("ADD A, n8. Called, not setup.\n");
-    uint8_t n8_val = instrc.operand1;
-    uint8_t add_result = (cpu->A + n8_val);
-
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    ((cpu->A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
-
-    cpu->A = add_result;
-    cpu->PC += 2;
-
-    // Bytes = 2
-}
-static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
-    printf("ADD HL, r16. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = --
-        N = 0
-        H = Set if overflow bit 3
-        C = Set if overflow bit 7
-    */
-}
-static void ADD_HL_SP(CPU *cpu, instruction_T instrc) {     // Add the value in SP to HL
-    printf("ADD HL, SP. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: SEE ADD_HL_r16
-}
-static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
-    printf("ADD SP, e8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // NOTICE values like e8, needs to have the bit retreaved, from the memory. THEN CAST! Into an int8_t value (Not uint!) So it can have -128 to +127 memory offset.
-
-    /*
-        FLAGS:
-        Z = 0
-        N = 0
-        H = Set if overflow bit 3
-        C = Set if overflow bit 7
-    */
-}
-
-// ADC Add instructions:
-static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
-    printf("ADC A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
-    uint8_t op_index = (instrc.opcode & 0x07);
-
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = Set if overflow bit 3.
-        C = Set if overflow bit 7
-    */
-}
-static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("ADC A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see adc_A_r8
-}
-static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-    printf("ADC A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see adc_A_r8
-}
-
-
-
-// -----------------------------------------------
-/// SECTION:
-// SUBtraction 
-// SBC (sub with cary flag)
-
-static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
-    printf("SUB A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
-    uint8_t op_index = (instrc.opcode & 0x07);
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 1
-        H = Set if borrow from bit 4
-        C = Set if borrow (i.e. if r8 > A).
-    */
-}
-static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
-    printf("SUB A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See sub_aAr8
-}
-static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
-    printf("SUB A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See sub_A_r8
-}
-// SBC (Sub with the cary flag):
-static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
-    printf("SBC A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
-    uint8_t op_index = (instrc.opcode & 0x07);
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 1
-        H = Set if borrow from bit 4
-        C = Set if borrow (i.e. if (r8 + carry) > A)
-    */
-}
-static void SBC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("SBC A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see sbc_a_r8    
-}
-static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-    printf("SBC A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see sbc_a_r8    
-}
-
-
-
-// -----------------------------------------------
-/// SECTION:
-// Station Manipulation, POP, PUSH
-
-static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF from the stack.
-    printf("POP AF Registers from SP.\n");
-
-    printf("POP AF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-    This is roughly equivalent to the following imaginary instructions:
-        LD F, [SP]  ; See below for individual flags
-        INC SP
-        LD A, [SP]
-        INC SP
-    */
-
-    /*
-        FLAGS:
-        Z = Set from bit 7 of the popped low Byte
-        N = Set from bit 6 of the popped low Byte
-        H = Set from bit 5 of the popped low Byte
-        C = Set from bit 4 of the popped low Byte
-    */
-}
-static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
-    printf("POP r16 register from SP.\n");
-    printf("POP r16. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-
-    /*
-    This is roughly equivalent to the following imaginary instructions:
-        LD LOW(r16), [SP]   ; C, E or L
-        INC SP
-        LD HIGH(r16), [SP]  ; B, D or H
-        INC SP
-    */
-
-    // Bytes = ??
-    // FLAGS: None affected
-}
-static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
-    printf("PUSH_AF, Writes the A value, and the Flags into SP (Stack Pointer) 0x%04X\n", cpu->SP);
-
-    // Decrement SP, 
-    // Copy A => into SP (stack pointer)        NOTE: Don't overwrite the SP's pointer itself, but save it in HRAM or something, Where ever SP is "pointing" to
-    // Decrement SP
-    // Copy F (The 1 or 0s in Flags) Into where the SP, points to (Likely HRAM)
-
-
-    cpu->SP --;
-    external_write(cpu->SP, cpu->A);
-    cpu->SP --;
-    external_write(cpu->SP, cpu->F);
-
-    cpu->PC ++;     // PUSH_AF is only 1 byte.
-
-    // Bytes = 1
-    // FLAGS: None affected
-}
-
-
-static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16 into the Stack.
-    // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
-
-    /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
-
-    switch (instrc.opcode) {
-        case 0xC5:    // BC to stack
-            cpu->SP --;
-            external_write(cpu->SP, cpu->B);
-            cpu->SP --;
-            external_write(cpu->SP, cpu->C);
-            break;
-        case 0xD5:    // DE to stack
-            cpu->SP --;
-            external_write(cpu->SP, cpu->D);
-            cpu->SP --;
-            external_write(cpu->SP, cpu->E);
-            break;
-        case 0xE5:    // HL to stack
-            cpu->SP --;
-            external_write(cpu->SP, cpu->H);
-            cpu->SP --;
-            external_write(cpu->SP, cpu->L);
-            break;
-    }
-
-    cpu->PC ++;
-
-    // Bytes = 1
-    // FLAGS: None affected
-}
-
-
-
-
-
-
-
-
 // -----------------------------------------------
 /// SECTION:
 // Bitwise, AND, OR XOR instructions.
@@ -1497,20 +1489,14 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
 
     cpu->A = OR_result;
 
-    (OR_result == 0) ? set_flag(0) : clear_flag(0);
+    (OR_result == 0) ? set_flag(0) : clear_flag(0);     // Set if Zero (Z Flag)
     clear_flag(1);  // ALways cleared
     clear_flag(2);  // Always cleared
     clear_flag(3);  // Always cleared
 
     cpu->PC ++;
 
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = 0
-    */
+    // Bytes = 1
 }
 static void OR_A_p_HL(CPU *cpu, instruction_T instrc) {     // Set A to the bitwise OR between the byte pointed to by HL and A
     printf("OR A, [HL]. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
@@ -1526,7 +1512,7 @@ static void OR_A_p_HL(CPU *cpu, instruction_T instrc) {     // Set A to the bitw
 
     cpu->PC ++;
 
-
+    // Bytes = 1
     // FLAGS: see: OR_A_r8
 }
 static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value n8 and A
@@ -1543,7 +1529,7 @@ static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
 
     cpu->PC += 2;
 
-
+    // Bytes = 1
     // FLAGS: see: OR_A_r8   
 }
 // XOR Instructions:
@@ -1558,20 +1544,12 @@ static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     cpu->A = XOR_result;
 
 
-    (XOR_result == 0) ? set_flag(0) : clear_flag(0);
+    (XOR_result == 0) ? set_flag(0) : clear_flag(0);    // Set if Zero (Z Flag)
     clear_flag(1);  // ALways cleared
     clear_flag(2);  // Always cleared
     clear_flag(3);  // Always cleared
 
-
-
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = 0
-    */
+    // Bytes = 1
 }
 static void XOR_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitwise XOR between the byte pointed to by HL and A
     printf("XOR A, [HL]. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
@@ -1587,6 +1565,8 @@ static void XOR_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitw
     clear_flag(3);  // Always cleared
 
     cpu->PC ++;
+
+    // Bytes = 1
 }
 static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value n8 and A
     printf("XOR A, n8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
@@ -1603,9 +1583,17 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
     cpu->PC += 2;
 
-    // FLAGS: see: XOR_A_r8
+    // Bytes = 2
 }
 
+// CPL Instruction. Like a bitwse NOT
+static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT
+    printf("CPL. Called, not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+
+    // Bytes = 1
+}
 
 
 
@@ -1636,6 +1624,8 @@ static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     clear_flag(2);
 
     cpu->PC++;
+
+    // Bytes = 1
 }
 
 static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A right. b8 ---> b0
@@ -1650,8 +1640,9 @@ static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
     │ ┗━━━━━━━━━━━━━━━━━┛ │ ┗━━━━━━━━━┛
     └─────────────────────┘
     */
-}
 
+    // Bytes = 1
+}
 
 static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A Left. Through the carry flag <---
     printf("RLA. Rotate Register A Left (through carry flag).\n");
@@ -1668,6 +1659,7 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A
         H = 0
         C = Set according to result
     */
+    // Bytes = 1
 }
 
 static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left.
@@ -1682,12 +1674,14 @@ static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
                 └─────────────────────┘
     */
 
+    // Bytes = 1
+
 }
 
 
 
 /// NOTICE:
-// These Rotate Byte Instructions are in PREFIXED instruction sets.
+// PREFIXED Rotate Instructions:
 
 static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Register r8 left, through the carry flag. <---
     printf("RL r8. Called, not setup.\n");
@@ -1755,7 +1749,7 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
         return;
     }
 
-    uint8_t data_snapshot = *assigned_register;                  // Snapshot of Data
+    uint8_t data_snapshot = *assigned_register;                 // Snapshot of Data
     uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;               // Bit 4, C carry flag.
     uint8_t new_carry = (cpu->A & 0x1);                         // Bit 0, before shift
 
@@ -1841,7 +1835,8 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte p
 
 
 
-/// NOTICE: These are PREFIXED instructions: 
+/// NOTICE:
+// These are PREFIXED instructions: 
 // SHIFT left & right Arithmetically.
 
 static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically Register r8.  <--
@@ -1903,7 +1898,7 @@ static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logic
 
 
 
-// (PREFIXED Instructions sets)
+// These are PREFIXED instructions: 
 // Swap, Complement Carry Flag. Set Carry Flag.
 static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
     printf("SWAP r8. Called, not setup.\n");
@@ -1925,40 +1920,10 @@ static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 
 
 }
 
-// Carry Flag Instructions:
-static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
-    printf("CCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = --
-        N = 0
-        H = 0
-        C = Inverted
-    */     
-}
-static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
-    printf("SCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    /*
-        FLAGS:
-        Z = --
-        N = 0
-        H = 0
-        C = 1
-    */
-}
-
-
-
 // -----------------------------------------------
 /// SECTION:
+// These are PREFIXED instructions: 
 // Bit Flag instructions:
-
-
-/// NOTICE: PREFIXED Instruction Sets:
 
 static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8m set the zero flag if bit not set
     printf("BIT u3, r8. Called, not setup.\n");
@@ -2016,47 +1981,6 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 
 
 
-
-
-
-
-
-// TEST: This uses macros to make a function dynmatically.
-
-// This is LD Register -> Register
-#define LD_X_Y(X, Y) \
-static void LD_##X##_##Y(CPU *cpu, instruction_T instrc) \
-{ \
-    printf("LD r8 to r8\n");\
-    cpu->X = cpu-> Y;\
-    cpu->PC += 1;\
-}
-
-// Maps to: 
-// LD B, [HL]
-#define LD_X_DHL(X) \
-static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
-{ \
-    printf("LD r8, [HL]\n");\
-    cpu->X = external_read(cpu->HL);\
-    cpu->PC += 1;\
-}
-
-// Maps to: 
-// LD [HL], B
-#define LD_DHL_Y(Y) \
-static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
-{ \
-    printf("LD [HL], r8\n");\
-    external_write(cpu->HL, cpu->Y);\
-    cpu->PC += 1;\
-}
-
-
-/* NOP */   LD_X_Y(B,C) LD_X_Y(B,D) LD_X_Y(B,E) LD_X_Y(B,H) LD_X_Y(B,L) LD_X_DHL(B) LD_X_Y(B,A) LD_X_Y(C,B) /* NOP */   LD_X_Y(C,D) LD_X_Y(C,E) LD_X_Y(C,H) LD_X_Y(C,L) LD_X_DHL(C) LD_X_Y(C,A)
-LD_X_Y(D,B) LD_X_Y(D,C) /* NOP */   LD_X_Y(D,E) LD_X_Y(D,H) LD_X_Y(D,L) LD_X_DHL(D) LD_X_Y(D,A) LD_X_Y(E,B) LD_X_Y(E,C) LD_X_Y(E,D) /* NOP */   LD_X_Y(E,H) LD_X_Y(E,L) LD_X_DHL(E) LD_X_Y(E,A)
-LD_X_Y(H,B) LD_X_Y(H,C) LD_X_Y(H,D) LD_X_Y(H,E) /* NOP */   LD_X_Y(H,L) LD_X_DHL(H) LD_X_Y(H,A) LD_X_Y(L,B) LD_X_Y(L,C) LD_X_Y(L,D) LD_X_Y(L,E) LD_X_Y(L,H) /* NOP */   LD_X_DHL(L) LD_X_Y(L,A)
-LD_DHL_Y(B) LD_DHL_Y(C) LD_DHL_Y(D) LD_DHL_Y(E) LD_DHL_Y(H) LD_DHL_Y(L) /* NOP */   LD_DHL_Y(A) LD_X_Y(A,B) LD_X_Y(A,C) LD_X_Y(A,D) LD_X_Y(A,E) LD_X_Y(A,H) LD_X_Y(A,L) LD_X_DHL(A) /* NOP */
 
 
 
