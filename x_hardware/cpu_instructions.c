@@ -747,8 +747,8 @@ static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
     // Yes, A + r8 + Carry Flag. -- If it rolls over. That's ok, track it with the Carry Flag.
 
     uint8_t *reg_table[8] = { 
-        &cpu->B, &cpu->C, &cpu->D, 
-        &cpu->E, &cpu->H, &cpu->L 
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
@@ -809,12 +809,27 @@ static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {
 
 // SUB / SBC Instructions:
 static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values in a, by 8byte register
-    printf("SUB A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("SUB A, r8. Called.              ; Sub Value in Register A, by r8 value\n");
 
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A
+    };
     uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
+    uint8_t reg_a = cpu->A;
+
+    uint16_t sub_16bit = (cpu->A - op_r8);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    ((reg_a & 0x0F) < (op_r8 & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
+    (reg_a < op_r8) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
 
     /*
         FLAGS:
@@ -826,24 +841,75 @@ static void SUB_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract values i
 }
 static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
     printf("SUB A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See sub_aAr8
+
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t reg_a = cpu->A;
+
+    uint16_t sub_16bit = (cpu->A - hl_val);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    ((reg_a & 0x0F) < (hl_val & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
+    (reg_a < hl_val) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
+
 }
 static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
-    printf("SUB A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See sub_A_r8
+    printf("SUB A, n8. Called.                  ; Subtract Register A by immediate value n8\n");
+
+    uint8_t n8 = instrc.operand1;
+    uint8_t reg_a = cpu->A;
+
+    uint16_t sub_16bit = (cpu->A - n8);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    ((reg_a & 0x0F) < (n8 & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
+    (reg_a < n8) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
 }
 // SBC (Sub with the cary flag):
 static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
-    printf("SBC A, r8. Called, not setup.\n");
+    printf("SBC A, r8. Called.                  ; Subtract value in r8 (and the carry flag) from Register A\n");
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
 
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A
+    };
     uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
+
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    // Use 16bit for Flag checks. 8bit will truncate results
+    uint16_t sub_16bit  = (cpu->A - op_r8 - carry_val);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+    uint8_t reg_a = cpu->A;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    (((reg_a & 0x0F) - (op_r8 & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    
+    // This has + carry, as it checks if the whole result underflowed
+    // If register a is less than the TOTAL amount of in op_r8. Then set the flag. (Hence the + carry_val)
+    (reg_a < (op_r8 + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
+
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -853,16 +919,47 @@ static void SBC_A_r8 (CPU *cpu, instruction_T instrc) {     // Subtract the valu
     */
 }
 static void SBC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("SBC A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see sbc_a_r8    
+    printf("SBC A, [HL]. Called, not setup.             ; Subtract value in hl (and the carry flag) from Register A\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    // Use 16bit for Flag checks. 8bit will truncate results
+    uint16_t sub_16bit  = (cpu->A - hl_val - carry_val);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+    uint8_t reg_a = cpu->A;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    (((reg_a & 0x0F) - (hl_val & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    
+    // This has + carry, as it checks if the whole result underflowed
+    (reg_a < (hl_val + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
+    // FLAGS: see sbc_a_r8
 }
 static void SBC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-    printf("SBC A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see sbc_a_r8    
+    printf("SBC A, n8. Called.          ; Subtract value in n8 (and the carry flag) from Register A\n");
+
+    uint8_t n8 = instrc.operand1;
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    // Use 16bit for Flag checks. 8bit will truncate results
+    uint16_t sub_16bit  = (cpu->A - n8 - carry_val);
+    uint8_t final_8bit = (uint8_t)sub_16bit;
+    uint8_t reg_a = cpu->A;
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
+    (((reg_a & 0x0F) - (n8 & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    
+    // This has + carry, as it checks if the whole result underflowed
+    (reg_a < (n8 + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
+    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    
 }
 
 // Increment & Decrement Instructions:
