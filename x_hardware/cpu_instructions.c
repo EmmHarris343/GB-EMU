@@ -682,7 +682,7 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
         &cpu->H, &cpu->L, NULL, &cpu->A };
     uint8_t op_index = (instrc.opcode & 0x07);
-    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE. For this calculation.
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
     
     uint16_t add_result = (cpu->A + *reg_table[op_index]);
@@ -751,7 +751,7 @@ static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
         &cpu->E, &cpu->H, &cpu->L 
     };
     uint8_t op_index = (instrc.opcode & 0x07);
-    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE. For this calculation.
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
 
     uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
@@ -804,7 +804,7 @@ static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {
     clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->A = final_8bit;
-    cpu->PC ++;
+    cpu->PC += 2;
 }
 
 // SUB / SBC Instructions:
