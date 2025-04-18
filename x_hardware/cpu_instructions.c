@@ -678,20 +678,22 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     printf("ADD A, r8. Called.          ; Add value in r8 into Register A\n");
 
     // Table calculates WHICH register is called, based on the OP code provided.
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A };
     uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE. For this calculation.
 
-    uint8_t op_r8 = *reg_table[op_index];
     
-    uint8_t add_result = (cpu->A + *reg_table[op_index]);
+    uint16_t add_result = (cpu->A + *reg_table[op_index]);
+    uint8_t final_8bit = (uint8_t)add_result;
 
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
     ((cpu->A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
     (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
     clear_flag(1);  // N Flag (Subtraction)
 
-    cpu->A = add_result;
+    cpu->A = final_8bit;
     cpu->PC += 1;
 
 
@@ -708,65 +710,101 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
 static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed by HL into A
     printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into Register A\n");
     uint8_t hl_val = external_read(cpu->HL);
-    uint8_t add_result = (cpu->A + hl_val);
+    uint16_t add_result = (cpu->A + hl_val);
+    uint8_t final_8bit = (uint8_t)add_result;
 
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
     ((cpu->A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
     (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
     clear_flag(1);  // N Flag (Subtraction)
 
-    cpu->A = add_result;
+    cpu->A = final_8bit;
     cpu->PC += 1;
-
 
     // Bytes = 1
 }
 static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
     printf("ADD A, n8. Called.              ; Add immediate value to Register A\n");
     uint8_t n8_val = instrc.operand1;
-    uint8_t add_result = (cpu->A + n8_val);
 
-    // Z Flag. 
-    (add_result == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    uint16_t add_result = (cpu->A + n8_val);
+    uint8_t final_8bit = (uint8_t)add_result;
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
     ((cpu->A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
     (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
     clear_flag(1);  // N Flag (Subtraction)
 
-    cpu->A = add_result;
+    cpu->A = final_8bit;
     cpu->PC += 2;
 
     // Bytes = 2
 }
 // ADC Add instructions:
 static void ADC_A_r8 (CPU *cpu, instruction_T instrc) {
-    printf("ADC A, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("ADC A, r8.                  ; Add the value in r8 PLUS the carry flag to Register A \n");
 
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    // Yes, A + r8 + Carry Flag. -- If it rolls over. That's ok, track it with the Carry Flag.
+
+    uint8_t *reg_table[8] = { 
+        &cpu->B, &cpu->C, &cpu->D, 
+        &cpu->E, &cpu->H, &cpu->L 
+    };
     uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE. For this calculation.
 
 
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = Set if overflow bit 3.
-        C = Set if overflow bit 7
-    */
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    // Use 16bit for Flag checks. 8bit will truncate results
+    uint16_t add_16bit  = (cpu->A + op_r8 + carry_val);
+    uint8_t final_8bit = (uint8_t)add_16bit;
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    (((cpu->A & 0x0F) + (op_r8 & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
+
+    // Bytes = 1
 }
-static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
+static void ADC_A_p_HL (CPU *cpu, instruction_T instrc) {
     printf("ADC A, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see adc_A_r8
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    uint16_t add_16bit = (cpu->A + hl_val + carry_val);
+    uint8_t final_8bit = (uint8_t)add_16bit;    
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    (((cpu->A & 0x0F) + (hl_val & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
 }
-static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
+static void ADC_A_n8 (CPU *cpu, instruction_T instrc) {
     printf("ADC A, n8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: see adc_A_r8
+
+    uint8_t n8_val = instrc.operand1;
+    uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
+
+    uint16_t add_16bit = (cpu->A + n8_val + carry_val);
+    uint8_t final_8bit = (uint8_t)add_16bit;    
+
+
+    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
+    (((cpu->A & 0x0F) + (n8_val & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
+    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+
+    cpu->A = final_8bit;
+    cpu->PC ++;
 }
 
 // SUB / SBC Instructions:
