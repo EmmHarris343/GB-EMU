@@ -1639,8 +1639,8 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
     (XOR_result == 0) ? set_flag(0) : clear_flag(0);    // Z condition.
     clear_flag(1);  // N ALways cleared
-    clear_flag(2);  // C Always cleared
-    clear_flag(3);  // H Always cleared
+    clear_flag(2);  // H Always cleared
+    clear_flag(3);  // C Always cleared
 
     cpu->PC += 2;
 
@@ -1648,12 +1648,17 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 }
 
 // CPL Instruction. Like a bitwse NOT
-static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT
-    printf("CPL. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT a
+    printf("CPL. Called.                    ; ComPLement accumulator, \n");
+    cpu->A = ~cpu->A;   // A = NOT A. Basically flip the bits around.
+    
+    set_flag(1);    // N Flag Set (Subtraction Flag)
+    set_flag(2);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
 
+    cpu->PC ++;
     // Bytes = 1
+    // Don't clear Z or C flags.
+    // - N H -
 }
 
 
