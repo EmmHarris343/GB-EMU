@@ -244,21 +244,11 @@ static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     // Bytes: 3
     // Flags: None Affected
 }
-
 static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
-    printf("Load 16bit data, into pointer in 16bit Register.\n");
-    printf("Values? OP1: %02X OP2: %02X", instrc.operand1, instrc.operand2);
+    printf("LD [r16] n16                    ; Load n16 value into value pointed by Register in [r16]\n");
     uint16_t load_n16;
     load_n16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 }
-
-// Pointed to HL Instructions:
-static void LD_p_HL_r8(CPU *cpu, instruction_T instrc) {       // This might be a little complicated cause it needs to know, which range. HR, or LR (B, D, H) or (C, E, L)
-    printf("LD [HL] r8. Called, not setup HALT\n");
-    cpu_status.halt = 1;        
-}
-
-
 static void LD_p_HL_n8(CPU *cpu, instruction_T instrc) {       // Copy data from n8, into where HL is being pointed to
     printf("LD [HL] n8 Called.                  ; LD n8 Value into [HL]\n");
 
@@ -275,7 +265,7 @@ static void LD_p_HL_n8(CPU *cpu, instruction_T instrc) {       // Copy data from
 // LD Acculator (A Register) instructions
 
 static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
-    printf("LD [r16] A.               ; EXP: [DE] <- A \n");
+    printf("LD [r16] A.                     ; Copy Register A into value pointed by register [r16]\n");
     switch (instrc.opcode) {
         case 0x02:
             // LD [BC], A
@@ -286,37 +276,18 @@ static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
     }
     cpu->PC++;
 }
-static void LD_p_n16_A(CPU *cpu, instruction_T instrc) {
-    printf("LD [n16], A. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
 static void LD_A_p_r16(CPU *cpu, instruction_T instrc) {
-    printf("LD A, [r16]. Called, not setup HALT\n");
-    cpu_status.halt = 1;
+    printf("LD A, [r16] Called.             ; Copy value in register [r16] into Register A\n");
+    switch (instrc.opcode) {
+        case 0x0A:
+            // LD A, [BC]
+            cpu->A = external_read(cpu->BC);
+        case 0x1A:
+            // LD A, [DE]
+            cpu->A = external_read(cpu->DE);
+    }
+    cpu->PC++;
 }
-static void LD_A_p_n16(CPU *cpu, instruction_T instrc) {
-    printf("LD A, [n16]. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-
-// LDH (A) Load Instructions        -- THESE I MIGHT HAVE TURN INTO MACRO!
-static void LDH_p_n16_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [n16], A. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-static void LDH_p_C_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [C], A. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-static void LDH_A_p_n16(CPU *cpu, instruction_T instrc) {
-    printf("LDH A, [n16]. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {
-    printf("LDH A, [C]. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-}
-
 // LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
@@ -390,30 +361,36 @@ static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
     // No flags affected
 }
 
-// LDH a8 instructions:
+// LDH a8/ [c] instructions:
+static void LDH_p_C_A(CPU *cpu, instruction_T instrc) {     // LDH => Load (High Range). 0xFF the high bit, is fixed.
+    printf("LDH A [C]. Called.                          ; LD value pointed by (High Range)[0xFF + C] into A Register\n");
+
+    uint16_t combined_addr = 0xFF00 + cpu->C;
+    external_write(combined_addr, cpu->A);
+
+    cpu->PC ++;
+}
+static void LDH_A_p_C(CPU *cpu, instruction_T instrc) {     // LDH => Load (High Range). 0xFF the high bit, is fixed.
+    printf("LDH [C], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + C]\n");
+
+    uint16_t combined_addr = 0xFF00 + cpu->C;
+    cpu->A = external_read(combined_addr);
+    cpu->PC ++;
+}
 static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
-    printf("LDH A [a8] Called => Copy value in (0xFF00 + a8) into A register\n");
-    // This one is wonky. Takes an [a8] value, converts it to 16bit and is Zero Extended
-    // 0x21 => 0xFF21, This area is often HRAM, I/O. IE Register
-    // [a8] brackets mean: loading value of a8, so 0xFF00 + a8
+    printf("LDH A [a8]. Called.                         ; LD value pointed by (High Range)[0xFF + a8] into A Register\n");
 
     uint8_t a8 = instrc.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
-    uint8_t load_h_range = external_read(combined_addr);
-
-    cpu->A = load_h_range;
+    cpu->A = external_read(combined_addr);
 
     cpu->PC +=2;
 }
 static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
-    printf("LDH [a8] A, Called => Copy A Register value into 8bit value located at (0xFF00 + a8) \n");
+    printf("LDH [a8], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + a8]\n");
     
     uint8_t a8 = instrc.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
-
-    printf(":LDH: Combined val %04X\n", combined_addr);
     external_write(combined_addr, cpu->A);
 
     cpu->PC +=2;    
