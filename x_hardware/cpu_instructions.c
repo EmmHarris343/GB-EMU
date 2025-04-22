@@ -1418,6 +1418,7 @@ static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subro
 static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subroutine if condition CC is met
     int proceed = 0;
 
+    printf("RET CC Called.          ; Populate PC from SP, if CC Condition met\n");
     switch (instrc.opcode) {
         case 0xC0:
             // Z flag is NOT set.
@@ -1438,6 +1439,7 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
     }
 
     if (proceed) {
+        printf("RET CC Met. Populating PC from SP\n");
         // TL;DR : Populate the PC from the SP.
         uint8_t low_byte = external_read(cpu->SP);
         cpu->SP ++;
@@ -1447,7 +1449,7 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
         cpu->PC = cnvrt_lil_endian(low_byte, high_byte);
     }
     else {
-        printf("CALL cc Conditions are NOT met. Skipping..\n");
+        printf("RET cc Conditions are NOT met. Skipping..\n");
         cpu->PC ++;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
     }  
     
