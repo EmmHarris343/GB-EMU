@@ -152,9 +152,13 @@ static void BLANK(CPU *cpu, instruction_T instrc) {      // Do nothing, basicall
 
 // Carry Flag Instructions:
 static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry Flag
-    printf("CCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("CCF. Called.                ; Invert Carry Flag 0=1, 1=0\n");
+
+    // If it's set, clear it, otherwise set it.
+    (cpu->F & FLAG_C) ? clear_flag(3) : set_flag(3);    // Invert the C flag.
+    
+
+
     /*
         FLAGS:
         Z = --
@@ -164,9 +168,9 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
     */     
 }
 static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
-    printf("SCF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("SCF. Called.                ; Set Carry Flag (True)\n");
+    set_flag(3);
+
     /*
         FLAGS:
         Z = --
@@ -208,8 +212,7 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
 // -----------------------------------------------
 /// SECTION:
-// Load n8 value into r8 register
-
+// LD Functions
 static void LD_r8_n8(CPU *cpu, instruction_T instrc) {
     printf("LD r8, n8.                 ; EXP: r8 <- n8    ..    Reg.H <- n8 OR Reg.C <- n8\n");
     uint8_t op_index = (instrc.opcode >> 3) & 0x07;      // <-- This style needed for left, right. DOWN left right, DOWN etc
@@ -224,7 +227,6 @@ static void LD_r8_n8(CPU *cpu, instruction_T instrc) {
     cpu->PC += 2;
     // No flags affected.
 }
-
 static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("LD r16 n16. Copy n16 value into r16 Register\n");
     //printf("Values? OP1: %02X OP2: %02X\n", instrc.operand1, instrc.operand2);
@@ -248,8 +250,6 @@ static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("Values? OP1: %02X OP2: %02X", instrc.operand1, instrc.operand2);
     uint16_t load_n16;
     load_n16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-
-    
 }
 
 // Pointed to HL Instructions:
