@@ -260,18 +260,13 @@ static void LD_p_HL_r8(CPU *cpu, instruction_T instrc) {       // This might be 
 
 
 static void LD_p_HL_n8(CPU *cpu, instruction_T instrc) {       // Copy data from n8, into where HL is being pointed to
-    printf("LD [HL] n8. Called, not setup HALT\n");
-    cpu_status.halt = 1;            
+    printf("LD [HL] n8 Called.                  ; LD n8 Value into [HL]\n");
 
+    external_write(cpu->HL, instrc.operand1);
+    cpu->PC ++;
     // Bytes = 2
     // No flags Affected
 }
-
-static void LD_r8_p_HL(CPU *cpu, instruction_T instrc) {       // Copy data inside HL (that is being pointed to it) Into Register r8 (Needs to know range. HR, or LR (B, D, H) or (C, E, L))
-    printf("LD r8 [HL]. Called, not setup HALT\n");
-    cpu_status.halt = 1;        
-}
-
 
 
 
