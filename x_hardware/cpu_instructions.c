@@ -680,7 +680,8 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     // Table calculates WHICH register is called, based on the OP code provided.
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
-        &cpu->H, &cpu->L, NULL, &cpu->A };
+        &cpu->H, &cpu->L, NULL, &cpu->A 
+    };
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
@@ -916,7 +917,7 @@ static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     */
 }
 static void SBC_A_p_HL(CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("SBC A, [HL]. Called, not setup.             ; Subtract value in hl (and the carry flag) from Register A\n");
+    printf("SBC A, [HL]. Called, not setup.             ; Subtract value in [HL] (and the carry flag) from Register A\n");
 
     uint8_t hl_val = external_read(cpu->HL);
     uint8_t carry_val = (cpu->F & FLAG_C) ? 1 : 0;
@@ -980,7 +981,6 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
 
     clear_flag(1);  // N Flag Cleared (SUB Flag)
     cpu->PC ++;
-
 }
 // Decrement Instructions
 static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
@@ -1012,25 +1012,29 @@ static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL r
     uint8_t hl_val = external_read(cpu->HL);
     ((hl_val & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     
-    external_write(cpu->HL,(cpu->HL ++));
+    //external_write(cpu->HL,(cpu->HL ++));
+    hl_val ++;
     (hl_val == 0) ? set_flag(0) : clear_flag(0);                // Set/Clear (Z) Zero Flag.
-    external_write(cpu->HL, hl_val);
+    
+    external_write(cpu->HL, hl_val);    // This saves the changes in the location pointed by [HL]
 
     clear_flag(1);      // Clear subtraction flag (N)
     cpu->PC ++;
 
     // Bytes = 1
 }
-static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement 16 bit HL in register, The Value In Pointer -- HL
+static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byte insde the location pointed by [HL]
     printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
     // NOTE, technically this is INC_p_r16. But there is not other time that happens. Except for [HL].. SO NVM!
 
     uint8_t hl_val = external_read(cpu->HL);
     (hl_val == 0) ? set_flag(2) : clear_flag(2);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     
-    external_write(cpu->HL,(cpu->HL --));
+    //external_write(cpu->HL,(cpu->HL --));
+    hl_val --;
     (hl_val == 0) ? set_flag(0) : clear_flag(0);            // Set/Clear (Z) Zero Flag.
-    external_write(cpu->HL, hl_val);
+    
+    external_write(cpu->HL, hl_val);    // This saves the changes in the location pointed by [HL]
 
     set_flag(1);        // Set subtraction flag (N)
     cpu->PC ++;
@@ -1154,7 +1158,7 @@ static void INC_r16(CPU *cpu, instruction_T instrc) {
         case 0x33: cpu->SP ++; break;       // Notice this is technically STACK MANIPULATION. INC_SP
     }
 
-    cpu->PC ++;         // this is only 1 Byte.
+    cpu->PC ++;
 
     // Bytes = 1
     // FLAGS: NONE AFFECTED
@@ -1169,11 +1173,10 @@ static void DEC_r16(CPU *cpu, instruction_T instrc) {
         case 0x3B: cpu->SP --; break;       // Notice this is technically STACK MANIPULATION. DEC_SP
     }
 
-    cpu->PC ++;         // This is only 1 Byte.
+    cpu->PC ++;
 
     // Bytes = 1
     // FLAGS: NONE AFFECTED
-
 }
 
 
@@ -1181,11 +1184,20 @@ static void DEC_r16(CPU *cpu, instruction_T instrc) {
 
 
 static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF from the stack.
-    printf("POP AF Registers from SP.\n");
+    printf("POP AF Called.              ; Populate AF Register from SP.\n");
 
-    printf("POP AF. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    uint8_t low_byte = external_read(cpu->SP);
+    cpu->SP ++;
+    uint8_t high_byte = external_read(cpu->SP);
+    cpu->SP ++;
+
+    // Believe how I have the flags setup. this should work.
+    //cpu->AF = cnvrt_lil_endian(low_byte, high_byte);
+
+    cpu->AF = (high_byte << 8) | (low_byte & 0xF0);     // Being safe, as the 0-3 bits are 0, and the flag is only 4-7. Previous code might work, but might not also.
+
+    cpu->PC ++;
+
     /*
     This is roughly equivalent to the following imaginary instructions:
         LD F, [SP]  ; See below for individual flags
@@ -1193,7 +1205,7 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
         LD A, [SP]
         INC SP
     */
-
+    // Bytes = 1
     /*
         FLAGS:
         Z = Set from bit 7 of the popped low Byte
@@ -1203,10 +1215,22 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
     */
 }
 static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
-    printf("POP r16 register from SP.\n");
-    printf("POP r16. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("POP r16 Called.                 ; Populate 16byte Register from SP\n");
+
+    uint16_t *reg_table[3] = {
+        &cpu->BC, &cpu->DE, &cpu->HL
+    };
+    uint8_t op_index = (instrc.opcode & 0x07);
+
+    uint8_t low_byte = external_read(cpu->SP);
+    cpu->SP ++;
+    uint8_t high_byte = external_read(cpu->SP);
+    cpu->SP ++;
+
+    // Depending on the OPCODE called, will set the specific Register to the Opcode.
+    *reg_table[op_index] = cnvrt_lil_endian(low_byte, high_byte);
+
+    cpu->PC ++;
 
     /*
     This is roughly equivalent to the following imaginary instructions:
@@ -1216,7 +1240,7 @@ static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 
         INC SP
     */
 
-    // Bytes = ??
+    // Bytes = 1
     // FLAGS: None affected
 }
 static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
@@ -1245,6 +1269,7 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
 
     /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
 
+    printf("Push r16 Called.                ; Push 16 Byte Regiser (BC, DE, HL) to the Stack Pointer SP\n");
     switch (instrc.opcode) {
         case 0xC5:    // BC to stack
             cpu->SP --;
@@ -1426,9 +1451,38 @@ static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subro
     cpu_status.halt = 1;
     // FLAGS: None affected
 }
-static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec. This is a shorter and faster equivalent to CALL for suitable values of vec.
-    printf("RST_vec. Called, not setup HALT\n");
-    cpu_status.halt = 1;
+static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CALL, then Jumps to a specific Vector address (basically a predetermined offset)
+    printf("RST_vec. Called.                ; Push PC to Stack Pointer (SP), then Jump to specific Vector location\n");
+
+    uint8_t vec_table[8] = {
+        0x00, 0x08, 0x10, 0x18, 
+        0x20, 0x28, 0x30, 0x38
+    };
+
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint16_t jump_addr = vec_table[op_index];
+
+    uint16_t pc_loc = cpu->PC;
+
+    uint8_t split_addr_LOW = pc_loc & 0xFF;
+    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
+
+    // Push return address onto stack (high byte first)
+    cpu->SP --; 
+    external_write(cpu->SP, split_addr_HIGH);
+    cpu->SP --;
+    external_write(cpu->SP, split_addr_LOW);
+
+    cpu->PC = jump_addr;
+
+
+
+
+
+    // Main difference, is like the op_codes that are LD A, r8. It knows by the opcode, which register to load the data from. 
+    // RST Vector is a specific Vector 
+    // An RST vector (0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, and 0x38).
+
     // FLAGS: None affected
 }
 
@@ -1443,7 +1497,10 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Call address vec.
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
     printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
     // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A 
+    };
 
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t AND_result = (cpu->A & *reg_table[op_index]);
@@ -1506,7 +1563,10 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
     printf("AND A, r8. Called.          ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
     // If varbiale one bit(x) = 1, OR variable 2 bit(x) = 1. RESULT = One. 
     // ONLY will give result bit(x) 0. if BOTH variable 1 & variable 2 = 0. IE 0&0
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A 
+    };
 
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t OR_result = (cpu->A | *reg_table[op_index]);
@@ -1560,7 +1620,10 @@ static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
 static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value in r8 and A
     printf("XOR A, r8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
 
-    uint8_t *reg_table[8] = { &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L };
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, NULL, &cpu->A 
+    };
 
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t XOR_result = (cpu->A ^ *reg_table[op_index]);
@@ -1572,6 +1635,8 @@ static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     clear_flag(1);  // ALways cleared
     clear_flag(2);  // Always cleared
     clear_flag(3);  // Always cleared
+
+    cpu->PC ++;
 
     // Bytes = 1
 }
