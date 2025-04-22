@@ -12,6 +12,9 @@
 #include "mmu_interface.h"
 
 
+#include <unistd.h>
+
+
 extern Cartridge cart;
 
 
@@ -134,6 +137,7 @@ int startup_sequence() {
     /// TODO: Add Function/ Code for splitting into seperate ROM Banks
     //printf("Rom Bank? %02X\n", cart.resrce.current_rom_bank);
     
+    sleep(2);
     // Setup the MMU memory Map.
     e_int();
 

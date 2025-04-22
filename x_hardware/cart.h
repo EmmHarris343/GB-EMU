@@ -42,7 +42,7 @@ typedef struct {
     uint8_t has_ram_banking;
     size_t rom_size;           // Size of Entire ROM
     size_t ram_size;
-    size_t rom_bank_count;     // Total of rom banks
+    uint8_t rom_bank_count;     // Total of rom banks
     size_t ram_bank_count;     // RAM (External Memory Banks)
 } Config;
 

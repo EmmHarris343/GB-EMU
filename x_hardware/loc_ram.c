@@ -12,10 +12,14 @@ static uint8_t ERAM[ERAM_SIZE];
 
 int init_loc_ram() {
     printf("Initialize ERAM, WRAM, HRAM..\n");
-    memset(HRAM, 0, HRAM_SIZE);
+    memset(HRAM, 0x76, HRAM_SIZE);  // Make all HRAM data HALT OPCODES
     memset(WRAM, 0, WRAM_SIZE);
     memset(ERAM, 0, ERAM_SIZE); // This is mostly a route area. Technically NOTHIGN should be written here. If it is, I believe the gameboy would freeze up normally
     
+
+    for (int i = 0; i < HRAM_SIZE; i++) {
+        printf("HRAM[%02X] = %02X\n", i + 0xFF80, HRAM[i]);
+    }
 
     return 0;
 }
@@ -54,7 +58,7 @@ void loc_eram_write(uint16_t addr, uint8_t val) {
 
 // HRAM
 uint8_t loc_hram_read(uint16_t addr) {
-    //printf(":loc_ram: Hit HRAM Read!\n");
+    printf(":loc_ram: Hit HRAM Read!\n");
     if (addr < 0xFF80 || addr > 0xFFFE) {
         // Invalid
         return 0xFF;

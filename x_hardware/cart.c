@@ -81,10 +81,33 @@ int decode_cart_features() {
             break;
     }
 
+    const uint32_t rom_size_lookup[0x55] = {
+        [0x00] = 32 * 1024,
+        [0x01] = 64 * 1024,
+        [0x02] = 128 * 1024,
+        [0x03] = 256 * 1024,
+        [0x04] = 512 * 1024,
+        [0x05] = 1024 * 1024,
+        [0x06] = 2 * (1024 * 1024),
+        [0x07] = 4 * (1024 * 1024),
+        [0x08] = 8 * (1024 * 1024),
+        [0x52] = 72 * 16 * 1024,  // Wonky 72 banks => 1.1 MB
+        [0x53] = 80 * 16 * 1024,  // Wonky 80 banks => 1.2 MB
+        [0x54] = 96 * 16 * 1024   // Wonky 96 banks => 1.5 MB
+    };
+    const uint16_t rom_bank_lookup[0x55] = {
+        2, 4, 8, 16, 32, 64, 128, 256, 512,        
+        [0x52] = 72, [0x53] = 80, [0x54] = 96 // Special $52 - $54 Rom Size codes:
+    };
+
+    uint8_t rom_size_code = cart.headers.rom_size_code;
+    cart.config.rom_size = rom_size_lookup[rom_size_code];
+    cart.config.rom_bank_count = rom_bank_lookup[rom_size_code];
 
     // Set ROM Size:
-    cart.config.rom_size = 32 * 1024 << cart.headers.rom_size_code;        // Each step will double the Ram size by 32
-    cart.config.rom_bank_count = 2 << cart.headers.rom_size_code;          // Each step doubles the rom Banks (Yes, even no MSB, technically is 2 ROM Banks)
+    // This reads wrong. Try something else!
+    // cart.config.rom_size = 32 * 1024 << cart.headers.rom_size_code;        // Each step will double the Ram size by 32
+    // cart.config.rom_bank_count = 2 << cart.headers.rom_size_code;          // Each step doubles the rom Banks (Yes, even no MSB, technically is 2 ROM Banks)
 
 
     // Configure RAM Size:
@@ -166,28 +189,38 @@ int initialize_cartridge() {
 
 void execute_ROM_BSWTCH(uint8_t Bank_num) {
     // Take the provided Bank_num. Use it to change the current ROM Bank.
-    cart.resrce.current_rom_bank = Bank_num;
-    printf("Switched ROM Bank to: 0x%02X, %d\n", Bank_num, Bank_num);
+    if (cart.config.rom_bank_count <= Bank_num) {
+        fprintf(stderr, "FATAL ERROR! \n      ----> Invalid Bank switch Location. ROM Bank Count: 0x%04X | Desired ROM Bank: 0x%04X\n", cart.config.rom_bank_count, Bank_num);
+        exit(1);  // catch bad rom Bank switching!
+    }
+    else {
+        cart.resrce.current_rom_bank = Bank_num;
+        printf("Switched ROM Bank to: 0x%02X, %d\n", Bank_num, Bank_num);
+    }
+
 
 }
 
 
 uint8_t read_data(uint16_t addr) {
-    uint8_t read_data = 0x0;
+    uint8_t read_rom_data = 0x0;
     switch (addr){        
         case 0x0000 ... 0x3FFF:
-            //printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");           
-            read_data = cart.resrce.rom_data[addr];
+            printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");           
+            read_rom_data = cart.resrce.rom_data[addr];
             //printf(":Cart: FxB\n");
             //printf(":Cart: Data read from ROM (FxB) -> %02X\n", read_data);
-            return read_data;
+            return read_rom_data;
             break;
         case 0x4000 ... 0x7FFF:
-            //printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
-            read_data = cart.resrce.rom_data[(cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000)];
+            printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
+            printf(":Cart: Read Address -> %04X\n", addr);
+            printf(":Cart: Current ROM bank -> %04X\n", cart.resrce.current_rom_bank);
+            printf(":Cart: ROM BANK ADDR + OFFSET. (Actual location) ---> %04X\n,    With addr - 0x4000: %04X\n", (cart.resrce.current_rom_bank * 0x4000), (cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000));
+            read_rom_data = cart.resrce.rom_data[(cart.resrce.current_rom_bank * 0x4000) + (addr - 0x4000)];
             printf(":Cart: SwB Read\n");
-            //printf(":Cart: Data read from ROM (SwB) -> %02X\n", read_data);
-            return read_data;
+            printf(":Cart: Data read from ROM (SwB) -> %02X\n", read_rom_data);
+            return read_rom_data;
             break;
         default:
         return 0xFF;    // If somehow values are out of range for Reading rom Data.

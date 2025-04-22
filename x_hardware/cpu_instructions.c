@@ -208,66 +208,34 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 
 // -----------------------------------------------
 /// SECTION:
-// LD High Register, LD Low Register instructions
+// Load n8 value into r8 register
 
-static void LD_hr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value into HR (High) 8 byte Register IE: B, D, H
-    printf("LD HR, n8.                 ; EXP: HR <- n8    ..    Reg.H <- n8\n");
-    switch (instrc.opcode) {
-        case 0x06:
-            cpu->B = instrc.operand1;
-            break;
-        case 0x16:
-            cpu->D = instrc.operand1;
-            break;
-        case 0x26:
-            cpu->H = instrc.operand1;
-            break;
-    }
+static void LD_r8_n8(CPU *cpu, instruction_T instrc) {
+    printf("LD r8, n8.                 ; EXP: r8 <- n8    ..    Reg.H <- n8 OR Reg.C <- n8\n");
+    uint8_t op_index = (instrc.opcode >> 3) & 0x07;      // <-- This style needed for left, right. DOWN left right, DOWN etc
+    uint8_t *reg_table[8] = { 
+        &cpu->B, &cpu->C, 
+        &cpu->D, &cpu->E, 
+        &cpu->H, &cpu->L, 
+        NULL, &cpu->A
+    };
+    *reg_table[op_index] = instrc.operand1;
+
     cpu->PC += 2;
     // No flags affected.
-}
-
-static void LD_lr_n8(CPU *cpu, instruction_T instrc) {      // Copy Byte Value into LR (Low) 8 byte Register IE: C, E, L
-    printf("LD LR, n8.                ; EXP: LR <- n8       .. Reg.C <- n8\n");
-    switch (instrc.opcode) {
-        case 0x0E:
-            cpu->C = instrc.operand1;
-            break;
-        case 0x1E:
-            cpu->E = instrc.operand1;
-            break;
-        case 0x2E:
-            cpu->L = instrc.operand1;
-            break;
-    }
-    cpu->PC += 2;
-    // No flags affected
 }
 
 static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("LD r16 n16. Copy n16 value into r16 Register\n");
     //printf("Values? OP1: %02X OP2: %02X\n", instrc.operand1, instrc.operand2);
-    uint16_t load_n16;
-    load_n16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-
-    switch (instrc.opcode) {
-        case 0x01:        
-            // BC
-            cpu->BC = load_n16;
-            break;
-        case 0x11:
-            // DE
-            cpu->DE = load_n16;
-            break;
-        case 0x21:
-            // HL
-            cpu->HL = load_n16;
-            break;
-        case 0x31:
-            // SP
-            cpu->SP = load_n16;
-            break;
-    }
+    uint8_t op_index = (instrc.opcode >> 4) & 0x03; // <- This style needed for straight down op codes.
+    uint16_t *reg_16table[4] = { 
+        &cpu->BC, 
+        &cpu->DE, 
+        &cpu->HL, 
+        &cpu->SP
+    };
+    *reg_16table[op_index] = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 
     cpu->PC += 3;
 
@@ -977,11 +945,11 @@ static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value
 static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
     printf("INC_r8.               ; Registry H ++\n");
 
+    uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
         &cpu->H, &cpu->L, NULL, &cpu->A
     };
-    uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
     ((op_r8 & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
@@ -995,11 +963,11 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
 static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
     printf("DEC_hr8.               ; Registery H --\n");
 
+    uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
         &cpu->H, &cpu->L, NULL, &cpu->A
     };
-    uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
     set_flag(1);        // Set subtraction Flag always set.
@@ -1140,7 +1108,7 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
     uint16_t *reg16_table[4] = {
         &cpu->BC, &cpu->DE, &cpu->HL, &cpu->SP
     };
-    uint8_t register_index = (instrc.opcode >> 4) & 0x03;       
+    uint8_t register_index = (instrc.opcode >> 4) & 0x03;
     uint16_t op_r16 = *reg16_table[register_index];                   // The calculated "Source" Register, from the OPCODE.    
     uint16_t hl_val = cpu->HL;
 
@@ -1159,6 +1127,9 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
 // Full INC/DEC 16 bit Registers (BC, DE, HL):
 static void INC_r16(CPU *cpu, instruction_T instrc) {
     printf("INC r16.               ; EXP: BC ++\n");
+    
+    // If I use table use:
+    // uint8_t register_index = (instrc.opcode >> 4) & 0x03;
 
     switch (instrc.opcode) {
         case 0x03: cpu->BC ++; break;
@@ -1175,6 +1146,8 @@ static void INC_r16(CPU *cpu, instruction_T instrc) {
 static void DEC_r16(CPU *cpu, instruction_T instrc) {
     printf("DEC r16.               ; EXP: BC --\n");
 
+    // If I use table use:
+    // uint8_t register_index = (instrc.opcode >> 4) & 0x03;
     switch (instrc.opcode) {
         case 0x0B: cpu->BC --; break;
         case 0x1B: cpu->DE --; break;
@@ -1225,11 +1198,11 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
 }
 static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
     printf("POP r16 Called.                 ; Populate 16byte Register from SP\n");
-
+    
+    uint8_t op_index = (instrc.opcode >> 4) & 0x03;
     uint16_t *reg_table[3] = {
         &cpu->BC, &cpu->DE, &cpu->HL
-    };
-    uint8_t op_index = (instrc.opcode & 0x07);
+    };    
 
     uint8_t low_byte = external_read(cpu->SP);
     cpu->SP ++;
@@ -1316,7 +1289,7 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
 
     // Call n16 is like "Go to subroutine at n16. And remember to come back here".
-    // The [remember to come back here] is done by stack pointers. 
+    // The [remember to come back here] is done by stack pointers / RET (RETurn)
     
     // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
     uint16_t pc_loc = (cpu->PC + 3);
@@ -1332,7 +1305,8 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     external_write(cpu->SP, split_addr_HIGH);
     cpu->SP --;
     external_write(cpu->SP, split_addr_LOW);
-    
+
+    printf("What is the Stack Pointer showing? %04X\n", cpu->SP);
 
     // Next jump to Location:
     cpu->PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
@@ -1485,7 +1459,7 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
         0x20, 0x28, 0x30, 0x38
     };
 
-    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint16_t jump_addr = vec_table[op_index];
 
     uint16_t pc_loc = cpu->PC;
@@ -2107,10 +2081,10 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 
 static opcode_t *opcodes[256] = {
 /*  ---> X0, X1, X2, X3, X4 ... XB .. XF etc */
-/* 0X */ NOP,        LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_hr_n8,   RLCA,     /* || */ LD_p_a16_SP,  ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_lr_n8,   RRCA,
-/* 1X */ STOP,       LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_hr_n8,   RLA,      /* || */ JR_e8,        ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_lr_n8,   RRA,
-/* 2X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_r8,     DEC_r8,  LD_hr_n8,   DAA,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLI,  DEC_r16,   INC_r8,     DEC_r8,   LD_lr_n8,   CPL,
-/* 3X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_p_HL,    DEC_p_HL, LD_p_HL_n8, SCF,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLD,  DEC_r16,   INC_r8,     DEC_r8,   LD_hr_n8,   CCF,
+/* 0X */ NOP,        LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   RLCA,     /* || */ LD_p_a16_SP,  ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   RRCA,
+/* 1X */ STOP,       LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   RLA,      /* || */ JR_e8,        ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   RRA,
+/* 2X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   DAA,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLI,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   CPL,
+/* 3X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_p_HL,    DEC_p_HL, LD_p_HL_n8, SCF,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLD,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   CCF,
 /* 4X */ NOP,        LD_B_C,        LD_B_D,     LD_B_E,   LD_B_H,      LD_B_L,   LD_B_DHL,   LD_B_A,   /* || */ LD_C_B,       NOP,        LD_C_D,      LD_C_E,    LD_C_H,      LD_C_L,    LD_C_DHL,   LD_C_A,
 /* 5X*/  LD_D_B,     LD_D_C,        NOP,        LD_D_E,   LD_D_H,      LD_D_L,   LD_D_DHL,   LD_D_A,   /* || */ LD_E_B,       LD_E_C,     LD_E_D,      NOP,       LD_E_H,      LD_E_L,    LD_E_DHL,   LD_E_A,
 /* 6X */ LD_H_B,     LD_H_C,        LD_H_D,     LD_H_E,   NOP,         LD_H_L,   LD_H_DHL,   LD_H_A,   /* || */ LD_L_B,       LD_L_C,     LD_L_D,      LD_L_E,    LD_L_H,      NOP,       LD_L_DHL,   LD_L_A,
