@@ -53,6 +53,7 @@ typedef struct {
 
     uint16_t SP;    // Stack pointer
     uint16_t PC;    // Program Counter
+    uint8_t IME;    // Interrupt Master Enable, flag
 
 } CPU;
 

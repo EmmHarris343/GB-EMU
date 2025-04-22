@@ -99,13 +99,22 @@ static void HALT(CPU *cpu, instruction_T instrc) {      // Likely completely HAL
     printf("HALT Called. Exit Now.. (Guessing)\n");
     cpu_status.halt = 1;
 }
-// DI?
-static void DI(CPU *cpu, instruction_T instrc) {
+static void DI(CPU *cpu, instruction_T instrc) {        // DI - Disables interrupt Handling (Flag set to := 0)
+    printf("DI Called.                  ; IME := 0 (Interupt flag 0 - disabled)\n");
+    cpu->IME = 0;
+    cpu->PC ++;
 
+    // Bytes = 1
+    // No flags affected. ---> The Register flags in F that is.
 }
-// EI? 
-static void EI(CPU *cpu, instruction_T instrc) {
-
+ 
+static void EI(CPU *cpu, instruction_T instrc) {        // EI - Enables interrupt Handling (Flag set to := 1)
+    printf("EI Called.                  ; IME := 1 (Interupt flag 1 - enabled)\n");
+    cpu->IME = 1;
+    cpu->PC ++;
+    
+    // Bytes = 1
+    // No flags affected. ---> The Register flags in F that is.
 }
 
 
@@ -1445,11 +1454,26 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
     // Bytes: 1
     // FLAGS: None affected
 }
-static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subroutine and enable I-nterupts.
+static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subroutine and enable Interupts.
     // This is basically equivalent to executing EI then RET, meaning that IME is set right after this instruction.
-    printf("RETI. Called, not setup HALT\n");
-    cpu_status.halt = 1;
-    // FLAGS: None affected
+    printf("RETI. Called.           ; Set IME Flag (Interupt), Then RETurn / Pop PC from SP\n");
+
+    // Enables interrupts and returns (same as ei immediately followed by ret).
+
+
+    // TL;DR :
+    // Set IME flag to 1 - enable
+    cpu->IME = 1;
+    // Populate the PC from the SP.
+    uint8_t low_byte = external_read(cpu->SP);
+    cpu->SP ++;
+    uint8_t high_byte = external_read(cpu->SP);
+    cpu->SP ++;
+
+    cpu->PC = cnvrt_lil_endian(low_byte, high_byte);
+
+
+    // FLAGS: None affected --> In Register F that is.
 }
 static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CALL, then Jumps to a specific Vector address (basically a predetermined offset)
     printf("RST_vec. Called.                ; Push PC to Stack Pointer (SP), then Jump to specific Vector location\n");
