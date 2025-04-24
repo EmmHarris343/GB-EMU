@@ -182,23 +182,11 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 
 
 
-// This is the PREFIXED Instructions... Or rather the entry point to them.
-// Haven't setup yet. But, take the sub opcode or something?
-// Then point to the --> Specific PREFIXED Instruction?
-static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points to Table 2 in the OP_CODE Map
-
-    printf("CB Prefix call.... blehhhhh was hoping this would be later... bleh\nI don't know how this works or data works. \n");
-    // Entry point to Table 2 (Prefix) OP_CODES?
-
-    // Should be only 1byte code. so.. umm huh..
-    
 
 
-    // IE: RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
-    printf("CB Prefix Called, not setup HALT\n");
-    cpu_status.halt = 1;    
-}
+
+
 
 
 
@@ -208,6 +196,14 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {  // Ummmm Maybe points t
 // ==---- Starting main OP Code instructions ----==
 //
 // -----------------------------------------------
+
+
+
+
+
+
+
+
 
 
 // -----------------------------------------------
@@ -1741,8 +1737,24 @@ static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
 
 
 
-/// NOTICE:
-// PREFIXED Rotate Instructions:
+
+
+
+
+// ------------------------------------------------------
+//
+///                    NOTICE:
+// ==---- Starting PREFIXED OP Code instructions ----==
+//
+// ------------------------------------------------------
+
+
+
+
+
+
+
+
 
 static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Register r8 left, through the carry flag. <---
     printf("RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
@@ -2084,22 +2096,48 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
     // FLAGS: None affected
 }
 
+static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
+    printf("CB BIT handler called. Not setup.\n");
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+}
+
+static void CB_RES_Handler(CPU *cpu, instruction_T instrc){
+    printf("CB RES handler called. Not setup.\n");
+
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+}
+
+static void CB_SET_Handler(CPU *cpu, instruction_T instrc){
+    printf("CB SET handler called. Not setup.\n");
+
+    printf("%sHALTING%s\n", KRED, KNRM);
+    cpu_status.halt = 1;
+}
+
+static opcode_t *cb_opcodes[256] = {
+    [0x00 ... 0x05] = RLC_r8, [0x06] = RLC_p_HL, [0x07] = RLC_r8, [0x08 ... 0x0D] = RRC_r8, [0x0E] = RRC_p_HL, [0x0F] = RRC_r8,
+    [0x10 ... 0x15] = RL_r8,  [0x16] = RL_p_HL,  [0x17] = RL_r8,  [0x18 ... 0x1D] = RR_r8,  [0x1E] = RR_p_HL,  [0x1F] = RR_r8,
+    [0x20 ... 0x25] = RL_r8,  [0x26] = RL_p_HL,  [0x27] = RL_r8,  [0x28 ... 0x2D] = RR_r8,  [0x2E] = RR_p_HL,  [0x2F] = RR_r8,
+    [0x30 ... 0x35] = RL_r8,  [0x36] = RL_p_HL,  [0x37] = RL_r8,  [0x38 ... 0x3D] = RR_r8,  [0x3E] = RR_p_HL,  [0x3F] = RR_r8,
+    [0x40 ... 0x7F] = CB_BIT_Handler,
+    [0x80 ... 0xBF] = CB_RES_Handler,
+    [0xC0 ... 0xFF] = CB_SET_Handler,
+};
+
+static void CB_PREFIX(CPU *cpu, instruction_T instrc) {
+    printf("CB PREFIX Called.               ; Load next Byte, to call Prefixed OPCODE\n");
+    // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
+
+    // Advance the PC, and read it at the same time. 
+    uint16_t prefixed_opcode = external_read(cpu->PC++);       // Read CB Opcoad at PC++ location. 
+    printf("%s CB OPCODE:=[%0X4%s]\n", KYEL, prefixed_opcode, KNRM);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    cb_opcodes[prefixed_opcode](cpu, instrc);
+    printf("%sCB Block Finished.%s\n", KYEL, KNRM);
+}
 
 
 
@@ -2124,6 +2162,18 @@ static opcode_t *opcodes[256] = {
 /* EX */ LDH_p_a8_A, POP_r16,      LDH_p_C_A,  BLANK,    BLANK,        PUSH_r16, AND_A_n8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_n8,   RST_vec,
 /* FX */ LDH_A_p_a8, POP_AF,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_n8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 int execute_instruction(CPU *cpu, instruction_T instrc) {
