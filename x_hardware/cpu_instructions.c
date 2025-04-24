@@ -1675,9 +1675,8 @@ static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     uint8_t a_reg = cpu->A;
     uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = (cpu->A & 0x1);
-    uint8_t shifted_a_reg = (a_reg >> 1) | (carry_in << 7);
-    cpu->A = shifted_a_reg;
-
+    uint8_t rotated_a = (a_reg >> 1) | (carry_in << 7);     // Rotate Right, Set bit 7
+    cpu->A = rotated_a;
 
     (carry_out) ? set_flag(3) : clear_flag(3);  
     clear_flag(0);
@@ -1692,9 +1691,9 @@ static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
     printf("RRCA Called.                    ; Rotate Register A Right Without the carry flag input\n");
 
     uint8_t a_reg = cpu->A;
-    uint8_t carry_out = (a_reg & 0x1);    // Bit 0 value
-    uint8_t shifted_a = (a_reg >> 1) | (carry_out << 7);
-    cpu->A = shifted_a;
+    uint8_t carry_out = (a_reg & 0x1);
+    uint8_t rotated_a = (a_reg >> 1) | (carry_out << 7);    // Rotate Right, Set bit 7
+    cpu->A = rotated_a;
 
     (carry_out) ? set_flag(3) : clear_flag(3);
     clear_flag(0);  // Z Flag
@@ -1710,8 +1709,8 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A
 
     uint8_t a_reg = cpu->A;
     uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
-    uint8_t carry_out = ((a_reg >> 7) & 0x1);    // Isolate and extract bit 7
-    uint8_t rotated_a = (a_reg << 1) | carry_in; // Shift left, set bit 0 value.
+    uint8_t carry_out = ((a_reg >> 7) & 0x1);               // Isolate and extract bit 7
+    uint8_t rotated_a = (a_reg << 1) | carry_in;            // Shift left, set bit 0
     cpu->A = rotated_a;
 
     (carry_out) ? set_flag(3) : clear_flag(3);
@@ -1723,14 +1722,14 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A
     // Bytes = 1
 }
 
-static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left.
+static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left. (without carry flag input)
     printf("RLCA Called.                    ; Rotate Register A Left, wont use carry flag input\n");
     
     uint8_t a_reg = cpu->A;
-    uint8_t carry_out = ((a_reg >> 7) & 0x1);    // Shift bit right 7 to position 0, and pull the value at bit 0
-    uint8_t rotated_a = (a_reg << 1) | carry_out; // Shift left, set bit 0 value.
-
+    uint8_t carry_out = ((a_reg >> 7) & 0x1);           // Isolate and extract bit 7
+    uint8_t rotated_a = (a_reg << 1) | carry_out;       // Shift left, set bit 0
     cpu->A = rotated_a;
+    
     (carry_out) ? set_flag(3) : clear_flag(3);
     clear_flag(0);  // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
@@ -1746,9 +1745,27 @@ static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
 // PREFIXED Rotate Instructions:
 
 static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Register r8 left, through the carry flag. <---
-    printf("RL r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
+
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t r8_reg = *reg_table[op_index];
+
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = ((r8_reg >> 7) & 0x1);              // Isolate and extract bit 7
+    uint8_t rotated_r8 = (r8_reg << 1) | carry_in;          // Shift left, set bit 0
+    
+    *reg_table[op_index] = rotated_r8;                      // Set register to value.
+
+    (carry_out) ? set_flag(3) : clear_flag(3);      // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);     // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
+
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
 
     /*
         FLAGS:
@@ -1759,21 +1776,47 @@ static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Re
     */
 }
 static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by HL left, through the carry flag. <---
-    printf("RL [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
+    uint8_t rotated_hl_val = (hl_val << 1) | carry_in;      // Shift byte left, set bit 0 value.
+    
+    external_write(cpu->HL, rotated_hl_val);   // Set [HL] value
+
+    (carry_out) ? set_flag(3) : clear_flag(3);          // C Flag
+    (rotated_hl_val) ? set_flag(0) : clear_flag(0);     // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
+
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
+
+
     // FLAGS: See RL_r8
 }
 
+static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers r8 Left. <--- (without Carry flag input)
+    printf("RLC r8. Called.                   ; Rotate r8 Left (without carry flag input).\n");
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t r8_reg = *reg_table[op_index];
+    uint8_t carry_out = ((r8_reg >> 7) & 0x1);              // Isolate and extract bit 7
+    uint8_t rotated_r8 = (r8_reg << 1) | carry_out;         // Shift left, set bit 0 value.
 
+    *reg_table[op_index] = rotated_r8;                      // Set r8 Register.
 
-/// NOTICE:
-// These are only in the PREFIXED instruction set!
+    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
 
-static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers r8 Left. <---
-    printf("RLC r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
+
     /*
         FLAGS:
         Z = 0
@@ -1782,59 +1825,49 @@ static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers 
         C = Set according to result
     */
 }
-static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by [HL] left. <---
-    printf("RLC [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by [HL] left. <--- (without Carry flag input)
+    printf("RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
+    uint8_t rotated_r8 = (hl_val << 1) | carry_out;         // Shift Byte Left, set bit 0
+
+    external_write(cpu->HL, hl_val);        // Set [HL] value
+
+    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
+
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
+
     // FLAGS: See RLC_r8
-
 }
+
+// PREFIXED Rotate Right Instructions:
 static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r8 Right. Through the carry flag. -->
-    printf("RR r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RR r8. Called.                      ; Rotate r8 Right through carry flag\n");
 
-    uint8_t *assigned_register = NULL;      // Set this to say, cpu->B, cpu->C, cpu->E etc..
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t r8_reg = *reg_table[op_index];
 
-    /// TODO: NOT FINISHED. This code will NOT! work!
-
-    /// NOTICE: THIS IS PREFIXED Instruction, so this approach isn't actually correct...
-    switch (instrc.opcode) {
-        case 0x18: 
-            // This is RR B (0x18) -- PREFIXED!
-            assigned_register = &cpu->B;
-            break;
-    }
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = (r8_reg & 0x1);
+    uint8_t rotated_r8 = (r8_reg >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
     
-    if (assigned_register == NULL) {
-        // ERROR, invalid opcode or missing case.
-        return;
-    }
+    *reg_table[op_index] = rotated_r8;                      // Set register to value.
 
-    uint8_t data_snapshot = *assigned_register;                 // Snapshot of Data
-    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;               // Bit 4, C carry flag.
-    uint8_t new_carry = (cpu->A & 0x1);                         // Bit 0, before shift
+    (carry_out) ? set_flag(3) : clear_flag(3);      // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);     // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
 
-    uint8_t rotated_byte = (data_snapshot >> 1) | (og_carry << 7);
-
-    
-    *assigned_register = rotated_byte;
-
-
-    if (new_carry > 0) {
-        set_flag(3);
-    }else {
-        clear_flag(3);
-    }
-
-    clear_flag(0);
-    clear_flag(1);
-    clear_flag(2);
-
-    cpu->PC++;     
-
-
-
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
 
     /*
         FLAGS:
@@ -1845,38 +1878,46 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
     */
 }
 static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte pointed to by [HL] Right. Through the carry flag. -->
-    printf("rR [HL]. Called         ; Rotate byte in [HL] RIGHT\n");
+    printf("rR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
 
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = (hl_val & 0x1);
+    uint8_t rotated_r8 = (hl_val >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
 
-    uint8_t data_snapshot = external_read(cpu->HL);     // Snapshot of Data pointed BY HL
-    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;               // Bit 4, C carry flag.
-    uint8_t new_carry = (cpu->A & 0x1);                         // Bit 0, before shift
+    external_write(cpu->HL, hl_val);         // Set [HL] value.
 
-    uint8_t rotated_byte = (data_snapshot >> 1) | (og_carry << 7);
+    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
 
-    external_write(cpu->HL, rotated_byte);
-    if (new_carry > 0) {
-        set_flag(3);
-    }else {
-        clear_flag(3);
-    }
-
-    clear_flag(0);
-    clear_flag(1);
-    clear_flag(2);
-
-    cpu->PC++;    
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2
 
     // FLAGS: see RR_r8
 }
-static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r8 Right. -->
-    printf("RRC r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r8 Right. --> (Without carry flag input)
+    printf("RRC r8. Called.                     ; Rotate r8, without carry flag input\n");
 
-    //          r8           Flags
-    //  -> b7-> ... -> b0 --> [C]
-    // ^<--------------<--
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+    uint8_t op_index = (instrc.opcode & 0x07);
+    uint8_t r8_reg = *reg_table[op_index];
+    uint8_t carry_out = (r8_reg & 0x1);
+    uint8_t rotated_r8 = (r8_reg >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
+
+    *reg_table[op_index] = rotated_r8;   // Set r8 Register.
+
+    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
+
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2    
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1885,13 +1926,25 @@ static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r
         C = Set according to result
     */
 }
-static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte pointed to by [HL] Right. -->
-    printf("RRC [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value pointed to by [HL] Right. -->  (Without carry flag input)
+    printf("RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
+
+
+    uint8_t hl_val = external_read(cpu->HL);
+    uint8_t carry_out = (hl_val & 0x1);
+    uint8_t rotated_r8 = (hl_val >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
+
+    external_write(cpu->HL, hl_val);            // Set [HL] value
+
+    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
+    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
+
+    cpu->PC += 2;
+    // PREFIXED => Bytes 2    
 
     // FLAGS: See RRC r8
-
 }
 
 
