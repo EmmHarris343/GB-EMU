@@ -1670,86 +1670,74 @@ static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumu
 
 // NON-PREFIXED
 static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A -> Right. Through the carry flag. b8 ---> b0 <> [carry flag]
-    printf("RRA. Called.            ;   Rotate Register A (bit) RIGHT --> through Flag C.\n");
+    printf("RRA. Called.            ; Rotate Register A RIGHT --> through Flag C.\n");
 
-    uint8_t a_reg = cpu->A;                             // Snapshot A register.
-    uint8_t og_carry = (cpu->F & FLAG_C) ? 1 : 0;       // Bit 4, of C carry flag.
-    uint8_t new_carry = (cpu->A & 0x1);                 // Bit 0, before shift
-
-    uint8_t shifted_a_reg = (a_reg >> 1) | (og_carry << 7);
-
+    uint8_t a_reg = cpu->A;
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = (cpu->A & 0x1);
+    uint8_t shifted_a_reg = (a_reg >> 1) | (carry_in << 7);
     cpu->A = shifted_a_reg;
-    (new_carry) ? set_flag(3) : clear_flag(3);  
 
+
+    (carry_out) ? set_flag(3) : clear_flag(3);  
     clear_flag(0);
     clear_flag(1);
     clear_flag(2);
 
     cpu->PC++;
-
     // Bytes = 1
 }
 
 static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A right. (WITHOUT CARRY)
     printf("RRCA Called.                    ; Rotate Register A Right Without the carry flag input\n");
 
-    // Does the exact same thing RRA, but instead. It sets bit 7 and C flag to the original bit 0 value.
-    // It just doesn't use the carry flag as an input for bit 7, that's the only real difference.
     uint8_t a_reg = cpu->A;
-    uint8_t to_bit7 = (a_reg & 0x1);    // Bit 0 value
-
-    uint8_t shifted_a = (a_reg >> 1) | (to_bit7 << 7);
-
+    uint8_t carry_out = (a_reg & 0x1);    // Bit 0 value
+    uint8_t shifted_a = (a_reg >> 1) | (carry_out << 7);
     cpu->A = shifted_a;
-    (to_bit7) ? set_flag(3) : clear_flag(3);
 
+    (carry_out) ? set_flag(3) : clear_flag(3);
     clear_flag(0);  // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
     cpu->PC++;
     // Bytes = 1
-
-    /*
-      ┏━━━━━━━ A ━━━━━━━┓   ┏━ Flags ━┓
-    ┌─╂→ b7 → ... → b0 ─╂─┬─╂→   C    ┃
-    │ ┗━━━━━━━━━━━━━━━━━┛ │ ┗━━━━━━━━━┛
-    └─────────────────────┘
-    */
 }
 
 static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A Left. Through the carry flag <---
-    printf("RLA. Rotate Register A Left (through carry flag).\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RLA Called.                     ; Rotate Register A Left (through carry flag).\n");
 
-    // Rotate register A left, through the carry flag.
+    uint8_t a_reg = cpu->A;
+    uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
+    uint8_t carry_out = ((a_reg >> 7) & 0x1);    // Isolate and extract bit 7
+    uint8_t rotated_a = (a_reg << 1) | carry_in; // Shift left, set bit 0 value.
+    cpu->A = rotated_a;
 
+    (carry_out) ? set_flag(3) : clear_flag(3);
+    clear_flag(0);  // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
 
-    /*
-        FLAGS:
-        Z = Set if result is 0
-        N = 0
-        H = 0
-        C = Set according to result
-    */
+    cpu->PC++;
     // Bytes = 1
 }
 
 static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left.
-    printf("RLCA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RLCA Called.                    ; Rotate Register A Left, wont use carry flag input\n");
+    
+    uint8_t a_reg = cpu->A;
+    uint8_t carry_out = ((a_reg >> 7) & 0x1);    // Shift bit right 7 to position 0, and pull the value at bit 0
+    uint8_t rotated_a = (a_reg << 1) | carry_out; // Shift left, set bit 0 value.
 
-    /*
-    ┏━ Flags ━┓   ┏━━━━━━━ A ━━━━━━━┓
-    ┃    C   ←╂─┬─╂─ b7 ← ... ← b0 ←╂─┐
-    ┗━━━━━━━━━┛ │ ┗━━━━━━━━━━━━━━━━━┛ │
-                └─────────────────────┘
-    */
+    cpu->A = rotated_a;
+    (carry_out) ? set_flag(3) : clear_flag(3);
+    clear_flag(0);  // Z Flag
+    clear_flag(1);  // N (Subtraction) Flag
+    clear_flag(2);  // H (Half Carry) Flag
 
+    cpu->PC++;
     // Bytes = 1
-
 }
 
 
