@@ -1776,8 +1776,8 @@ static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Re
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     /*
         FLAGS:
@@ -1802,8 +1802,8 @@ static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
 
     // FLAGS: See RL_r8
@@ -1826,8 +1826,8 @@ static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers 
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     /*
         FLAGS:
@@ -1851,8 +1851,8 @@ static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte p
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     // FLAGS: See RLC_r8
 }
@@ -1878,8 +1878,8 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     /*
         FLAGS:
@@ -1904,8 +1904,8 @@ static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     // FLAGS: see RR_r8
 }
@@ -1927,8 +1927,8 @@ static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2    
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     /*
         FLAGS:
@@ -1953,8 +1953,8 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value 
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
-    cpu->PC += 2;
-    // PREFIXED => Bytes 2    
+    cpu->PC ++;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
 
     // FLAGS: See RRC r8
 }
@@ -1962,10 +1962,7 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value 
 
 
 
-/// NOTICE:
-// These are PREFIXED instructions: 
-// SHIFT left & right Arithmetically.
-
+// PREFIXED SHIFT left & right Arithmetically.
 static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically Register r8.  <--
     printf("SLA r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2023,10 +2020,7 @@ static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logic
 }
 
 
-
-
-// These are PREFIXED instructions: 
-// Swap, Complement Carry Flag. Set Carry Flag.
+// PREFIXED Swap instructions
 static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
     printf("SWAP r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2047,11 +2041,7 @@ static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 
 
 }
 
-// -----------------------------------------------
-/// SECTION:
-// These are PREFIXED instructions: 
-// Bit Flag instructions:
-
+// PREFIXED Bit Flag instructions
 static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8m set the zero flag if bit not set
     printf("BIT u3, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2071,6 +2061,8 @@ static void BIT_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Test bit u3 in th
     cpu_status.halt = 1;
     // FLAGS: See BIT_u3_r8
 }
+
+// PREFIXED RES Instructions (Set a specific bit to 0?)
 static void RES_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
     printf("RES u3, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2083,6 +2075,7 @@ static void RES_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
     cpu_status.halt = 1;
     // FLAGS: None affected
 }
+// PREFIXED SET instructions (Set a specific bit to 1?)
 static void SET_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
     printf("SET u3, r8. Called, not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2096,6 +2089,18 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
     // FLAGS: None affected
 }
 
+
+
+
+
+
+/// NOTICE:
+// CB Prefixed BIT, RES, SET, Handlers.
+
+// Handlers help point to the correct function (RES x, r8), (RES x, [HL]).. 
+// AND which parameters for each Function:
+// BIT 0, B. or BIT 4, H. 
+// RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
     printf("CB BIT handler called. Not setup.\n");
     printf("%sHALTING%s\n", KRED, KNRM);
@@ -2104,6 +2109,8 @@ static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
 
 static void CB_RES_Handler(CPU *cpu, instruction_T instrc){
     printf("CB RES handler called. Not setup.\n");
+    
+    // NOTE RES Sets no Flags: ----
 
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
@@ -2111,6 +2118,8 @@ static void CB_RES_Handler(CPU *cpu, instruction_T instrc){
 
 static void CB_SET_Handler(CPU *cpu, instruction_T instrc){
     printf("CB SET handler called. Not setup.\n");
+
+    // NOTE SET Sets no Flags: ----
 
     printf("%sHALTING%s\n", KRED, KNRM);
     cpu_status.halt = 1;
@@ -2131,12 +2140,11 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
     // Advance the PC, and read it at the same time. 
-    uint16_t prefixed_opcode = external_read(cpu->PC++);       // Read CB Opcoad at PC++ location. 
-    printf("%s CB OPCODE:=[%0X4%s]\n", KYEL, prefixed_opcode, KNRM);
-
+    uint8_t prefixed_opcode = external_read(cpu->PC++);       // Read CB Opcoad at PC++ location. 
+    printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
 
     cb_opcodes[prefixed_opcode](cpu, instrc);
-    printf("%sCB Block Finished.%s\n", KYEL, KNRM);
+    printf("%sCB Block Finished.%s\n", KBLU, KNRM);
 }
 
 
@@ -2162,15 +2170,6 @@ static opcode_t *opcodes[256] = {
 /* EX */ LDH_p_a8_A, POP_r16,      LDH_p_C_A,  BLANK,    BLANK,        PUSH_r16, AND_A_n8,   RST_vec,  /* || */ ADD_SP_e8,    JP_HL,      LD_p_a16_A,  BLANK,     BLANK,       BLANK,     XOR_A_n8,   RST_vec,
 /* FX */ LDH_A_p_a8, POP_AF,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_n8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
-
-
-
-
-
-
-
-
-
 
 
 
