@@ -1781,12 +1781,12 @@ static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     uint8_t hl_val = external_read(cpu->HL);
     uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
-    uint8_t rotated_hl_val = (hl_val << 1) | carry_in;      // Shift byte left, set bit 0 value.
+    uint8_t rotated_hl = (hl_val << 1) | carry_in;          // Shift byte left, set bit 0 value.
     
-    external_write(cpu->HL, rotated_hl_val);   // Set [HL] value
+    external_write(cpu->HL, rotated_hl);    // Set [HL] value
 
     (carry_out) ? set_flag(3) : clear_flag(3);          // C Flag
-    (rotated_hl_val) ? set_flag(0) : clear_flag(0);     // Z Flag
+    (rotated_hl) ? set_flag(0) : clear_flag(0);     // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
@@ -1830,12 +1830,12 @@ static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte p
 
     uint8_t hl_val = external_read(cpu->HL);
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
-    uint8_t rotated_r8 = (hl_val << 1) | carry_out;         // Shift Byte Left, set bit 0
+    uint8_t rotated_hl = (hl_val << 1) | carry_out;         // Shift Byte Left, set bit 0
 
-    external_write(cpu->HL, hl_val);        // Set [HL] value
+    external_write(cpu->HL, rotated_hl);    // Set [HL] value
 
     (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
@@ -1883,12 +1883,12 @@ static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     uint8_t hl_val = external_read(cpu->HL);
     uint8_t carry_in = (cpu->F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = (hl_val & 0x1);
-    uint8_t rotated_r8 = (hl_val >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
+    uint8_t rotated_hl = (hl_val >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
 
-    external_write(cpu->HL, hl_val);         // Set [HL] value.
+    external_write(cpu->HL, rotated_hl);    // Set [HL] value.
 
     (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
@@ -1908,7 +1908,7 @@ static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r
     uint8_t carry_out = (r8_reg & 0x1);
     uint8_t rotated_r8 = (r8_reg >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
 
-    *reg_table[op_index] = rotated_r8;   // Set r8 Register.
+    *reg_table[op_index] = rotated_r8;                          // Set r8 Register.
 
     (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
     (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
@@ -1932,12 +1932,12 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value 
 
     uint8_t hl_val = external_read(cpu->HL);
     uint8_t carry_out = (hl_val & 0x1);
-    uint8_t rotated_r8 = (hl_val >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
+    uint8_t rotated_hl = (hl_val >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
 
-    external_write(cpu->HL, hl_val);            // Set [HL] value
+    external_write(cpu->HL, rotated_hl);        // Set [HL] value
 
     (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
+    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
     clear_flag(1);  // N (Subtraction) Flag
     clear_flag(2);  // H (Half Carry) Flag
 
