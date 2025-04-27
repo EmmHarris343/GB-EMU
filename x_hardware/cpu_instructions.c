@@ -129,8 +129,8 @@ static void NOP(CPU *cpu, instruction_T instrc) {                    // Placehol
 }
 // STOP
 static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like Pause.
-    printf("STOP Called, not setup HALT\n");
-    cpu_status.halt = 1;
+    printf("STOP Called, not setup PANIC HALT\n");
+    cpu_status.panic = 1;
     
 
 }
@@ -139,15 +139,15 @@ static void DAA(CPU *cpu, instruction_T instrc) {
     
     // DAA => Decimal Adjust Accumulator.
     printf("DAA. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
 }
 // BLANK
 static void BLANK(CPU *cpu, instruction_T instrc) {      // Do nothing, basically NOP, but for clarity don't write it like that.
     // DO NOTHING - Not even any command.
     // This shouldn't Even be called.
-    printf("%sBLANK Called, This should never be called. Halting%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sBLANK Called, This should never be called. Panic Halt.%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
 }
 
 // Carry Flag Instructions:
@@ -823,8 +823,6 @@ static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
 // SBC (Sub with the cary flag):
 static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
     printf("SBC A, r8. Called.                  ; Subtract value in r8 (and the carry flag) from Register A\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
 
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
@@ -1965,8 +1963,8 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value 
 // PREFIXED SHIFT left & right Arithmetically.
 static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically Register r8.  <--
     printf("SLA r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1977,14 +1975,14 @@ static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithm
 }
 static void SLA_P_HL(CPU *cpu, instruction_T instrc) {      //  Shift Left Arithmetically the byte pointed to by [HL]. <--
     printf("SLA [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     // Flags: SEE SLA r8
 }
 static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arithmetically Register r8. -->
     printf("SRA r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
 
     /*
         FLAGS:
@@ -1996,14 +1994,14 @@ static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arith
 }
 static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL. --> 
     printf("SRA [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     // Flags: See SRA_r8
 }
 static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logically Register r8. -->
     printf("SRL r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2014,8 +2012,8 @@ static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logic
 }
 static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logically the byte pointed to by [HL]. -->
     printf("SLR [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     // FLAGS: See SRL_r8
 }
 
@@ -2023,8 +2021,8 @@ static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logic
 // PREFIXED Swap instructions
 static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
     printf("SWAP r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2035,8 +2033,8 @@ static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 
 }
 static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
     printf("SWAP [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("%sPANIC HALTING%s\n", KRED, KNRM);
+    cpu_status.panic = 1;
     // FLAGS: See SWAP_r8
 
 }

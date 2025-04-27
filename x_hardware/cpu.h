@@ -58,6 +58,7 @@ typedef struct {
 } CPU;
 
 typedef struct {
+    uint8_t panic;
     uint8_t halt;
     uint8_t pause;
     uint8_t stop;

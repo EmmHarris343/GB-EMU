@@ -270,8 +270,8 @@ void run_cpu(int max_steps) {
         step_cpu(loc_cpu.PC);
         //check_registers();
         //if (cpu_status.halt == 1) i = max_steps;
-        if (cpu_status.halt == 1) {
-            printf("::CPU:: HALT detected. Breaking CPU loop.\n"); 
+        if (cpu_status.panic == 1) {
+            printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n"); 
             break;
         }
     }
