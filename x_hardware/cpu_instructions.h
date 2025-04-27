@@ -24,7 +24,7 @@ typedef struct {
 // void instr_ADD(CPU *cpu, uint8_t value);
 // void instr_SUB(CPU *cpu, uint8_t value);
 
-int execute_instruction(CPU *cpu, instruction_T instrc);
+int execute_instruction(CPU *cpu, instruction_T instrc, int step_count);
 
 // ... more instructions
 

@@ -11,12 +11,14 @@
 // #include "mmu.h"
 #include "mmu_interface.h"
 
+#include "debug.h"
+
 
 #include <unistd.h>
 
 
 extern Cartridge cart;
-
+extern FILE *debug_dump_file;
 
 void e_int(void) {
     static mmu_map_entry mmu_map[] = {
@@ -121,6 +123,12 @@ int startup_sequence() {
     
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
+        return -1;
+    }
+
+    const char *log_file = "./log/debug_log.txt";
+    if (debug_init(log_file) != 0) {
+        fprintf(stderr, "Error Initializing DEBUG File:\n");
         return -1;
     }
     

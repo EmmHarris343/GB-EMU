@@ -8,7 +8,6 @@
 
 #include "mmu_interface.h"
 
-
 uint8_t local_rom_entry[3];
 
 CPU loc_cpu;
@@ -218,7 +217,7 @@ uint8_t external_read(uint16_t addr_pc) {
     return int8_val;
 }
 
-void step_cpu(uint16_t addr_pc) {
+void step_cpu(uint16_t addr_pc, int step_count) {
     //printf("Entered Step CPU\n");
     uint8_t op_code = 0;
     uint8_t operand1 = 0;
@@ -255,7 +254,7 @@ void step_cpu(uint16_t addr_pc) {
     //printf(":CPU: Stepping... \n  PC: %04X\n  OPCODE: %02X\n  OP_Length: %02X\n", addr_pc, op_instruction.opcode, op_code_length);
     //printf(":CPU: OP1: %02X OP2: %02X\n", operand1, operand2);
 
-    if (execute_instruction(&loc_cpu, op_instruction) != 0) {
+    if (execute_instruction(&loc_cpu, op_instruction, step_count) != 0) {
         printf(":CPU: Error Executing CPU instruction!\n");
     }
     //printf(":CPU: Finished CPU Step\n");
@@ -267,7 +266,7 @@ void run_cpu(int max_steps) {
     printf(":CPU: RUN_CPU Started. Running test run: MAX STEPS: %0X\n", max_steps);
     for (int i = 0; i < max_steps; i++) {
         printf("\n[STEP %03d]", i);
-        step_cpu(loc_cpu.PC);
+        step_cpu(loc_cpu.PC, i);
         //check_registers();
         //if (cpu_status.halt == 1) i = max_steps;
         if (cpu_status.panic == 1) {

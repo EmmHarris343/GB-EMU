@@ -8,7 +8,12 @@
 
 #include "cpu_instructions.h"
 
+#include "debug.h"
 
+
+extern FILE *debug_dump_file;
+
+int step_count_icpu = 0;
 
 /// TODO: Make Flags easier to Use and more readable. /// BAD: set_flag(2), clear_flag(1)
 /*
@@ -2223,12 +2228,24 @@ static opcode_t *opcodes[256] = {
 
 
 
+void run_debug(CPU *cpu) {
+    // 
+
+    uint8_t hl_val = external_read(cpu->HL);
+    debug_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->HL, hl_val, cpu->A, cpu->PC);
+}
 
 
-int execute_instruction(CPU *cpu, instruction_T instrc) {
+int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
     printf(" PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->PC, instrc.opcode, instrc.operand1, instrc.operand2);
 
+    step_count_icpu = step_count;
     opcodes[instrc.opcode](cpu, instrc);
+
+
+    if (step_count % 1000 == 0) {
+        run_debug(cpu);
+    }
 
     printf("%sExecution Block Finished.%s\n", KYEL, KNRM);
     return 0;
