@@ -2042,24 +2042,42 @@ static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 
 }
 
 // PREFIXED Bit Flag instructions
-static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8m set the zero flag if bit not set
-    printf("BIT u3, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in register r8 set the zero flag if bit not set
+    printf("BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
 
-    /*
-        FLAGS:
-        Z = Set if the select bit is 0
-        N = 0
-        H = 1
-        C = ---
-    */
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+
+    uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (instrc.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t r8_reg = *reg_table[reg_index];
+
+    uint8_t get_state = ((r8_reg >> u3_num) & 1);
+    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+
+    clear_flag(1);  // Always clear N Flag. (Just GB CPU logic)
+    set_flag(2);    // Always SET h Flag.   (Just GB CPU logic)
+    // C flag unaffected.
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
 }
 static void BIT_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
-    printf("BIT u3, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
-    // FLAGS: See BIT_u3_r8
+    printf("BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
+
+    uint8_t u3_num = (instrc.opcode >> 3);                  // Acts as a divide by 8
+    uint8_t hl_val = external_read(cpu->HL);
+
+    uint8_t get_state = ((hl_val >> u3_num) & 1);
+    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+
+    clear_flag(1);  // Always clear N Flag.
+    set_flag(2);    // Always SET h Flag.
+    // C flag unaffected.
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
 }
 
 // PREFIXED RES Instructions (Set a specific bit to 0?)
@@ -2078,8 +2096,21 @@ static void RES_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 // PREFIXED SET instructions (Set a specific bit to 1?)
 static void SET_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
     printf("SET u3, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+
+    uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (instrc.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t r8_reg = *reg_table[reg_index];
+
+    uint8_t get_state = ((r8_reg >> u3_num) & 1);
+    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+
+    
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
     // FLAGS: None affected
 }
 static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
@@ -2097,32 +2128,26 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 /// NOTICE:
 // CB Prefixed BIT, RES, SET, Handlers.
 
-// Handlers help point to the correct function (RES x, r8), (RES x, [HL]).. 
+// Handlers help point to the correct function (RES X, r8), (RES X, [HL]).. 
 // AND which parameters for each Function:
 // BIT 0, B. or BIT 4, H. 
 // RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
-    printf("CB BIT handler called. Not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
+
+    ((instrc.opcode & 0x07) == 0x06) ? BIT_u3_p_HL(cpu, instrc) : BIT_u3_r8(cpu, instrc);
 }
 
 static void CB_RES_Handler(CPU *cpu, instruction_T instrc){
-    printf("CB RES handler called. Not setup.\n");
+    printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
     
-    // NOTE RES Sets no Flags: ----
-
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    ((instrc.opcode & 0x07) == 0x06) ? RES_u3_p_HL(cpu, instrc) : RES_u3_r8(cpu, instrc);
 }
 
 static void CB_SET_Handler(CPU *cpu, instruction_T instrc){
-    printf("CB SET handler called. Not setup.\n");
+    printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
 
-    // NOTE SET Sets no Flags: ----
-
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    ((instrc.opcode & 0x07) == 0x06) ? SET_u3_p_HL(cpu, instrc) : SET_u3_r8(cpu, instrc);
 }
 
 static opcode_t *cb_opcodes[256] = {
