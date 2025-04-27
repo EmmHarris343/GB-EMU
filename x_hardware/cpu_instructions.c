@@ -266,9 +266,11 @@ static void LD_p_r16_A(CPU *cpu, instruction_T instrc) {
         case 0x02:
             // LD [BC], A
             external_write(cpu->BC, cpu->A);
+            break;
         case 0x12:
             // LD [DE], A
             external_write(cpu->DE, cpu->A);
+            break;
     }
     cpu->PC++;
 }
@@ -278,9 +280,13 @@ static void LD_A_p_r16(CPU *cpu, instruction_T instrc) {
         case 0x0A:
             // LD A, [BC]
             cpu->A = external_read(cpu->BC);
+            break;
         case 0x1A:
-            // LD A, [DE]
+            // LD A, [DE]            
             cpu->A = external_read(cpu->DE);
+            break;
+            printf("|DEBUG| : A Regiser: %02X || [DE] value: %02X | Addr: %04X\n", cpu->A, external_read(cpu->DE), cpu->DE);
+            
     }
     cpu->PC++;
 }
@@ -289,6 +295,7 @@ static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
 
     uint8_t a_val = cpu->A;
+    printf("|DEBUG| : A:%02X HL Addr: %04X\n", a_val, cpu->HL);
     external_write(cpu->HL, a_val);
 
     // Increment HL & the PC By one.
