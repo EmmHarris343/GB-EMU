@@ -2082,20 +2082,36 @@ static void BIT_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Test bit u3 in th
 
 // PREFIXED RES Instructions (Set a specific bit to 0?)
 static void RES_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("RES u3, r8. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+
+    uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (instrc.opcode & 0x07);  // Provides 0-7 Index to Match Register
+
+    *reg_table[reg_index] &= ~(1 << u3_num);     // Set bit at u3 index to 0.
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
     // FLAGS: None affected
 }
 static void RES_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("RES u3, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
+
+    uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
+    uint8_t hl_val = external_read(cpu->HL);
+    
+    hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
+    external_write(cpu->HL, hl_val);
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
     // FLAGS: None affected
 }
-// PREFIXED SET instructions (Set a specific bit to 1?)
+// PREFIXED SET instructions (Set bit to 1, at u3 Index?)
 static void SET_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("SET u3, r8. Called, not setup.\n");
+    printf("SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
@@ -2103,20 +2119,24 @@ static void SET_u3_r8(CPU *cpu, instruction_T instrc) {     // Set bit u3 in reg
 
     uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
     uint8_t reg_index = (instrc.opcode & 0x07);  // Provides 0-7 Index to Match Register
-    uint8_t r8_reg = *reg_table[reg_index];
 
-    uint8_t get_state = ((r8_reg >> u3_num) & 1);
-    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+    *reg_table[reg_index] |= (1 << u3_num);     // Sets a single bit to 1, in the Index of r8 Register.
 
-    
     cpu->PC ++;
     // Bytes = 2 (CB logic already advanced once)
     // FLAGS: None affected
 }
 static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("SET u3, [HL]. Called, not setup.\n");
-    printf("%sHALTING%s\n", KRED, KNRM);
-    cpu_status.halt = 1;
+    printf("SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
+
+    uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
+    uint8_t hl_val = external_read(cpu->HL);
+    hl_val |= (1 << u3_num);
+
+    external_write(cpu->HL, hl_val);
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
     // FLAGS: None affected
 }
 
