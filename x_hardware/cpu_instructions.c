@@ -2032,9 +2032,26 @@ static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logic
 
 // PREFIXED Swap instructions
 static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
-    printf("SWAP r8. Called, not setup.\n");
-    printf("%sPANIC HALTING%s\n", KRED, KNRM);
-    cpu_status.panic = 1;
+    printf("SWAP r8. Called.                    ; Swap upper and lower bits in r8 Register X::Y -> Y::X\n");
+
+    uint8_t *reg_table[8] = {
+        &cpu->B, &cpu->C, &cpu->D, &cpu->E, &cpu->H, &cpu->L, NULL, &cpu->A
+    };
+    uint8_t reg_index = (instrc.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t r8_reg = *reg_table[reg_index];
+
+    uint8_t swapped = (r8_reg << 4) | (r8_reg >> 4);
+
+    *reg_table[reg_index] = swapped;
+
+    (swapped) ? clear_flag(0) : set_flag(0);  // If not 0, clear, else Set Z flag.
+    set_flag(1);    // N Cleared
+    set_flag(2);    // H Cleared
+    set_flag(3);    // C Cleared
+
+    cpu->PC ++;
+    // Bytes = 2 (CB logic already advanced once)
+
     /*
         FLAGS:
         Z = Set if result is 0
