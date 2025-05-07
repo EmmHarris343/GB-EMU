@@ -11,7 +11,7 @@
 // #include "mmu.h"
 #include "mmu_interface.h"
 
-#include "debug.h"
+#include "logger.h"
 
 
 #include <unistd.h>
@@ -127,7 +127,7 @@ int startup_sequence() {
     }
 
     const char *log_file = "./log/debug_log.txt";
-    if (debug_init(log_file) != 0) {
+    if (logging_init(log_file) != 0) {
         fprintf(stderr, "Error Initializing DEBUG File:\n");
         return -1;
     }

@@ -1,11 +1,11 @@
-#include "debug.h"
+#include "logger.h"
 #include <stdarg.h>
 
 FILE *debug_dump_file = NULL;
 FILE *debug_sml = NULL;
 
 
-int debug_init(const char *filename) {
+int logging_init(const char *filename) {
     debug_dump_file = fopen(filename, "w");
     if (!debug_dump_file) {
         printf("[ERROR] Failed to open debug log file!\n");
@@ -15,14 +15,14 @@ int debug_init(const char *filename) {
 }
 
 
-void debug_close() {
+void logging_close() {
     if (debug_dump_file) {
         fclose(debug_dump_file);
         debug_dump_file = NULL;
     }
 }
 
-void debug_log(const char *format, ...) {
+void logging_log(const char *format, ...) {
     if (!debug_dump_file) return;
 
     va_list args;

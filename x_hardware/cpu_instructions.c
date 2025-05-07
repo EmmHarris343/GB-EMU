@@ -8,7 +8,7 @@
 
 #include "cpu_instructions.h"
 
-#include "debug.h"
+#include "logger.h"
 
 
 extern FILE *debug_dump_file;
@@ -2249,7 +2249,7 @@ void run_debug(CPU *cpu) {
     // 
 
     uint8_t hl_val = external_read(cpu->HL);
-    debug_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->HL, hl_val, cpu->A, cpu->PC);
+    logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->HL, hl_val, cpu->A, cpu->PC);
 }
 
 
