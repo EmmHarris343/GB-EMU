@@ -245,16 +245,11 @@ static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     // Bytes: 3
     // Flags: None Affected
 }
-static void LD_p_r16_n16(CPU *cpu, instruction_T instrc) {
-    printf("LD [r16] n16                    ; Load n16 value into value pointed by Register in [r16]\n");
-    uint16_t load_n16;
-    load_n16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-}
 static void LD_p_HL_n8(CPU *cpu, instruction_T instrc) {       // Copy data from n8, into where HL is being pointed to
     printf("LD [HL] n8 Called.                  ; LD n8 Value into [HL]\n");
 
     external_write(cpu->HL, instrc.operand1);
-    cpu->PC ++;
+    cpu->PC += 2;
     // Bytes = 2
     // No flags Affected
 }
@@ -407,17 +402,7 @@ static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
 
 /// SECTION:
 // LD Stack manipulation Instructions:
-static void LD_SP_n16(CPU *cpu, instruction_T instrc) {
-    printf("LD_SP_n16 Overwrite the stack pointer, with value in n16.\n");
 
-    // Overwrites the stack pointer with the value in the operands.
-    cpu->SP = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-    cpu->PC += 3;
-
-    // Bytes = 3
-    // No Flags affected
-    
-}
 static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
     printf("LD [n16] SP, Write SP_Low & SP_High Bytes, into the [a16] and [a16+1] memory locations\n");
 
@@ -580,8 +565,6 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instrc.operand1;
-
-    uint16_t jr_addr_test = (cpu->PC + e_signed_offset);
 
     switch (instrc.opcode) {
         case 0x20:                  // JR, NZ e8
@@ -1001,9 +984,6 @@ static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byt
 static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in pointer HL to A
     // Depending on the OP Code, it changes WHICH instruction is compared.
     printf("CP A, r8.               ; EXP: ComPare (cpu->A - r8_reg) --> Set Flags \n");
-
-    uint8_t op_c_reg = instrc.opcode;
-    uint8_t r8_reg = 0;
 
     uint8_t *reg_table[8] = {
         &cpu->B, &cpu->C, &cpu->D, &cpu->E, 
@@ -2228,7 +2208,7 @@ static opcode_t *opcodes[256] = {
 /* 0X */ NOP,        LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   RLCA,     /* || */ LD_p_a16_SP,  ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   RRCA,
 /* 1X */ STOP,       LD_r16_n16,    LD_p_r16_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   RLA,      /* || */ JR_e8,        ADD_HL_r16, LD_A_p_r16,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   RRA,
 /* 2X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_r8,     DEC_r8,  LD_r8_n8,   DAA,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLI,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   CPL,
-/* 3X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLI_A, INC_r16,  INC_p_HL,    DEC_p_HL, LD_p_HL_n8, SCF,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLD,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   CCF,
+/* 3X */ JR_cc_e8,   LD_r16_n16,    LD_p_HLD_A, INC_r16,  INC_p_HL,    DEC_p_HL, LD_p_HL_n8, SCF,      /* || */ JR_cc_e8,     ADD_HL_r16, LD_A_p_HLD,  DEC_r16,   INC_r8,     DEC_r8,   LD_r8_n8,   CCF,
 /* 4X */ NOP,        LD_B_C,        LD_B_D,     LD_B_E,   LD_B_H,      LD_B_L,   LD_B_DHL,   LD_B_A,   /* || */ LD_C_B,       NOP,        LD_C_D,      LD_C_E,    LD_C_H,      LD_C_L,    LD_C_DHL,   LD_C_A,
 /* 5X*/  LD_D_B,     LD_D_C,        NOP,        LD_D_E,   LD_D_H,      LD_D_L,   LD_D_DHL,   LD_D_A,   /* || */ LD_E_B,       LD_E_C,     LD_E_D,      NOP,       LD_E_H,      LD_E_L,    LD_E_DHL,   LD_E_A,
 /* 6X */ LD_H_B,     LD_H_C,        LD_H_D,     LD_H_E,   NOP,         LD_H_L,   LD_H_DHL,   LD_H_A,   /* || */ LD_L_B,       LD_L_C,     LD_L_D,      LD_L_E,    LD_L_H,      NOP,       LD_L_DHL,   LD_L_A,
