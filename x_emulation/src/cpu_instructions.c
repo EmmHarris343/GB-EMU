@@ -2233,6 +2233,16 @@ void run_debug(CPU *cpu) {
 }
 
 
+
+void execute_test(CPU *cpu, instruction_T instrc) {
+
+
+    //step_count_icpu = step_count;     do I want or need a step count?
+    opcodes[instrc.opcode](cpu, instrc);
+
+}
+
+
 int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
     printf(" PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->PC, instrc.opcode, instrc.operand1, instrc.operand2);
 

@@ -249,15 +249,9 @@ void step_cpu(uint16_t addr_pc, int step_count) {
     op_instruction.operand1 = operand1;
     op_instruction.operand2 = operand2;
     
-    //printf(":CPU: Stepping... Opcode: %02X, Op1: %02X, Op2: %02X\n", op_instruction.opcode, op_instruction.operand1, op_instruction.operand2);
-
-    //printf(":CPU: Stepping... \n  PC: %04X\n  OPCODE: %02X\n  OP_Length: %02X\n", addr_pc, op_instruction.opcode, op_code_length);
-    //printf(":CPU: OP1: %02X OP2: %02X\n", operand1, operand2);
-
     if (execute_instruction(&loc_cpu, op_instruction, step_count) != 0) {
         printf(":CPU: Error Executing CPU instruction!\n");
     }
-    //printf(":CPU: Finished CPU Step\n");
 }
 
 
@@ -276,8 +270,3 @@ void run_cpu(int max_steps) {
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");   
 }
-
-
-        //printf("\n\n===================\n:CPU: Step Count:(%d / %d) \n", i, max_steps);
-        //check_registers();
-        //printf(":CPU: PC Counter: 0x%04X\n", loc_cpu.PC);

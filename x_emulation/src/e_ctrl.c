@@ -89,7 +89,7 @@ void dump_hram_test() {
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
 
-    const char *rom_file = "../rom/pkmn_red.gb";
+    const char *rom_file = "../../rom/pkmn_red.gb";
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
     
     // 06-ld_r,r
@@ -126,7 +126,7 @@ int startup_sequence() {
         return -1;
     }
 
-    const char *log_file = "./log/debug_log.txt";
+    const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
         fprintf(stderr, "Error Initializing DEBUG File:\n");
         return -1;

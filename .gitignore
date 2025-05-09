@@ -19,8 +19,11 @@ cpu_op
 *.o
 
 # (The main executable for now)
-x_emulation/log/*.txt
+
+x_emulation/log/debug_log.txt
 x_emulation/src/gb_em
+
+
 
 
 
@@ -44,8 +47,6 @@ x_emulation/src/gb_em
 
 
 # Debug files
-*.txt
-*log.txt
 .vscode
 *.dSYM/
 *.su

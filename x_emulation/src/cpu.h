@@ -3,23 +3,11 @@
 
 #include <stdint.h>
 
-// typedef struct {
-//     uint8_t A, F;   // Accumulator & Flags
-//     uint8_t B, C;
-//     uint8_t D, E;
-//     uint8_t H, L;
-//     uint16_t SP;    // 
-//     uint16_t PC;    // Pointer Counter
-// } CPU;
-
 typedef struct {
     uint8_t opcode;
     uint8_t operand1;
     uint8_t operand2;
 } instruction_T;
-
-
-
 
 typedef struct {
     union {
