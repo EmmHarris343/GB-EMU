@@ -17,8 +17,12 @@ cpu_op
 
 # What I'm calling my executable library files 
 *.o
+
 # (The main executable for now)
-x_hardware/gb_em
+x_emulation/log/*.txt
+x_emulation/src/gb_em
+
+
 
 
 # Other:
@@ -36,10 +40,12 @@ x_hardware/gb_em
 *.lo
 
 # this is just where I threw some code I don't know if I want to keep, don't upload to github.
-x_hardware/*old.c 
+
 
 
 # Debug files
+*.txt
+*log.txt
 .vscode
 *.dSYM/
 *.su
