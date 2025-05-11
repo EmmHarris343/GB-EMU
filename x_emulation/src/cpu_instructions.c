@@ -11,9 +11,13 @@
 #include "logger.h"
 
 
+int step_count_icpu = 0;
 extern FILE *debug_dump_file;
 
-int step_count_icpu = 0;
+extern CPU_STATE cpu_status;
+typedef void opcode_t(CPU *cpu, instruction_T instrc);
+
+
 
 /// TODO: Make Flags easier to Use and more readable. /// BAD: set_flag(2), clear_flag(1)
 /*
@@ -93,9 +97,7 @@ void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
 
 
 
-typedef void opcode_t(CPU *cpu, instruction_T instrc);
 
-extern CPU_STATE cpu_status;
 
 
 // INTERUPT Instructions:
