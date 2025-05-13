@@ -8,4 +8,4 @@
 
 
 
-void run_cpu_test();
+void instruction_test();

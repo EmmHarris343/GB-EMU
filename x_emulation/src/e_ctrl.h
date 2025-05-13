@@ -10,6 +10,7 @@
 
 
 int startup_sequence();
+int test_sequence();
 
 
 

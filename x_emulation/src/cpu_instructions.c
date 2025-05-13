@@ -2236,12 +2236,15 @@ void run_debug(CPU *cpu) {
 
 
 
-void execute_test(CPU *cpu, instruction_T instrc) {
-
-
-    //step_count_icpu = step_count;     do I want or need a step count?
+int execute_test(CPU *cpu, instruction_T instrc) {
+    printf("(EXTRA DETAIL) PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->PC, instrc.opcode, instrc.operand1, instrc.operand2);
+    // Force it with 22..
     opcodes[instrc.opcode](cpu, instrc);
 
+    printf("%sExecution of Test Instruction Complete. Saving to Log File.%s\n", KYEL, KNRM);
+    run_debug(cpu);
+    // run_debug(cpu);       Dump Registers, Flags, PC, and SP
+    return 0;
 }
 
 

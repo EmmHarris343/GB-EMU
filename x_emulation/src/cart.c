@@ -3,6 +3,8 @@
 Cartridge cart;         // doing *cart means that I need to allocate the memory, maybe I will do that, but for now this works
 
 
+#include "string.h"
+
 
 /*
         Steps:
@@ -32,7 +34,115 @@ Write Table: (Intercepting)
     A000 - BFFF (EXT RAM)       => READ/ WRITE  ACTION: Reads from External RAM / Writes to External RAM
 */
 
-// Load cartridge Settings.
+
+
+
+// Some re-usable functions:
+uint32_t rom_size_by_code(uint8_t rom_size_code) {
+    const uint32_t rom_size_lookup[0x55] = {
+        [0x00] = 32 * 1024,
+        [0x01] = 64 * 1024,
+        [0x02] = 128 * 1024,
+        [0x03] = 256 * 1024,
+        [0x04] = 512 * 1024,
+        [0x05] = 1024 * 1024,
+        [0x06] = 2 * (1024 * 1024),
+        [0x07] = 4 * (1024 * 1024),
+        [0x08] = 8 * (1024 * 1024),
+        [0x52] = 72 * 16 * 1024,  // Wonky 72 banks => 1.1 MB
+        [0x53] = 80 * 16 * 1024,  // Wonky 80 banks => 1.2 MB
+        [0x54] = 96 * 16 * 1024   // Wonky 96 banks => 1.5 MB
+    };
+    return rom_size_lookup[rom_size_code];
+}
+
+uint16_t rom_bank_by_code(uint8_t rom_bank_code) {
+    const uint16_t rom_bank_lookup[0x55] = {
+        2, 4, 8, 16, 32, 64, 128, 256, 512,        
+        [0x52] = 72, [0x53] = 80, [0x54] = 96 // Special $52 - $54 Rom Size codes:
+    };
+    return rom_bank_lookup[rom_bank_code];
+}
+
+size_t ram_size_by_code(uint8_t ram_code) {    
+    size_t ram_size = 0;
+    switch (cart.headers.ram_size_code) {
+        case 0x00: ram_size = 0; break;
+        case 0x01: ram_size = 2 * 1024; break;
+        case 0x02: ram_size = 8 * 1024; break;
+        case 0x03: ram_size = 32 * 1024; break;
+        case 0x04: ram_size = 128 * 1024; break;
+        case 0x05: ram_size = 64 * 1024; break;
+        default: ram_size = 0; break;
+    }
+    return ram_size;
+}
+
+
+
+
+
+int init_cart_test_mode() {
+    // Default to DMG 01 | MBC 1
+    uint8_t full_header[HEADER_SIZE];
+    printf("Starting Mock Rom/ Cartridge Configuration.. \n");
+
+
+    /// NOTICE: These are hard coded values. Intended strictly for testing
+
+    cart.headers.cart_type_code = 0x03;          // MBC (Zda MBC1 = 0x02 - 0x03)
+    cart.headers.rom_size_code = 0x04;           // Rom (Zda uses 0x04)
+    cart.headers.ram_size_code = 0x02;           // Ram (Memory size)    
+
+    // ROM Size / Bank count
+    cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
+    cart.config.rom_bank_count = rom_bank_by_code(cart.headers.rom_size_code);
+
+    // RAM Size:
+    cart.config.ram_size = ram_size_by_code(cart.headers.ram_size_code);
+
+    // Some Other Config Settings.
+    cart.config.mbc_type = 1;
+    cart.config.has_rom_banking = 1;
+    cart.config.has_ram = 1;
+    cart.config.has_ram_banking = 1;
+    cart.config.has_battery = 1;
+
+    // Some default Startup Settings for Rom.
+    if (cart.config.has_ram == 1) {
+        cart.resrce.ram_toggle = 0;
+    }
+    if (cart.config.has_ram_banking) {
+        cart.resrce.current_ram_bank = 0x00;
+    }
+    if (cart.config.has_rom_banking == 1) {
+        cart.resrce.current_rom_bank = 1;           // Defaulting to bank 1 (WARNING! this behaviour is not consistant in all MBC!)
+        cart.resrce.fixed_b_addr = 0x00;
+        cart.resrce.calcd_switch_addr = (cart.resrce.current_rom_bank * 0x4000);     // Not confident I want to use this.
+    }
+
+    printf("Create, and Malloc. A Mock ROM with test Data.\n");
+    // Fills the rom with mock data.
+    uint32_t mock_rom_size = cart.config.rom_size;
+    uint8_t mock_banks = cart.config.rom_bank_count;
+
+    cart.resrce.rom_data = malloc(mock_rom_size);
+    if (!cart.resrce.rom_data) {
+        fprintf(stderr, "Mock ROM Malloc failed!\n");
+        return -1;
+    }
+
+    for (uint32_t bank = 0; bank < mock_banks ; ++bank) {
+        uint8_t fill = (uint8_t)(bank & 0xFF);              // Makes each bank have different bytes/ data
+        memset(cart.resrce.rom_data + bank * 0x4000, fill, 0x4000);
+    }
+    printf("Done.\n");
+    printf("Finished all Cartridge Configuration & Mock Rom setup.\n");
+
+    return 0;
+}
+
+
 
 int load_headers(const char *filename) {
     uint8_t full_header[HEADER_SIZE];                   // Not static means, header will be deleted after function finishes.
@@ -71,7 +181,7 @@ int decode_cart_features() {
             cart.config.mbc_type = 1;
             cart.config.has_rom_banking = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);
             cart.config.has_ram = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);
-            cart.config.has_ram_banking = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);            
+            cart.config.has_ram_banking = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);
             cart.config.has_battery = (cart.headers.cart_type_code == 0x03);
             break;
         case 0x13:      // MBC3 + RAM + Battery
@@ -81,45 +191,16 @@ int decode_cart_features() {
             break;
     }
 
-    const uint32_t rom_size_lookup[0x55] = {
-        [0x00] = 32 * 1024,
-        [0x01] = 64 * 1024,
-        [0x02] = 128 * 1024,
-        [0x03] = 256 * 1024,
-        [0x04] = 512 * 1024,
-        [0x05] = 1024 * 1024,
-        [0x06] = 2 * (1024 * 1024),
-        [0x07] = 4 * (1024 * 1024),
-        [0x08] = 8 * (1024 * 1024),
-        [0x52] = 72 * 16 * 1024,  // Wonky 72 banks => 1.1 MB
-        [0x53] = 80 * 16 * 1024,  // Wonky 80 banks => 1.2 MB
-        [0x54] = 96 * 16 * 1024   // Wonky 96 banks => 1.5 MB
-    };
-    const uint16_t rom_bank_lookup[0x55] = {
-        2, 4, 8, 16, 32, 64, 128, 256, 512,        
-        [0x52] = 72, [0x53] = 80, [0x54] = 96 // Special $52 - $54 Rom Size codes:
-    };
+    //cart.config.rom_size = rom_size_lookup[rom_size_code];
+    //cart.config.rom_bank_count = rom_bank_lookup[rom_size_code];
 
-    uint8_t rom_size_code = cart.headers.rom_size_code;
-    cart.config.rom_size = rom_size_lookup[rom_size_code];
-    cart.config.rom_bank_count = rom_bank_lookup[rom_size_code];
+    // ROM Size / Bank count
+    cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
+    cart.config.rom_bank_count = rom_bank_by_code(cart.headers.rom_size_code);
 
-    // Set ROM Size:
-    // This reads wrong. Try something else!
-    // cart.config.rom_size = 32 * 1024 << cart.headers.rom_size_code;        // Each step will double the Ram size by 32
-    // cart.config.rom_bank_count = 2 << cart.headers.rom_size_code;          // Each step doubles the rom Banks (Yes, even no MSB, technically is 2 ROM Banks)
+    // RAM Size:
+    cart.config.ram_size = ram_size_by_code(cart.headers.ram_size_code);
 
-
-    // Configure RAM Size:
-    switch (cart.headers.ram_size_code) {
-        case 0x00: cart.config.ram_size = 0; break;
-        case 0x01: cart.config.ram_size = 2 * 1024; break;
-        case 0x02: cart.config.ram_size = 8 * 1024; break;
-        case 0x03: cart.config.ram_size = 32 * 1024; break;
-        case 0x04: cart.config.ram_size = 128 * 1024; break;
-        case 0x05: cart.config.ram_size = 64 * 1024; break;
-        default: cart.config.ram_size = 0; break;
-    }
     printf("Done.\n");
 
     return 0;
@@ -166,7 +247,7 @@ int load_cartridge(const char *filename) {
 
 int initialize_cartridge() {
     // Load resources and info, set bank values, ram values, etc
-    //printf("What does the Has ram look like? %02X, %d\n", cart.config.has_ram, cart.config.has_ram);
+    // printf("What does the Has ram look like? %02X, %d\n", cart.config.has_ram, cart.config.has_ram);
     if (cart.config.has_ram == 1) {
         cart.resrce.ram_toggle = 0;
     }
@@ -255,6 +336,12 @@ void write_intercept(uint16_t addr, uint8_t write_value) {
 }
 
 
+
+
+
+
+
+
 // Entry point from MMU:
 
 uint8_t cart_read(uint16_t addr) {
@@ -285,7 +372,7 @@ void cart_write(uint16_t addr, uint8_t val) {
 
 uint8_t cart_ram_read(uint16_t addr) {
     
-    return 0xFF;
+    return 0xFF; // Returns dummy response of 0xFF
 
 }
 void cart_ram_write(uint16_t addr, uint8_t val) {

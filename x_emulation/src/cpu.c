@@ -151,6 +151,7 @@ void extract_opcode(uint16_t addr_pc) {
     uint8_t operand2 = 0;   
     
     op_code = mmu_read(addr_pc);
+    printf("OP_CODE (Read from Ram)%04X\n", op_code);
     if (opcode_lengths[op_code] >= 2) {
         // printf(":CPU: 8Bit Operand ");
         operand1 = mmu_read(addr_pc + 1);
@@ -196,11 +197,11 @@ void run_cpu(int max_steps) {
 /// TEST:
 // *----
 
-void tstate_set_opcode() {
-        // Set the operands:
-        op_instruction.opcode = 0;
-        op_instruction.operand1 = 0;
-        op_instruction.operand2 = 0;  
+void tstate_set_opcode(uint8_t test_opcode, uint8_t op1, uint8_t op2) {
+        // Set the opcode and operands:
+        op_instruction.opcode = test_opcode;
+        op_instruction.operand1 = op1;
+        op_instruction.operand2 = op2;
 }
 
 void tstate_set_registers() {
@@ -240,16 +241,24 @@ void tstate_set_ram() {
 // This ensures everything is done, then finally calls the Execute Instruction
 void run_cpu_test() {
     int step_count = 0;             // Will I ever use this for tests?
+    uint8_t special_op_code = 0x5C; // 5C = LD E, H
     
-    tstate_set_opcode();            // The Opcode (& the Operands), to pass to CPU Instruction
+    tstate_set_opcode(special_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
     
-    tstate_set_registers();    
+    tstate_set_registers();
     tstate_set_flag();              // How do I know which flag Needs to be set?
     tstate_set_ram();
 
+    printf(":CPU: Initial CPU state set. Ready for Execution of Test\n");
 
-    /// TODO: Placeholder... this calls the Normal CPU instruction, NOT Test.
-    if (execute_instruction(&local_cpu, op_instruction, step_count) != 0) {
+    printf("Showing Registers first, making sure working..\n\n");
+    check_registers();
+
+
+    if (execute_test(&local_cpu, op_instruction) != 0) {
         printf(":CPU: Error Executing CPU instruction!\n");
     }
+
+    printf("Post Execution Registers... \n");
+    check_registers();
 }

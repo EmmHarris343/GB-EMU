@@ -17,9 +17,9 @@ int init_loc_ram() {
     memset(ERAM, 0, ERAM_SIZE); // This is mostly a route area. Technically NOTHIGN should be written here. If it is, I believe the gameboy would freeze up normally
     
 
-    for (int i = 0; i < HRAM_SIZE; i++) {
-        printf("HRAM[%02X] = %02X\n", i + 0xFF80, HRAM[i]);
-    }
+    // for (int i = 0; i < HRAM_SIZE; i++) {
+    //     printf("HRAM[%02X] = %02X\n", i + 0xFF80, HRAM[i]);
+    // }
 
     return 0;
 }

@@ -29,7 +29,10 @@ void verify_state() {
 }
 
 
-void run_cpu_test(){
+void instruction_test(){
+    printf("[CPU_Test] Hook into CPU.c ---> Start CPU Test!\n");
+    // TEST Section:
+    run_cpu_test(); // cpu_test -> cpu.c
 
 
 }

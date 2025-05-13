@@ -75,6 +75,7 @@ int load_headers(const char *filename);
 int decode_cart_features();
 int load_cartridge(const char *filename);
 int initialize_cartridge();
+int init_cart_test_mode();
 
 // Test
 void write_intercept(uint16_t address, uint8_t data);
