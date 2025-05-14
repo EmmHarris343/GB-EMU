@@ -2238,19 +2238,24 @@ void run_debug(CPU *cpu) {
 
 void run_test_debug(CPU *cpu) {
     logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->AF, cpu->BC, cpu->DE, cpu->HL, cpu->PC, cpu->SP);
+
 }
 
 
 
 int execute_test(CPU *cpu, instruction_T instrc) {
     printf("(EXTRA DETAIL) PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->PC, instrc.opcode, instrc.operand1, instrc.operand2);
-    // Force it with 22..
+
     run_test_debug(cpu);
     opcodes[instrc.opcode](cpu, instrc);
 
-    printf("%sExecution of Test Instruction Complete. Saving to Log File.%s\n", KYEL, KNRM);
-    run_test_debug(cpu);
-    // run_debug(cpu);       Dump Registers, Flags, PC, and SP
+    if (cpu_status.panic == 1) { printf("ENCOUNTERED PANIC, Instruction not yet ready.\n"); }
+    else {
+        printf("%sExecution of Test Instruction Complete. Saving to Log File.%s\n", KYEL, KNRM);
+        run_test_debug(cpu);
+        return -1;
+    }
+
     return 0;
 }
 
