@@ -9,6 +9,40 @@ typedef struct {
     uint8_t operand2;
 } instruction_T;
 
+// typedef struct {
+//     union {
+//         struct {
+//             uint8_t F;  // Flag Register (Yes the ZNHC)
+//             uint8_t A;  // The Accumulator
+//         };
+//         uint16_t AF;
+//     };
+//     union {
+//         struct {
+//             uint8_t C;
+//             uint8_t B;
+//         };
+//         uint16_t BC;
+//     };
+//     union {
+//         struct {
+//             uint8_t E;
+//             uint8_t D;
+//         };
+//         uint16_t DE;
+//     };
+//     union {
+//         struct {
+//             uint8_t L;
+//             uint8_t H;
+//         };
+//         uint16_t HL;
+//     };
+
+//     uint16_t SP;    // Stack pointer
+//     uint16_t PC;    // Program Counter
+// } CPU;
+
 typedef struct {
     union {
         struct {
@@ -38,19 +72,25 @@ typedef struct {
         };
         uint16_t HL;
     };
-
     uint16_t SP;    // Stack pointer
     uint16_t PC;    // Program Counter
-    uint8_t IME;    // Interrupt Master Enable, flag
+} CPU_Registers;
 
-} CPU;
+typedef struct {        
+    uint8_t halt;
+    uint8_t stop;
+    uint8_t pause;
+    uint8_t IME;    // Interrupt Master Enable, flag
+    uint8_t panic;  // My way to detect major failure, and abort.
+} CPU_State;
 
 typedef struct {
-    uint8_t panic;
-    uint8_t halt;
-    uint8_t pause;
-    uint8_t stop;
-} CPU_STATE;
+    CPU_Registers reg;  // CPU Registers
+    CPU_State state;    // CPU States
+} CPU;
+
+
+
 
 
 
@@ -73,7 +113,7 @@ void run_cpu(int max_steps);
 
 
 // TEST Section:
-void run_cpu_test();
+void run_cpu_test(uint8_t test_op_code);
 
 
 
