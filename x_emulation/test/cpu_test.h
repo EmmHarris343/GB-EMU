@@ -35,11 +35,6 @@ typedef struct {
 
 
 // Entry point from e_ctrl.c
-void instruction_test();    // I don't like this... 
-
-void unt_test_case();
-
-
 void unit_test_instruction();    // This one is more specific (A direct cpu_instruction test)
 
 

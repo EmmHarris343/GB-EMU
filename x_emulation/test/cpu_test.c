@@ -151,27 +151,7 @@ void integration_test_instruction() {
     
 }
 
-void instruction_test_advanced(){
-    printf("[CPU_Test] Hook into CPU.c ---> Start CPU Test!\n");
 
-
-    // TEST Section:
-    run_cpu_test(0x5C); // cpu_test -> cpu.c
-}
-
-
-
-void instruction_test(){
-    printf("[CPU_Test] Hook into CPU.c ---> Start CPU Test!\n");
-    
-
-
-    // TEST Section:
-    run_cpu_test(0x5C); // cpu_test -> cpu.c
-
-
-
-}
 
 
 
