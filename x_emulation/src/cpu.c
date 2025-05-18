@@ -21,7 +21,12 @@ const CPU cpu_post_bios_state = {
     .reg.DE = 0x00D8,
     .reg.HL = 0x014D,
     .reg.SP = 0xFFFE,
-    .reg.PC = 0x0100
+    .reg.PC = 0x0100,
+    .state.IME = 0,         // Interupt
+    .state.halt = 0,
+    .state.pause = 0,
+    .state.stop = 0,
+    .state.panic = 0        // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
 };
 
 const CPU cpu_reg_simple_tstate = {
@@ -30,7 +35,12 @@ const CPU cpu_reg_simple_tstate = {
     .reg.DE = 0x032C,
     .reg.HL = 0x043E,
     .reg.SP = 0xFFFE,
-    .reg.PC = 0x0789
+    .reg.PC = 0x0789,    
+    .state.IME = 0,         // Interupt
+    .state.halt = 0,
+    .state.pause = 0,
+    .state.stop = 0,
+    .state.panic = 0        // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
 };
 
 
@@ -248,6 +258,15 @@ void tstate_set_ram() {
     // Write to a specific area of RAM, 
     // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
 
+}
+
+int intiate_cpu_test(instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
+    // Set OPCODE Instruction
+    op_instruction = *passed_instrc;
+    local_cpu = *cpu;
+
+
+    return 0;
 }
 
 

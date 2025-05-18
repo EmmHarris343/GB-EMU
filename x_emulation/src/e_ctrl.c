@@ -86,7 +86,10 @@ int test_sequence() {
     // Setup the MMU memory Map.
     e_mmu_init();
 
-    instruction_test();
+    //instruction_test();
+    unit_test_instruction();
+    
+
     return 0; // Pass all good.
 }
 
