@@ -18,17 +18,6 @@ typedef void opcode_t(CPU *cpu, instruction_T instrc);
 
 
 
-/// TODO: Make Flags easier to Use and more readable. /// BAD: set_flag(2), clear_flag(1)
-/*
-
-cpu->reg.F.Z = 0;
-cpu->reg.F.N = 0;
-cpu->reg.F.H = 0;
-cpu->reg.F.C = 0;
-
-*/
-
-
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
@@ -37,9 +26,6 @@ cpu->reg.F.C = 0;
 #define KMAG  "\x1B[35m"
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
-
-
-
 
 /*
     printf("%sred\n", KRED);
@@ -57,22 +43,13 @@ cpu->reg.F.C = 0;
 
 
 
+void set_cpu_flag(CPU* cpu, uint8_t flag_hex) {
+    cpu->reg.F |= flag_hex;
+}
 
-/// TODO: Make the CPU Flags easier to read.
-/*
-IE: 
-#define FLAG_Z 0x80 OR ... 0, 1, 2, 3 etc 
-#define FLAG_N 0x40
-#define FLAG_H 0x20
-#define FLAG_C 0x10
-
-then I can do: 
-set_flag(FLAG_Z);
-clear_flag(FLAG_Z);
-
-Instead of:
-set_flag(0)... as I have no idea what the number refers to.. So it makes it not very readable..
-*/
+void clear_cpu_flag(CPU* cpu, uint8_t flag_hex) {
+    cpu->reg.F ^= flag_hex;
+}
 
 
 /// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier... 
@@ -161,7 +138,7 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
     printf("CCF. Called.                ; Invert Carry Flag 0=1, 1=0\n");
 
     // If it's set, clear it, otherwise set it.
-    (cpu->reg.F & FLAG_C) ? clear_flag(3) : set_flag(3);    // Invert the C flag.
+    (cpu->reg.F & FLAG_C) ? clear_cpu_flag(cpu, FLAG_C) : set_cpu_flag(cpu, FLAG_C);    // Invert the C flag.
     
 
 
@@ -175,7 +152,7 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
 }
 static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
     printf("SCF. Called.                ; Set Carry Flag (True)\n");
-    set_flag(3);
+    set_cpu_flag(cpu, FLAG_C);
 
     /*
         FLAGS:
@@ -431,18 +408,18 @@ static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in 
     uint8_t e8_flag_calc = (uint8_t)e_signed_offset;        // For easy Calculations, change back into uint8_t (Unsigned)
 
     // 
-    clear_flag(0);
-    clear_flag(1);
+    clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);
 
     if (((SP_LOW & 0xF) + (e8_flag_calc & 0xF)) > 0xF)       // IF combined the (first 4 bits) of each is GREATER than 4 bits.
-        set_flag(2);    // Set H Flag
+        set_cpu_flag(cpu, FLAG_H);    // Set H Flag
     else
-        clear_flag(2);  // Clear H Flag
+        clear_cpu_flag(cpu, FLAG_H);  // Clear H Flag
 
     if ((SP_LOW + e8_flag_calc) > 0xFF)                      // If combined, the values are greater than 8 Bits.
-        set_flag(3);    // Set C Flag
+        set_cpu_flag(cpu, FLAG_C);    // Set C Flag
     else
-        clear_flag(3);  // Clear C Flag
+        clear_cpu_flag(cpu, FLAG_C);  // Clear C Flag
 
     cpu->reg.PC += 2;
 
@@ -630,10 +607,10 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
     uint16_t add_result = (cpu->reg.A + *reg_table[op_index]);
     uint8_t final_8bit = (uint8_t)add_result;
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    ((cpu->reg.A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    ((cpu->reg.A & 0x0F) + (op_r8 & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -652,10 +629,10 @@ static void ADD_A_p_HL(CPU *cpu, instruction_T instrc) {    // Add value pointed
     uint16_t add_result = (cpu->reg.A + hl_val);
     uint8_t final_8bit = (uint8_t)add_result;
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    ((cpu->reg.A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    ((cpu->reg.A & 0x0F) + (hl_val & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++ ;
@@ -669,10 +646,10 @@ static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
     uint16_t add_result = (cpu->reg.A + n8_val);
     uint8_t final_8bit = (uint8_t)add_result;
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    ((cpu->reg.A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction)
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    ((cpu->reg.A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
@@ -699,10 +676,10 @@ static void ADC_A_r8(CPU *cpu, instruction_T instrc) {
     uint16_t add_16bit  = (cpu->reg.A + op_r8 + carry_val);
     uint8_t final_8bit = (uint8_t)add_16bit;
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    (((cpu->reg.A & 0x0F) + (op_r8 & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (((cpu->reg.A & 0x0F) + (op_r8 & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -719,10 +696,10 @@ static void ADC_A_p_HL(CPU *cpu, instruction_T instrc) {
     uint8_t final_8bit = (uint8_t)add_16bit;    
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    (((cpu->reg.A & 0x0F) + (hl_val & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (((cpu->reg.A & 0x0F) + (hl_val & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -737,10 +714,10 @@ static void ADC_A_n8(CPU *cpu, instruction_T instrc) {
     uint8_t final_8bit = (uint8_t)add_16bit;    
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag    
-    (((cpu->reg.A & 0x0F) + (n8_val & 0x0F) + carry_val) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_16bit > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
-    clear_flag(1);  // N Flag (Subtraction) Always cleared on ADC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (((cpu->reg.A & 0x0F) + (n8_val & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
@@ -762,10 +739,10 @@ static void SUB_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract values in
     uint8_t final_8bit = (uint8_t)sub_16bit;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    ((reg_a & 0x0F) < (op_r8 & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
-    (reg_a < op_r8) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    ((reg_a & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (reg_a < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -789,10 +766,10 @@ static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
     uint8_t final_8bit = (uint8_t)sub_16bit;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    ((reg_a & 0x0F) < (hl_val & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
-    (reg_a < hl_val) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    ((reg_a & 0x0F) < (hl_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (reg_a < hl_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -808,10 +785,10 @@ static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
     uint8_t final_8bit = (uint8_t)sub_16bit;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    ((reg_a & 0x0F) < (n8 & 0x0F)) ? set_flag(2) : clear_flag(2); // H Flag
-    (reg_a < n8) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    ((reg_a & 0x0F) < (n8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (reg_a < n8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -835,13 +812,13 @@ static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     uint8_t reg_a = cpu->reg.A;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    (((reg_a & 0x0F) - (op_r8 & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    (((reg_a & 0x0F) - (op_r8 & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     
     // This has + carry, as it checks if the whole result underflowed
     // If register a is less than the TOTAL amount of in op_r8. Then set the flag. (Hence the + carry_val)
-    (reg_a < (op_r8 + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (reg_a < (op_r8 + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -867,12 +844,12 @@ static void SBC_A_p_HL(CPU *cpu, instruction_T instrc) {   // Subtract the byte 
     uint8_t reg_a = cpu->reg.A;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    (((reg_a & 0x0F) - (hl_val & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    (((reg_a & 0x0F) - (hl_val & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     
     // This has + carry, as it checks if the whole result underflowed
-    (reg_a < (hl_val + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (reg_a < (hl_val + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
@@ -890,12 +867,12 @@ static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     uint8_t reg_a = cpu->reg.A;
 
 
-    (final_8bit == 0) ? set_flag(0) : clear_flag(0);    // Z Flag
-    (((reg_a & 0x0F) - (n8 & 0x0F) - carry_val) < 0) ? set_flag(2) : clear_flag(2); // H Flag
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    (((reg_a & 0x0F) - (n8 & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     
     // This has + carry, as it checks if the whole result underflowed
-    (reg_a < (n8 + carry_val)) ? set_flag(3) : clear_flag(3); // C Flag
-    set_flag(1);  // N Flag (Subtraction) Always SET on SUB/SBC
+    (reg_a < (n8 + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
@@ -914,11 +891,11 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
     };
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
-    ((op_r8 & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Set H Flag for overlow from bit 3
+    ((op_r8 & 0x0F) == 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);    // Set H Flag for overlow from bit 3
     (*reg_table[op_index]) ++;  // Make sure it decrements the actual Register (through a pointer)
-    (op_r8 == 0) ? set_flag(0) : clear_flag(0);                // Set (Z) Zero Flag
+    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set (Z) Zero Flag
 
-    clear_flag(1);  // N Flag Cleared (SUB Flag)
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag Cleared (SUB Flag)
     cpu->reg.PC ++;
 }
 // Decrement Instructions
@@ -932,12 +909,12 @@ static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Re
     };
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
-    set_flag(1);        // Set subtraction Flag always set.
-    (op_r8 == 0) ? set_flag(2) : clear_flag(2);     // Set/Clear H borrow flag from bit 4.
+    set_cpu_flag(cpu, FLAG_N);        // Set subtraction Flag always set.
+    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);     // Set/Clear H borrow flag from bit 4.
     (*reg_table[op_index]) --;  // Make sure it decrements the actual Register (through a pointer)
-    (op_r8 == 0) ? set_flag(0) : clear_flag(0);;    // Set/Clear (Z) Zero Flag
+    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);;    // Set/Clear (Z) Zero Flag
 
-    set_flag(1);        // Set subtraction Flag always set.
+    set_cpu_flag(cpu, FLAG_N);        // Set subtraction Flag always set.
     cpu->reg.PC ++;
 
 
@@ -949,15 +926,15 @@ static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL r
     printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
 
     uint8_t hl_val = external_read(cpu->reg.HL);
-    ((hl_val & 0x0F) == 0x0F) ? set_flag(2) : clear_flag(2);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    ((hl_val & 0x0F) == 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     
     //external_write(cpu->reg.HL,(cpu->reg.HL ++));
     hl_val ++;
-    (hl_val == 0) ? set_flag(0) : clear_flag(0);                // Set/Clear (Z) Zero Flag.
+    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set/Clear (Z) Zero Flag.
     
     external_write(cpu->reg.HL, hl_val);    // This saves the changes in the location pointed by [HL]
 
-    clear_flag(1);      // Clear subtraction flag (N)
+    clear_cpu_flag(cpu, FLAG_N);      // Clear subtraction flag (N)
     cpu->reg.PC ++;
 
     // Bytes = 1
@@ -967,15 +944,15 @@ static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byt
     // NOTE, technically this is INC_p_r16. But there is not other time that happens. Except for [HL].. SO NVM!
 
     uint8_t hl_val = external_read(cpu->reg.HL);
-    (hl_val == 0) ? set_flag(2) : clear_flag(2);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     
     //external_write(cpu->reg.HL,(cpu->reg.HL --));
     hl_val --;
-    (hl_val == 0) ? set_flag(0) : clear_flag(0);            // Set/Clear (Z) Zero Flag.
+    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);            // Set/Clear (Z) Zero Flag.
     
     external_write(cpu->reg.HL, hl_val);    // This saves the changes in the location pointed by [HL]
 
-    set_flag(1);        // Set subtraction flag (N)
+    set_cpu_flag(cpu, FLAG_N);        // Set subtraction flag (N)
     cpu->reg.PC ++;
 
     // Bytes = 1
@@ -995,11 +972,11 @@ static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     
     uint8_t result = (cpu->reg.A - op_r8);
 
-    set_flag(1); // N Flag - Always Set (Subtraction Flag)
-    (result == 0) ? set_flag(0) : clear_flag(0);                           // Z Flag  
+    set_cpu_flag(cpu, FLAG_N); // N Flag - Always Set (Subtraction Flag)
+    (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                           // Z Flag  
     
-    ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_flag(2) : clear_flag(2);      // H Flag
-    (cpu->reg.A < op_r8) ? set_flag(3) : clear_flag(3);                        // C Flag
+    ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);      // H Flag
+    (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                        // C Flag
 
     cpu->reg.PC++;
 
@@ -1011,11 +988,11 @@ static void CP_A_p_HL(CPU *cpu, instruction_T instrc) {     // ComPare -> value 
     uint8_t result = (cpu->reg.A - hl_val);
 
     // 
-    set_flag(1);    // N Flag - Always Set (Subtraction Flag)
+    set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
-    (result == 0) ? set_flag(0) : clear_flag(0);                        // Z Flag
-    ((cpu->reg.A & 0x0F) < (hl_val & 0x0F)) ? set_flag(2) : clear_flag(2);  // H Flag
-    (cpu->reg.A < hl_val) ? set_flag(3) : clear_flag(3);                    // C Flag
+    (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
+    ((cpu->reg.A & 0x0F) < (hl_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);  // H Flag
+    (cpu->reg.A < hl_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
     
     cpu->reg.PC ++;
 }
@@ -1025,11 +1002,11 @@ static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     uint8_t result = (cpu->reg.A - instrc.operand1);
 
     // 
-    set_flag(1);    // N Flag - Always Set (Subtraction Flag)
+    set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
-    (result == 0) ? set_flag(0) : clear_flag(0);                        // Z Flag
-    ((cpu->reg.A & 0x0F) < (n8_val & 0x0F)) ? set_flag(2) : clear_flag(2);  // H Flag
-    (cpu->reg.A < n8_val) ? set_flag(3) : clear_flag(3);                    // C Flag
+    (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
+    ((cpu->reg.A & 0x0F) < (n8_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);  // H Flag
+    (cpu->reg.A < n8_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
     
     cpu->reg.PC += 2;
 
@@ -1050,10 +1027,10 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     uint8_t add_result = (cpu->reg.A + e_val);
 
     // NOTE: ADD_SP_e8  Z and N aare always cleared.
-    clear_flag(0); // Z Flag Cleared
-    clear_flag(1); // N Flag Cleared (Subtraction)
-    ((cpu->reg.A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_cpu_flag(cpu, FLAG_Z); // Z Flag Cleared
+    clear_cpu_flag(cpu, FLAG_N); // N Flag Cleared (Subtraction)
+    ((cpu->reg.A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     
 
     cpu->reg.A = add_result;
@@ -1075,9 +1052,9 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
     uint16_t final_result = (uint16_t)add_result;
 
     // Z FLAG UNCHANGED, Do not set, or clear.
-    clear_flag(1);  // N Flag Cleared (Subtraction)
-    ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF) ? set_flag(2) : clear_flag(2); // H Flag
-    (add_result > 0xFF) ? set_flag(3) : clear_flag(3); // C Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N Flag Cleared (Subtraction)
+    ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     
     cpu->reg.HL = final_result;
     cpu->reg.PC ++;
@@ -1466,10 +1443,10 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
     cpu->reg.A = AND_result;
 
-    (AND_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleard
-    set_flag(2);    // Always set
-    clear_flag(3);  // Always cleared.
+    (AND_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleard
+    set_cpu_flag(cpu, FLAG_H);    // Always set
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared.
 
     cpu->reg.PC ++;
 
@@ -1490,10 +1467,10 @@ static void AND_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitw
 
     // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
 
-    (AND_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleared
-    set_flag(2);    // Always set
-    clear_flag(3);  // Always cleared
+    (AND_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    set_cpu_flag(cpu, FLAG_H);    // Always set
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
     // Bytes = 1
@@ -1507,10 +1484,10 @@ static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
     // One liner:       cpu->reg.A &= instrc.operand1;
 
-    (AND_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleared
-    set_flag(2);    // Always set
-    clear_flag(3);  // Always cleared
+    (AND_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    set_cpu_flag(cpu, FLAG_H);    // Always set
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC += 2;
 
@@ -1532,10 +1509,10 @@ static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
 
     cpu->reg.A = OR_result;
 
-    (OR_result == 0) ? set_flag(0) : clear_flag(0);     // Set if Zero (Z Flag)
-    clear_flag(1);  // ALways cleared
-    clear_flag(2);  // Always cleared
-    clear_flag(3);  // Always cleared
+    (OR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);     // Set if Zero (Z Flag)
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
 
@@ -1548,10 +1525,10 @@ static void OR_A_p_HL(CPU *cpu, instruction_T instrc) {     // Set A to the bitw
 
     // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
 
-    (OR_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleared
-    clear_flag(2);  // Always cleared
-    clear_flag(3);  // Always cleared
+    (OR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
 
@@ -1565,10 +1542,10 @@ static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
 
     // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
 
-    (OR_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleared
-    clear_flag(2);  // Always cleared
-    clear_flag(3);  // Always cleared
+    (OR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC += 2;
 
@@ -1590,10 +1567,10 @@ static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     cpu->reg.A = XOR_result;
 
 
-    (XOR_result == 0) ? set_flag(0) : clear_flag(0);    // Set if Zero (Z Flag)
-    clear_flag(1);  // ALways cleared
-    clear_flag(2);  // Always cleared
-    clear_flag(3);  // Always cleared
+    (XOR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Set if Zero (Z Flag)
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
 
@@ -1607,10 +1584,10 @@ static void XOR_A_p_HL(CPU *cpu, instruction_T instrc) {    // Set A to the bitw
 
     // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
 
-    (XOR_result == 0) ? set_flag(0) : clear_flag(0);
-    clear_flag(1);  // ALways cleared
-    clear_flag(2);  // Always cleared
-    clear_flag(3);  // Always cleared
+    (XOR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
 
@@ -1624,10 +1601,10 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 
     // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
 
-    (XOR_result == 0) ? set_flag(0) : clear_flag(0);    // Z condition.
-    clear_flag(1);  // N ALways cleared
-    clear_flag(2);  // H Always cleared
-    clear_flag(3);  // C Always cleared
+    (XOR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z condition.
+    clear_cpu_flag(cpu, FLAG_N);  // N ALways cleared
+    clear_cpu_flag(cpu, FLAG_H);  // H Always cleared
+    clear_cpu_flag(cpu, FLAG_C);  // C Always cleared
 
     cpu->reg.PC += 2;
 
@@ -1639,8 +1616,8 @@ static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumu
     printf("CPL. Called.                    ; ComPLement accumulator, \n");
     cpu->reg.A = ~cpu->reg.A;   // A = NOT A. Basically flip the bits around.
     
-    set_flag(1);    // N Flag Set (Subtraction Flag)
-    set_flag(2);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
+    set_cpu_flag(cpu, FLAG_N);    // N Flag Set (Subtraction Flag)
+    set_cpu_flag(cpu, FLAG_H);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
 
     cpu->reg.PC ++;
     // Bytes = 1
@@ -1665,10 +1642,10 @@ static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     uint8_t rotated_a = (a_reg >> 1) | (carry_in << 7);     // Rotate Right, Set bit 7
     cpu->reg.A = rotated_a;
 
-    (carry_out) ? set_flag(3) : clear_flag(3);  
-    clear_flag(0);
-    clear_flag(1);
-    clear_flag(2);
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);  
+    clear_cpu_flag(cpu, FLAG_Z);
+    clear_cpu_flag(cpu, FLAG_N);
+    clear_cpu_flag(cpu, FLAG_H);
 
     cpu->reg.PC++;
     // Bytes = 1
@@ -1682,10 +1659,10 @@ static void RRCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
     uint8_t rotated_a = (a_reg >> 1) | (carry_out << 7);    // Rotate Right, Set bit 7
     cpu->reg.A = rotated_a;
 
-    (carry_out) ? set_flag(3) : clear_flag(3);
-    clear_flag(0);  // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
+    clear_cpu_flag(cpu, FLAG_Z);  // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC++;
     // Bytes = 1
@@ -1700,10 +1677,10 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A
     uint8_t rotated_a = (a_reg << 1) | carry_in;            // Shift left, set bit 0
     cpu->reg.A = rotated_a;
 
-    (carry_out) ? set_flag(3) : clear_flag(3);
-    clear_flag(0);  // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
+    clear_cpu_flag(cpu, FLAG_Z);  // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC++;
     // Bytes = 1
@@ -1717,10 +1694,10 @@ static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A
     uint8_t rotated_a = (a_reg << 1) | carry_out;       // Shift left, set bit 0
     cpu->reg.A = rotated_a;
     
-    (carry_out) ? set_flag(3) : clear_flag(3);
-    clear_flag(0);  // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
+    clear_cpu_flag(cpu, FLAG_Z);  // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC++;
     // Bytes = 1
@@ -1762,10 +1739,10 @@ static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Re
     
     *reg_table[op_index] = rotated_r8;                      // Set register to value.
 
-    (carry_out) ? set_flag(3) : clear_flag(3);      // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);     // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);      // C Flag
+    (rotated_r8) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);     // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1788,10 +1765,10 @@ static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     
     external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value
 
-    (carry_out) ? set_flag(3) : clear_flag(3);          // C Flag
-    (rotated_hl) ? set_flag(0) : clear_flag(0);     // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);          // C Flag
+    (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);     // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1812,10 +1789,10 @@ static void RLC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Registers 
 
     *reg_table[op_index] = rotated_r8;                      // Set r8 Register.
 
-    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
+    (rotated_r8) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1837,10 +1814,10 @@ static void RLC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the byte p
 
     external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value
 
-    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
+    (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1864,10 +1841,10 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
     
     *reg_table[op_index] = rotated_r8;                      // Set register to value.
 
-    (carry_out) ? set_flag(3) : clear_flag(3);      // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);     // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);      // C Flag
+    (rotated_r8) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);     // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1890,10 +1867,10 @@ static void RR_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
 
     external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value.
 
-    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
+    (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1913,10 +1890,10 @@ static void RRC_r8(CPU *cpu, instruction_T instrc) {        // Rotate Register r
 
     *reg_table[op_index] = rotated_r8;                          // Set r8 Register.
 
-    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_r8) ? set_flag(0) : clear_flag(0);          // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
+    (rotated_r8) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -1939,10 +1916,10 @@ static void RRC_p_HL(CPU *cpu, instruction_T instrc) {      // Rotate the value 
 
     external_write(cpu->reg.HL, rotated_hl);        // Set [HL] value
 
-    (carry_out) ? set_flag(3) : clear_flag(3);           // C Flag
-    (rotated_hl) ? set_flag(0) : clear_flag(0);          // Z Flag
-    clear_flag(1);  // N (Subtraction) Flag
-    clear_flag(2);  // H (Half Carry) Flag
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
+    (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
+    clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
+    clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC ++;
     // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
@@ -2025,10 +2002,10 @@ static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 
 
     *reg_table[reg_index] = swapped;
 
-    (swapped) ? clear_flag(0) : set_flag(0);  // If not 0, clear, else Set Z flag.
-    set_flag(1);    // N Cleared
-    set_flag(2);    // H Cleared
-    set_flag(3);    // C Cleared
+    (swapped) ? clear_cpu_flag(cpu, FLAG_Z) : set_cpu_flag(cpu, FLAG_Z);  // If not 0, clear, else Set Z flag.
+    set_cpu_flag(cpu, FLAG_N);    // N Cleared
+    set_cpu_flag(cpu, FLAG_H);    // H Cleared
+    set_cpu_flag(cpu, FLAG_C);    // C Cleared
 
     cpu->reg.PC ++;
     // Bytes = 2 (CB logic already advanced once)
@@ -2062,10 +2039,10 @@ static void BIT_u3_r8(CPU *cpu, instruction_T instrc) {     // Test bit u3 in re
     uint8_t r8_reg = *reg_table[reg_index];
 
     uint8_t get_state = ((r8_reg >> u3_num) & 1);
-    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+    (get_state) ? clear_cpu_flag(cpu, FLAG_Z) : set_cpu_flag(cpu, FLAG_Z); // Z flag, Set if specific r8 bit NOT set.
 
-    clear_flag(1);  // Always clear N Flag. (Just GB CPU logic)
-    set_flag(2);    // Always SET h Flag.   (Just GB CPU logic)
+    clear_cpu_flag(cpu, FLAG_N);  // Always clear N Flag. (Just GB CPU logic)
+    set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.   (Just GB CPU logic)
     // C flag unaffected.
 
     cpu->reg.PC ++;
@@ -2078,10 +2055,10 @@ static void BIT_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Test bit u3 in th
     uint8_t hl_val = external_read(cpu->reg.HL);
 
     uint8_t get_state = ((hl_val >> u3_num) & 1);
-    (get_state) ? clear_flag(0) : set_flag(0); // Z flag, Set if specific r8 bit NOT set.
+    (get_state) ? clear_cpu_flag(cpu, FLAG_Z) : set_cpu_flag(cpu, FLAG_Z); // Z flag, Set if specific r8 bit NOT set.
 
-    clear_flag(1);  // Always clear N Flag.
-    set_flag(2);    // Always SET h Flag.
+    clear_cpu_flag(cpu, FLAG_N);  // Always clear N Flag.
+    set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.
     // C flag unaffected.
 
     cpu->reg.PC ++;
@@ -2227,8 +2204,6 @@ static opcode_t *opcodes[256] = {
 
 
 void run_debug(CPU *cpu) {
-    // 
-
     uint8_t hl_val = external_read(cpu->reg.HL);
     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
     logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
@@ -2237,13 +2212,7 @@ void run_debug(CPU *cpu) {
 
 void run_test_debug(CPU *cpu) {
     logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->reg.AF, cpu->reg.BC, cpu->reg.DE, cpu->reg.HL, cpu->reg.PC, cpu->reg.SP);
-
 }
-
-void send_debug_line(CPU *cpu, char* message) {
-
-}
-
 
 
 int execute_test(CPU *cpu, instruction_T instrc) {

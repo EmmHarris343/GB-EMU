@@ -124,10 +124,17 @@ void run_cpu_test(uint8_t test_op_code);
 
 // The others Z, H, C, I believe can be set to specific values!!
 /// TODO: This needs to be redone. This is wrong :/
-#define FLAG_Z  (1 << 7)
-#define FLAG_N  (1 << 6)
-#define FLAG_H  (1 << 5)
-#define FLAG_C  (1 << 4)
+
+#define FLAG_Z 0x80
+#define FLAG_N 0x40
+#define FLAG_H 0x20
+#define FLAG_C 0x10
+
+// Old method, bad. doesn't let me know what each flag is.
+// #define FLAG_Z  (1 << 7)
+// #define FLAG_N  (1 << 6)
+// #define FLAG_H  (1 << 5)
+// #define FLAG_C  (1 << 4)
 
 
 #endif

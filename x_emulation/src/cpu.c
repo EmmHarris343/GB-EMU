@@ -33,7 +33,7 @@ const CPU cpu_reg_simple_tstate = {
     .reg.AF = 0x01B0,       // B0 = 1011 (IE Z set, N not set, H set, C set)
     .reg.BC = 0x021B,
     .reg.DE = 0x032C,
-    .reg.HL = 0x043E,
+    .reg.HL = 0xC100,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0789,    
     .state.IME = 0,         // Interupt
@@ -67,7 +67,7 @@ static const uint8_t opcode_lengths[256] = {
 };
 
 /// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....." 
-void set_flag(int cpu_flag) {   
+void set_flag(int cpu_flag) {
     switch (cpu_flag) {
         case 0: // Z Flag
             //printf("Set z Flag\n");
@@ -118,11 +118,13 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
     op_instruction.operand1 = 0;
     op_instruction.operand2 = 0;
 
+
+    // Removing these. As the line before setting to CPU_POST_BIOS, sets the DMG01 Flags as well!
     // Set Flag Registers   (This is actually Registers F)
-    set_flag(0);    // Z
-    clear_flag(1);  // N
-    clear_flag(2);  // H
-    clear_flag(3);  // C
+    // set_flag(0);    // Z
+    // clear_flag(1);  // N
+    // clear_flag(2);  // H
+    // clear_flag(3);  // C
 
     // Set the Registers initial state (After Bootrom Pass) -- I think this is what DMG01 looks like after bootup
 
@@ -228,12 +230,7 @@ void run_cpu(int max_steps) {
 /// TEST:
 // *----
 
-void tstate_set_opcode(uint8_t opcode, uint8_t op1, uint8_t op2) {
-        // Set the opcode and operands:
-        op_instruction.opcode = opcode;
-        op_instruction.operand1 = op1;
-        op_instruction.operand2 = op2;
-}
+
 
 void tstate_set_registers() {
     // Set the Registers initial state (After Bootrom Pass) -- I think this is what DMG01 looks like after bootup
@@ -275,7 +272,7 @@ void run_cpu_test(uint8_t test_op_code) {
     int step_count = 0;             // Will I ever use this for tests?
     //uint8_t special_op_code = 0x5C; // 5C = LD E, H
     
-    tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
+    //tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
     
     tstate_set_registers();
     tstate_set_flag();              // How do I know which flag Needs to be set?
