@@ -276,6 +276,55 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
     // };
 }
 
+void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, CPU* expected_cpu, char* spec_message, uint8_t p_hl_val) {
+    uint8_t opcode = instruction.opcode;
+    //uint8_t dest_code = (opcode >> 3) & 0x07;          // Dest bits, 5-3  // NOT NEEDED. All instructions use A
+    uint8_t src_code = opcode & 0x07;                   // Source Bits 2-0
+    size_t opname_max_size = 32;
+
+    const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
+    
+    uint8_t *reg_lookup_expected[8] = {
+        &expected_cpu->reg.B, &expected_cpu->reg.C, &expected_cpu->reg.D, &expected_cpu->reg.E, 
+        &expected_cpu->reg.H, &expected_cpu->reg.L, NULL, &expected_cpu->reg.A
+    };
+
+    if (opcode >= 0xA0 && opcode <= 0xA7) {
+        // AND A, X
+        uint8_t reg_val = 0x00;
+        
+        if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // AND A, [HL]
+        else { reg_val = *reg_lookup_expected[src_code]; }                               // AND A, r8
+        
+        uint8_t AND_result = (initial_cpu->reg.A & reg_val);
+        initial_cpu->reg.A = AND_result;
+
+        (AND_result == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);
+        (expected_cpu->reg.F ^= tFLAG_N);  // ALways cleard
+        (expected_cpu->reg.F |= tFLAG_H);    // Always set
+        (expected_cpu->reg.F ^= tFLAG_C);  // Always cleared.
+
+        expected_cpu->reg.PC ++;
+    }
+    if (opcode >= 0xA8 && opcode <= 0xAF) {
+        // OR A, X
+        uint8_t reg_val = 0x00;
+        
+        if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // OR A, [HL]
+        else { reg_val = *reg_lookup_expected[src_code]; }                               // OR A, r8
+        
+        uint8_t OR_result = (initial_cpu->reg.A | reg_val);
+        expected_cpu->reg.A = OR_result;
+
+        (OR_result == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);
+        (expected_cpu->reg.F ^= tFLAG_N);  // ALways cleared
+        (expected_cpu->reg.F ^= tFLAG_H);  // Always cleared
+        (expected_cpu->reg.F ^= tFLAG_C);  // Always cleared
+
+        expected_cpu->reg.PC ++;
+    }
+
+    }
 
 void unt_tcase_builder(instruction_T local_instrc) {
     printf("---------\nCreating Unit Test. FOR --> OPCODE=0x%02X\n", local_instrc.opcode);
