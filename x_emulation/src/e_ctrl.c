@@ -87,8 +87,8 @@ int test_sequence() {
     e_mmu_init();
 
     //instruction_test();
-    unit_test_instruction();
-    
+    //unit_test_instruction();
+    entry_test_case();
 
     return 0; // Pass all good.
 }

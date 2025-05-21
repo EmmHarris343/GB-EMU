@@ -2247,15 +2247,15 @@ void send_debug_line(CPU *cpu, char* message) {
 
 
 int execute_test(CPU *cpu, instruction_T instrc) {
-    printf("(EXTRA DETAIL) PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->reg.PC, instrc.opcode, instrc.operand1, instrc.operand2);
+    //printf("(EXTRA DETAIL) PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->reg.PC, instrc.opcode, instrc.operand1, instrc.operand2);
 
-    run_test_debug(cpu);
+    //run_test_debug(cpu);
     opcodes[instrc.opcode](cpu, instrc);
 
     if (cpu->state.panic == 1) { printf("ENCOUNTERED PANIC, Instruction not yet ready.\n"); return -1; }
     else {
-        printf("%sExecution of Test Instruction Complete. Saving to Log File.%s\n", KYEL, KNRM);
-        run_test_debug(cpu);
+        printf("%sExecuted Test Instruction.%s\n", KYEL, KNRM);
+        //run_test_debug(cpu);
         return 0;
     }
     return 0;

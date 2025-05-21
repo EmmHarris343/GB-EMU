@@ -23,20 +23,23 @@ typedef struct {
     // MMU initial_mmu;
 
     uint8_t opcode;           // instruction to run
+    uint8_t operand1;
+    uint8_t operand2;
 
     CPU expected_cpu;
     // MMU expected_mmu;
 
     //bool (*custom_check)(const CPU *, const MMU *);  // Test callback? use, don't use?
     //bool (*custom_check)(const CPU *);  // 
-} test_case_t;
+} Test_Case_t;
 
 // void run_test_case(const test_case_t *test);
 
 
 // Entry point from e_ctrl.c
-void unit_test_instruction();    // This one is more specific (A direct cpu_instruction test)
-
+//void unit_test_instruction();    // This one is more specific (A direct cpu_instruction test)
+//void unt_test_case();   // Shouldn't b e called directly
+void entry_test_case();
 
 #endif
 
