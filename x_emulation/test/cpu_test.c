@@ -1,4 +1,5 @@
 #include "cpu_test.h"
+//#include <system_error>
 #ifdef ENABLE_TESTS
 // This is for The build flag.
 
@@ -24,6 +25,34 @@ extern CPU cpu_reg_simple_tstate;
 #define tFLAG_N 0x40  // 0100 0000
 #define tFLAG_H 0x20  // 0010 0000
 #define tFLAG_C 0x10  // 0001 0000
+
+
+#define FZ 0x80  // 1000 0000
+#define FN 0x40  // 0100 0000
+#define FH 0x20  // 0010 0000
+#define FC 0x10  // 0001 0000
+
+
+const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
+
+// Condensed flag instructions:
+void s_f(CPU* c, uint8_t fl) {
+    c->reg.F |= fl;
+}
+void c_f(CPU* c, uint8_t fl) {
+    c->reg.F ^= fl;
+}
+
+
+// Condensed checks
+uint8_t ck_cf(CPU* c) {
+    return (c->reg.F & FLAG_C) ? 1 : 0;
+}
+
+uint8_t ck_sbc(CPU* c, uint8_t r, uint8_t cy) {
+    return ((c->reg.A & 0x0F) - (r & 0x0F) - cy);
+}
+
 
 
 void check_flags(CPU* inital_cpu, CPU* expected_cpu) {
@@ -77,38 +106,26 @@ void get_expected_ld_reg(instruction_T instruction, CPU* initial_cpu, CPU* expec
     uint8_t dest_code = (opcode >> 3) & 0x07;           // Dest bits, 5-3
     uint8_t src_code = opcode & 0x07;                   // Source Bits 2-0
 
-    const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
-
     size_t max_length = 32;
     snprintf(spec_message, max_length, "LD %s, %s", reg_names[dest_code], reg_names[src_code]);
     
-    uint8_t *reg_lookup_initial[8] = {
-        &initial_cpu->reg.B, &initial_cpu->reg.C, &initial_cpu->reg.D, &initial_cpu->reg.E, 
-        &initial_cpu->reg.H, &initial_cpu->reg.L, NULL, &initial_cpu->reg.A
-    };
-
     uint8_t *reg_lookup_expected[8] = {
         &expected_cpu->reg.B, &expected_cpu->reg.C, &expected_cpu->reg.D, &expected_cpu->reg.E, 
         &expected_cpu->reg.H, &expected_cpu->reg.L, NULL, &expected_cpu->reg.A
     };
     
-    if (dest_code == 6) {
-        // LD [HL], x 
-        // White in RAM where [HL] points to. The valu of the Source value/ Register.e
-        external_write(initial_cpu->reg.HL, *reg_lookup_initial[src_code]);
+    if (dest_code == 6) {   // LD [HL], x         
+        external_write(initial_cpu->reg.HL, *reg_lookup_expected[src_code]);
     }
-    if (src_code == 6) {
-        // LD x, [HL]
-        // Seems counter intuitive. But WRITE 0xD0, so when it reads from ram in the value pointed by [HL]. 
-        // It will match what's in the expected_cpu val.
+    if (src_code == 6) {    // LD x, [HL]        
         external_write(initial_cpu->reg.HL, p_hl_val);
         *reg_lookup_expected[dest_code] = p_hl_val; // 
     }
     if ((src_code != 6) & (dest_code != 6)) {
-        *reg_lookup_expected[dest_code] = *reg_lookup_initial[src_code];
+        *reg_lookup_expected[dest_code] = *reg_lookup_expected[src_code];
     }
 
-    expected_cpu->reg.PC ++;    // 1 Byte. No Flag Change.
+    expected_cpu->reg.PC ++;    // 1 Byte
 }
 
 void unt_ld_tcase(instruction_T local_instrc) {
@@ -158,172 +175,154 @@ void unt_ld_tcase(instruction_T local_instrc) {
 }
 
 
-void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* expected_cpu, char* spec_message, uint8_t p_hl_val) {
+void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
     uint8_t opcode = instruction.opcode;
-    //uint8_t dest_code = (opcode >> 3) & 0x07;          // Dest bits, 5-3  // NOT NEEDED. All instructions use A
-    uint8_t src_code = opcode & 0x07;                   // Source Bits 2-0
-    size_t opname_max_size = 32;
-
-    const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
+    uint8_t src_code = opcode & 0x07;
+    size_t sz = 32;
+    char* op_mnemonic;
     
-    uint8_t *reg_lookup_initial[8] = {
-        &initial_cpu->reg.B, &initial_cpu->reg.C, &initial_cpu->reg.D, &initial_cpu->reg.E, 
-        &initial_cpu->reg.H, &initial_cpu->reg.L, NULL, &initial_cpu->reg.A
+    uint8_t *rg_lkp[8] = {
+        &exp_cpu->reg.B, &exp_cpu->reg.C, &exp_cpu->reg.D, &exp_cpu->reg.E, 
+        &exp_cpu->reg.H, &exp_cpu->reg.L, NULL, &exp_cpu->reg.A
     };
 
-    uint8_t *reg_lookup_expected[8] = {
-        &expected_cpu->reg.B, &expected_cpu->reg.C, &expected_cpu->reg.D, &expected_cpu->reg.E, 
-        &expected_cpu->reg.H, &expected_cpu->reg.L, NULL, &expected_cpu->reg.A
-    };
-
-    uint8_t orig_cpu_A_val = initial_cpu->reg.A;
+    uint8_t reg_val = 0x0;
+    if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // ADD A, [HL]
+    else               { reg_val = *rg_lkp[src_code];; }                             // ADD A, r8
 
     if (opcode >= 0x80 && opcode <= 0x87) {
-        // ADD A, x Instruction.
-        snprintf(spec_message, opname_max_size, "ADD A, %s", reg_names[src_code]);
-        uint8_t r8_src_val = 0x0;
+        op_mnemonic = "ADD";    // ADD A, X
+        
+        uint16_t add_result = (exp_cpu->reg.A + reg_val);
+        uint8_t final_8bit = (uint8_t)add_result;
 
-        if (src_code == 6) { r8_src_val = external_read(initial_cpu->reg.HL); }     // ADD A, [HL]
-        else { r8_src_val = *reg_lookup_expected[src_code]; }                               // ADD A, r8
+        c_f(exp_cpu, FN);  // N (sub) Always cleared
+        (add_result & 0xFF)  == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        (add_result > 0xFF)       ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
 
-        // 16bit for bit overflow:
-        uint16_t add_result = (expected_cpu->reg.A + r8_src_val);
-
-        uint8_t final_8bit = (uint8_t)add_result;   // Truncate anything above 8bit
-
-        (final_8bit == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);    // Z Flag
-        ((expected_cpu->reg.A & 0x0F) + (r8_src_val & 0x0F) > 0x0F) ? (expected_cpu->reg.F |= tFLAG_H) : (expected_cpu->reg.F ^= tFLAG_H); // H Flag
-        (add_result > 0xFF) ? (expected_cpu->reg.F |= tFLAG_C) : (expected_cpu->reg.F ^= tFLAG_C); // C Flag
-        (expected_cpu->reg.F ^= tFLAG_N);  // N Flag (Subtraction)
-
-        expected_cpu->reg.A = final_8bit;
-        expected_cpu->reg.PC ++;            // 1 Byte.
+        (exp_cpu->reg.A & 0x0F) + (reg_val & 0x0F) > 0x0F 
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+       
+        exp_cpu->reg.A = final_8bit;
     }
     if (opcode >= 0x88 && opcode <= 0x8F) {
-        // ADC A, x Instruction
-        snprintf(spec_message, opname_max_size, "ADC A, %s", reg_names[src_code]);
-        uint8_t r8_src_val = 0x0;
-        
-        if (src_code == 6) { r8_src_val = external_read(initial_cpu->reg.HL); }     // ADC A, [HL]
-        else { r8_src_val = *reg_lookup_expected[src_code]; }                               // ADC A, r8
-        
-        // Read CPU state, 
-        uint8_t carry_val = (expected_cpu->reg.F & FLAG_C) ? 1 : 0;
+        op_mnemonic = "ADC";    // ADC A, X
 
-        // Use 16bit for Flag checks. 8bit will truncate results
-        uint16_t add_16bit  = (expected_cpu->reg.A + r8_src_val + carry_val);
+        uint8_t carry_in = (exp_cpu->reg.F & FC) ? 1 : 0;
+        uint16_t add_16bit = (exp_cpu->reg.A + reg_val + carry_in);
         uint8_t final_8bit = (uint8_t)add_16bit;
 
-        (final_8bit == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);    // Z Flag
-        (((expected_cpu->reg.A & 0x0F) + (r8_src_val & 0x0F) + carry_val) > 0x0F) ? (expected_cpu->reg.F |= tFLAG_H) : (expected_cpu->reg.F ^= tFLAG_H); // H Flag
-        (add_16bit > 0xFF) ? (expected_cpu->reg.F |= tFLAG_C) : (expected_cpu->reg.F ^= tFLAG_C); // C Flag
-        (expected_cpu->reg.F ^= tFLAG_N);  // N Flag (Subtraction)
+        c_f(exp_cpu, FN);  // N (sub) Always cleared
+        (add_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        (add_16bit > 0xFF)      ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
 
-        expected_cpu->reg.A = final_8bit;
-        expected_cpu->reg.PC ++;    // Only 1 Byte.
+        ((exp_cpu->reg.A & 0x0F) + (reg_val & 0x0F) + carry_in) > 0x0F ?
+            s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+
+        exp_cpu->reg.A = final_8bit;
     }
     if (opcode >= 0x90 && opcode <= 0x97) {
-        // SUB A, x Instruction
-        snprintf(spec_message, opname_max_size, "SUB A, %s", reg_names[src_code]);
-        uint8_t r8_src_val = 0x0;
-        
-        if (src_code == 6) { r8_src_val = external_read(initial_cpu->reg.HL); }     // SUB A, [HL]
-        else { r8_src_val = *reg_lookup_expected[src_code]; }                               // SUB A, r8
+        op_mnemonic = "SUB";    // SUB A, X
 
-        uint16_t sub_16bit = (expected_cpu->reg.A - r8_src_val);
+        uint16_t sub_16bit = (exp_cpu->reg.A - reg_val);
         uint8_t final_8bit = (uint8_t)sub_16bit;
+        uint8_t a_reg = exp_cpu->reg.A;
 
-        (final_8bit == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);    // Z Flag
-        ((expected_cpu->reg.A & 0x0F) < (r8_src_val & 0x0F)) ? (expected_cpu->reg.F |= tFLAG_H) : (expected_cpu->reg.F ^= tFLAG_H); // H Flag
-        (expected_cpu->reg.A < r8_src_val) ? (expected_cpu->reg.F |= tFLAG_C) : (expected_cpu->reg.F ^= tFLAG_C); // C Flag
-        (expected_cpu->reg.F |= tFLAG_N);;  // N Flag (Subtraction) Always SET on SUB/SBC
+        (sub_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        s_f(exp_cpu, FN); // N (sub) Always set
+        
+        ((a_reg & 0x0F) < (reg_val & 0x0F)) ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        (a_reg < reg_val)   ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
 
-        expected_cpu->reg.A = final_8bit;
-        expected_cpu->reg.PC ++;
+        exp_cpu->reg.A = final_8bit;
     }
     if (opcode >= 0x98 && opcode <= 0x9F) {
-        // SBC A, x Instruction
-        snprintf(spec_message, opname_max_size, "SBC A, %s", reg_names[src_code]);
-        uint8_t r8_src_val = 0x0;
+        op_mnemonic = "SBC";    // SBC A, X
         
-        if (src_code == 6) { r8_src_val = external_read(initial_cpu->reg.HL); }     // SBC A, [HL]
-        else { r8_src_val = *reg_lookup_expected[src_code]; }                               // SBC A, r8
-
-        uint8_t carry_val = (initial_cpu->reg.F & FLAG_C) ? 1 : 0;
-
-        // Use 16bit for Flag checks. 8bit will truncate results
-        uint16_t sub_16bit  = (expected_cpu->reg.A - r8_src_val - carry_val);
+        uint8_t carry_in  = (exp_cpu->reg.F & FLAG_C) ? 1 : 0;
+        uint16_t sub_16bit = (exp_cpu->reg.A - reg_val - carry_in);
         uint8_t final_8bit = (uint8_t)sub_16bit;
+        uint8_t a_reg = exp_cpu->reg.A;
 
+        
+        (sub_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        s_f(exp_cpu, FN); // N (sub) Always set
 
-        (final_8bit == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);    // Z Flag
-        (((expected_cpu->reg.A & 0x0F) - (r8_src_val & 0x0F) - carry_val) < 0) ? (expected_cpu->reg.F |= tFLAG_H) : (expected_cpu->reg.F ^= tFLAG_H); // H Flag
-        (expected_cpu->reg.A < (r8_src_val + carry_val)) ? (expected_cpu->reg.F |= tFLAG_C) : (expected_cpu->reg.F ^= tFLAG_C); // C Flag
-        (expected_cpu->reg.F |= tFLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
+        ((a_reg & 0x0F) - (reg_val & 0x0F) - carry_in) < 0
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        (a_reg < (reg_val + carry_in))
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
 
-        expected_cpu->reg.A = final_8bit;
-        expected_cpu->reg.PC ++;
+        exp_cpu->reg.A = final_8bit;
     }
-
-
-
-    // Not sure I want to use a switch case...
-            // switch (opcode) {
-    //     case 0x80 ... 0x87:             
-    //         break;
-    //     default: 
-    //         printf("[ERR], 8bit arithmetic failure. Opcode doesn't match\n");
-    // };
+    exp_cpu->reg.PC ++; // Bytes = 1
+    snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
 }
 
-void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, CPU* expected_cpu, char* spec_message, uint8_t p_hl_val) {
+void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
     uint8_t opcode = instruction.opcode;
-    //uint8_t dest_code = (opcode >> 3) & 0x07;          // Dest bits, 5-3  // NOT NEEDED. All instructions use A
+    uint8_t dest_code = (opcode >> 3) & 0x07;           // Dest bits, 5-3  // NOT NEEDED. All instructions use A
     uint8_t src_code = opcode & 0x07;                   // Source Bits 2-0
-    size_t opname_max_size = 32;
+    size_t sz = 32;
+    char* op_mnemonic;
 
-    const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
-    
-    uint8_t *reg_lookup_expected[8] = {
-        &expected_cpu->reg.B, &expected_cpu->reg.C, &expected_cpu->reg.D, &expected_cpu->reg.E, 
-        &expected_cpu->reg.H, &expected_cpu->reg.L, NULL, &expected_cpu->reg.A
+    uint8_t *rg_lkp[8] = {
+        &exp_cpu->reg.B, &exp_cpu->reg.C, &exp_cpu->reg.D, &exp_cpu->reg.E, 
+        &exp_cpu->reg.H, &exp_cpu->reg.L, NULL, &exp_cpu->reg.A
     };
 
+    uint8_t reg_val = 0x00;
+    if (src_code == 6){ reg_val = external_read(initial_cpu->reg.HL); }     // (INSTR) A, [HL]
+    else              { reg_val = *rg_lkp[src_code]; }                              // (INSTR) A, r8
+
     if (opcode >= 0xA0 && opcode <= 0xA7) {
-        // AND A, X
-        uint8_t reg_val = 0x00;
-        
-        if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // AND A, [HL]
-        else { reg_val = *reg_lookup_expected[src_code]; }                               // AND A, r8
-        
+        op_mnemonic = "AND";    // AND A, X
+                
         uint8_t AND_result = (initial_cpu->reg.A & reg_val);
-        initial_cpu->reg.A = AND_result;
+        exp_cpu->reg.A = AND_result;
 
-        (AND_result == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);
-        (expected_cpu->reg.F ^= tFLAG_N);  // ALways cleard
-        (expected_cpu->reg.F |= tFLAG_H);    // Always set
-        (expected_cpu->reg.F ^= tFLAG_C);  // Always cleared.
-
-        expected_cpu->reg.PC ++;
+        (AND_result == 0) ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        c_f(exp_cpu, FN);  // ALways cleared
+        s_f(exp_cpu, FH);  // Always set
+        c_f(exp_cpu, FC);  // Always cleared
     }
-    if (opcode >= 0xA8 && opcode <= 0xAF) {
-        // OR A, X
-        uint8_t reg_val = 0x00;
+    if (opcode >= 0xA8 && opcode <= 0xAF) {     // XOR A, X
+        op_mnemonic = "XOR";    // XOR A, X
         
-        if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // OR A, [HL]
-        else { reg_val = *reg_lookup_expected[src_code]; }                               // OR A, r8
+        uint8_t XOR_result = (exp_cpu->reg.A ^ reg_val);
+        exp_cpu->reg.A = XOR_result;
+        (XOR_result == 0) ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        c_f(exp_cpu, FN);  // ALways cleared
+        c_f(exp_cpu, FH);  // Always cleared
+        c_f(exp_cpu, FC);  // Always cleared
+    }
+    if (opcode >= 0xB0 && opcode <= 0xB7) {
+        op_mnemonic = "OR";    // OR A, X
         
         uint8_t OR_result = (initial_cpu->reg.A | reg_val);
-        expected_cpu->reg.A = OR_result;
-
-        (OR_result == 0) ? (expected_cpu->reg.F |= tFLAG_Z) : (expected_cpu->reg.F ^= tFLAG_Z);
-        (expected_cpu->reg.F ^= tFLAG_N);  // ALways cleared
-        (expected_cpu->reg.F ^= tFLAG_H);  // Always cleared
-        (expected_cpu->reg.F ^= tFLAG_C);  // Always cleared
-
-        expected_cpu->reg.PC ++;
+        exp_cpu->reg.A = OR_result;
+        (OR_result == 0) ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        c_f(exp_cpu, FN);  // ALways cleared
+        c_f(exp_cpu, FH);  // Always cleared
+        c_f(exp_cpu, FC);  // Always cleared
     }
+    if (opcode >= 0xB8 && opcode <= 0xBF) {
+        op_mnemonic = "CP";     // CP A, X
 
+        uint8_t hold_result = (exp_cpu->reg.A - reg_val);
+        uint8_t a_reg = exp_cpu->reg.A;
+
+        (hold_result == 0) ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
+        s_f(exp_cpu, FN);  // ALways Set
+
+        (a_reg & 0x0F) < (reg_val & 0x0F)
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        (a_reg < reg_val)  
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
+        
+    }
+    exp_cpu->reg.PC ++; // Bytes = 1
+    snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
     }
 
 void unt_tcase_builder(instruction_T local_instrc) {
@@ -335,14 +334,24 @@ void unt_tcase_builder(instruction_T local_instrc) {
     char instruc_name_val[32];
 
     // This is the only part that might be hard.. to be Dynamic to point to the right Function.
-    // But..... I likely need to build, a specific function for each Instruction group. 
-    get_expected_8bit_arithmetic(
+    // But..... I likely need to build, a specific function for each Instruction group.     
+    if ((local_instrc.opcode >= 0x80) & (local_instrc.opcode <= 0x9F)) {
+        get_expected_8bit_arithmetic(
         local_instrc,
         &initial_cpu_state,
         &expected_cpu_state,
         instruc_name_val,
         p_hl_val);
-    
+    }
+    if ((local_instrc.opcode >= 0xA0) & (local_instrc.opcode <= 0xBF)) {
+        get_expected_logic_operations(
+        local_instrc,
+        &initial_cpu_state,
+        &expected_cpu_state,
+        instruc_name_val,
+        p_hl_val);
+    }
+
     Test_Case_t build_test;
     build_test.name = instruc_name_val;
     build_test.opcode = local_instrc.opcode;
@@ -390,7 +399,7 @@ void entry_test_case(){
     instrc.operand1 = 0x00;
     instrc.operand2 = 0x00;
 
-    for (int i = 0x80; i <= 0x9F; i++) {
+    for (int i = 0x80; i <= 0xBF; i++) {
         instrc.opcode = i;
         //unt_ld_tcase(instrc);
         unt_tcase_builder(instrc);

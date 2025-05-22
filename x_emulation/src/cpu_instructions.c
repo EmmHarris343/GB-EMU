@@ -973,10 +973,10 @@ static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     uint8_t result = (cpu->reg.A - op_r8);
 
     set_cpu_flag(cpu, FLAG_N); // N Flag - Always Set (Subtraction Flag)
-    (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                           // Z Flag  
+    (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
     
-    ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);      // H Flag
-    (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                        // C Flag
+    ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);
+    (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
 
     cpu->reg.PC++;
 
