@@ -261,7 +261,8 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
 
 void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
     uint8_t opcode = instruction.opcode;
-    uint8_t dest_code = (opcode >> 3) & 0x07;           // Dest bits, 5-3  // NOT NEEDED. All instructions use A
+    uint8_t op1 = instruction.operand1;
+    //uint8_t dest_code = (opcode >> 3) & 0x07;
     uint8_t src_code = opcode & 0x07;                   // Source Bits 2-0
     size_t sz = 32;
     char* op_mnemonic;
@@ -272,12 +273,16 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
     };
 
     uint8_t reg_val = 0x00;
-    if (src_code == 6){ reg_val = external_read(initial_cpu->reg.HL); }     // (INSTR) A, [HL]
-    else              { reg_val = *rg_lkp[src_code]; }                              // (INSTR) A, r8
+    if ((src_code == 6) && (opcode < 0xC0))                                  // (INSTR) A, [HL]
+        { reg_val = external_read(initial_cpu->reg.HL); }
+    if ((src_code != 6)  && (opcode < 0xC0))                               // (INSTR) A, r8
+        { reg_val = *rg_lkp[src_code]; }
+    if ((src_code == 6) && (opcode >= 0xC0))                                 // (INSTR) A, n8
+        { if (op1) reg_val = op1; }
 
-    if (opcode >= 0xA0 && opcode <= 0xA7) {
-        op_mnemonic = "AND";    // AND A, X
-                
+    if ((opcode >= 0xA0 && opcode <= 0xA7) || (opcode == 0xE6)) {
+        op_mnemonic = "AND";   // AND A, X || AND A, n8.
+
         uint8_t AND_result = (initial_cpu->reg.A & reg_val);
         exp_cpu->reg.A = AND_result;
 
@@ -285,9 +290,10 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
         c_f(exp_cpu, FN);  // ALways cleared
         s_f(exp_cpu, FH);  // Always set
         c_f(exp_cpu, FC);  // Always cleared
+        if (opcode == 0xE6) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0xA8 && opcode <= 0xAF) {     // XOR A, X
-        op_mnemonic = "XOR";    // XOR A, X
+    if ((opcode >= 0xA8 && opcode <= 0xAF) || (opcode == 0xEE)) {
+        op_mnemonic = "XOR";   // XOR A, X || XOR A, n8
         
         uint8_t XOR_result = (exp_cpu->reg.A ^ reg_val);
         exp_cpu->reg.A = XOR_result;
@@ -295,9 +301,10 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
         c_f(exp_cpu, FN);  // ALways cleared
         c_f(exp_cpu, FH);  // Always cleared
         c_f(exp_cpu, FC);  // Always cleared
+        if (opcode == 0xEE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0xB0 && opcode <= 0xB7) {
-        op_mnemonic = "OR";    // OR A, X
+    if ((opcode >= 0xB0 && opcode <= 0xB7) || (opcode == 0xF6)) {
+        op_mnemonic = "OR";     // OR A, X || OR A, n8
         
         uint8_t OR_result = (initial_cpu->reg.A | reg_val);
         exp_cpu->reg.A = OR_result;
@@ -305,9 +312,10 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
         c_f(exp_cpu, FN);  // ALways cleared
         c_f(exp_cpu, FH);  // Always cleared
         c_f(exp_cpu, FC);  // Always cleared
+        if (opcode == 0xF6) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0xB8 && opcode <= 0xBF) {
-        op_mnemonic = "CP";     // CP A, X
+    if ((opcode >= 0xB8 && opcode <= 0xBF) || (opcode == 0xFE)) {
+        op_mnemonic = "CP";     // CP A, X || CP A, n8
 
         uint8_t hold_result = (exp_cpu->reg.A - reg_val);
         uint8_t a_reg = exp_cpu->reg.A;
@@ -316,11 +324,15 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
         s_f(exp_cpu, FN);  // ALways Set
 
         (a_reg & 0x0F) < (reg_val & 0x0F)
-            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH); // H-Carry
         (a_reg < reg_val)  
-            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
-        
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC); // Carry
+        if (opcode == 0xFE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)        
     }
+    // Special Logical Operations (n8)
+    // This needs: AND A, n8, XOR A, n8 OR A, n8 CP a, n8
+
+
     exp_cpu->reg.PC ++; // Bytes = 1
     snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
     }
@@ -335,7 +347,7 @@ void unt_tcase_builder(instruction_T local_instrc) {
 
     // This is the only part that might be hard.. to be Dynamic to point to the right Function.
     // But..... I likely need to build, a specific function for each Instruction group.     
-    if ((local_instrc.opcode >= 0x80) & (local_instrc.opcode <= 0x9F)) {
+    if ((local_instrc.opcode >= 0x80) && (local_instrc.opcode <= 0x9F)) {
         get_expected_8bit_arithmetic(
         local_instrc,
         &initial_cpu_state,
@@ -343,7 +355,15 @@ void unt_tcase_builder(instruction_T local_instrc) {
         instruc_name_val,
         p_hl_val);
     }
-    if ((local_instrc.opcode >= 0xA0) & (local_instrc.opcode <= 0xBF)) {
+    if ((local_instrc.opcode >= 0xA0) && (local_instrc.opcode <= 0xBF)) {
+        get_expected_logic_operations(
+        local_instrc,
+        &initial_cpu_state,
+        &expected_cpu_state,
+        instruc_name_val,
+        p_hl_val);
+    }
+    if (local_instrc.opcode == 0xE6 || local_instrc.opcode == 0xEE || local_instrc.opcode == 0xF6 || local_instrc.opcode == 0xFE) {
         get_expected_logic_operations(
         local_instrc,
         &initial_cpu_state,
@@ -355,8 +375,13 @@ void unt_tcase_builder(instruction_T local_instrc) {
     Test_Case_t build_test;
     build_test.name = instruc_name_val;
     build_test.opcode = local_instrc.opcode;
+    if (local_instrc.operand1 > 0) {
+        build_test.operand1 = local_instrc.operand1;
+    }
+    if (local_instrc.operand2 > 0) {
+        build_test.operand2 = local_instrc.operand2;
+    }    
     build_test.initial_cpu = initial_cpu_state;
-
     build_test.expected_cpu = expected_cpu_state;
 
     CPU working_cpu = build_test.initial_cpu;
@@ -405,6 +430,33 @@ void entry_test_case(){
         unt_tcase_builder(instrc);
 
         if (i == 0x7F) { break; }   // Hit the last line. STOP and close
+    }
+
+
+    // // List of opcodes. To run (In sequence).
+    // uint8_t test_opcodes[] = {
+    //     0x80, 0x81, 0x82, // ADD A, B/C/D
+    //     0x88, 0x89,           // ADC A, B/C
+    //     0xC6,             // ADD A, n8
+    //     0xCE,             // ADC A, n8
+    //     // ...and so on
+    // };
+
+    // maybe do, to split into groups.
+    // Or ... to arrange "steps" for a instruction. 
+    // IE: "Run PUSH DE, Run 5-6 LDs, Run POP DE etc."
+    uint8_t concentraaaatee[] = { 0xA0, 0xA1, 0xA2, /* ......... etc etc */ };
+
+    // Special Logic Ops:
+    uint8_t logic_ops[] = { 0xE6, 0xEE, 0xF6, 0xFE };   // AND, XOR, OR, CP.
+
+    instrc.operand1 = 0x84;
+    instrc.operand2 = 0x00;
+    for (int i = 0x0; i <= 0x03; i++) {
+        instrc.opcode = logic_ops[i];    // This should execute each one. In order of the Array above.
+        printf("LOGIC OPS Value? 0x%02X\n", logic_ops[i]);
+        //unt_ld_tcase(instrc);
+        unt_tcase_builder(instrc);
     }
 }
 
