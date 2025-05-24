@@ -177,6 +177,7 @@ void unt_ld_tcase(instruction_T local_instrc) {
 
 void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
     uint8_t opcode = instruction.opcode;
+    uint8_t op1 = instruction.operand1;
     uint8_t src_code = opcode & 0x07;
     size_t sz = 32;
     char* op_mnemonic;
@@ -187,76 +188,95 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
     };
 
     uint8_t reg_val = 0x0;
-    if (src_code == 6) { reg_val = external_read(initial_cpu->reg.HL); }     // ADD A, [HL]
-    else               { reg_val = *rg_lkp[src_code];; }                             // ADD A, r8
+    if ((src_code == 6) & (opcode < 0xC0))          // (INSTR) A, [HL]
+        { reg_val = external_read(initial_cpu->reg.HL); }
+    if ((src_code != 6) & (opcode < 0xC0))          // (INSTR) A, r8
+        { reg_val = *rg_lkp[src_code]; }
+    if ((src_code == 6) & (opcode >= 0xC0))         // (INSTR) A, n8
+        { if (op1) reg_val = op1; }
 
-    if (opcode >= 0x80 && opcode <= 0x87) {
-        op_mnemonic = "ADD";    // ADD A, X
+
+    if ((opcode >= 0x80 && opcode <= 0x87) || (opcode == 0xC6)) {
+        op_mnemonic = "ADD";    // ADD A, X  | ADD A, n8
         
         uint16_t add_result = (exp_cpu->reg.A + reg_val);
         uint8_t final_8bit = (uint8_t)add_result;
+        uint8_t a_reg = exp_cpu->reg.A;
 
-        c_f(exp_cpu, FN);  // N (sub) Always cleared
-        (add_result & 0xFF)  == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
-        (add_result > 0xFF)       ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
-
-        (exp_cpu->reg.A & 0x0F) + (reg_val & 0x0F) > 0x0F 
-            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        c_f(exp_cpu, FN);   // N (sub) Always cleared
+        (add_result & 0xFF)  == 0 
+            ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
+        (a_reg & 0x0F) + (reg_val & 0x0F) > 0x0F 
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);  // H Flag
+        (add_result > 0xFF)
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
        
         exp_cpu->reg.A = final_8bit;
+        if (opcode == 0xC6) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0x88 && opcode <= 0x8F) {
-        op_mnemonic = "ADC";    // ADC A, X
+    if ((opcode >= 0x88 && opcode <= 0x8F) || (opcode == 0xCE)){
+        op_mnemonic = "ADC";   // ADC A, X || ADC A, n8
 
         uint8_t carry_in = (exp_cpu->reg.F & FC) ? 1 : 0;
         uint16_t add_16bit = (exp_cpu->reg.A + reg_val + carry_in);
         uint8_t final_8bit = (uint8_t)add_16bit;
+        uint8_t a_reg = exp_cpu->reg.A;
 
         c_f(exp_cpu, FN);  // N (sub) Always cleared
-        (add_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
-        (add_16bit > 0xFF)      ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
-
-        ((exp_cpu->reg.A & 0x0F) + (reg_val & 0x0F) + carry_in) > 0x0F ?
-            s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        (add_16bit & 0xFF) == 0 
+            ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
+        ((a_reg & 0x0F) + (reg_val & 0x0F) + carry_in) > 0x0F 
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);  // H Flag
+        (add_16bit > 0xFF)
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
 
         exp_cpu->reg.A = final_8bit;
+        if (opcode == 0xCE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0x90 && opcode <= 0x97) {
-        op_mnemonic = "SUB";    // SUB A, X
+    if ((opcode >= 0x90 && opcode <= 0x97) || (opcode == 0xD6)) {
+        op_mnemonic = "SUB";   // SUB A, X || SUB A, n8
 
         uint16_t sub_16bit = (exp_cpu->reg.A - reg_val);
         uint8_t final_8bit = (uint8_t)sub_16bit;
         uint8_t a_reg = exp_cpu->reg.A;
 
-        (sub_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
-        s_f(exp_cpu, FN); // N (sub) Always set
-        
-        ((a_reg & 0x0F) < (reg_val & 0x0F)) ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
-        (a_reg < reg_val)   ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
+        s_f(exp_cpu, FN);   // N (sub) Always set
+        (sub_16bit & 0xFF) == 0
+            ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
+        ((a_reg & 0x0F) < (reg_val & 0x0F))
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);  // H Flag
+        (a_reg < reg_val)
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
 
         exp_cpu->reg.A = final_8bit;
+        if (opcode == 0xD6) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    if (opcode >= 0x98 && opcode <= 0x9F) {
-        op_mnemonic = "SBC";    // SBC A, X
+    if ((opcode >= 0x98 && opcode <= 0x9F) || (opcode == 0xDE)){
+        op_mnemonic = "SBC";   // SBC A, X || SBC A, X
         
-        uint8_t carry_in  = (exp_cpu->reg.F & FLAG_C) ? 1 : 0;
+        uint8_t carry_in  = (exp_cpu->reg.F & FC) ? 1 : 0;
         uint16_t sub_16bit = (exp_cpu->reg.A - reg_val - carry_in);
         uint8_t final_8bit = (uint8_t)sub_16bit;
         uint8_t a_reg = exp_cpu->reg.A;
 
-        
-        (sub_16bit & 0xFF) == 0 ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);
-        s_f(exp_cpu, FN); // N (sub) Always set
-
+        s_f(exp_cpu, FN);   // N (sub) Always set
+        (sub_16bit & 0xFF) == 0
+            ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
         ((a_reg & 0x0F) - (reg_val & 0x0F) - carry_in) < 0
-            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);  // H Flag
         (a_reg < (reg_val + carry_in))
-            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
 
         exp_cpu->reg.A = final_8bit;
+        if (opcode == 0xDE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
     exp_cpu->reg.PC ++; // Bytes = 1
-    snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
+    if (opcode >= 0xC6 & opcode <= 0xFF) {
+        snprintf(spec_message, sz, "%s A, n8 (%2X)", op_mnemonic, op1);
+    }
+    else {
+        snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
+    }
 }
 
 void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
@@ -273,11 +293,11 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
     };
 
     uint8_t reg_val = 0x00;
-    if ((src_code == 6) && (opcode < 0xC0))                                  // (INSTR) A, [HL]
+    if ((src_code == 6) && (opcode < 0xC0))     // (INSTR) A, [HL]
         { reg_val = external_read(initial_cpu->reg.HL); }
-    if ((src_code != 6)  && (opcode < 0xC0))                               // (INSTR) A, r8
+    if ((src_code != 6) && (opcode < 0xC0))     // (INSTR) A, r8
         { reg_val = *rg_lkp[src_code]; }
-    if ((src_code == 6) && (opcode >= 0xC0))                                 // (INSTR) A, n8
+    if ((src_code == 6) && (opcode >= 0xC0))    // (INSTR) A, n8
         { if (op1) reg_val = op1; }
 
     if ((opcode >= 0xA0 && opcode <= 0xA7) || (opcode == 0xE6)) {
@@ -327,14 +347,16 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
             ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH); // H-Carry
         (a_reg < reg_val)  
             ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC); // Carry
-        if (opcode == 0xFE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)        
+        if (opcode == 0xFE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
     }
-    // Special Logical Operations (n8)
-    // This needs: AND A, n8, XOR A, n8 OR A, n8 CP a, n8
-
-
     exp_cpu->reg.PC ++; // Bytes = 1
-    snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
+    if (opcode >= 0xC6 & opcode <= 0xFF) {
+        snprintf(spec_message, sz, "%s A, n8 (%2X)", op_mnemonic, op1);
+    }
+    else {
+        snprintf(spec_message, sz, "%s A, %s", op_mnemonic, reg_names[src_code]);
+    }
+    
     }
 
 void unt_tcase_builder(instruction_T local_instrc) {
@@ -355,6 +377,14 @@ void unt_tcase_builder(instruction_T local_instrc) {
         instruc_name_val,
         p_hl_val);
     }
+    if (local_instrc.opcode == 0xC6 || local_instrc.opcode == 0xCE || local_instrc.opcode == 0xD6 || local_instrc.opcode == 0xDE) {
+        get_expected_8bit_arithmetic(
+        local_instrc,
+        &initial_cpu_state,
+        &expected_cpu_state,
+        instruc_name_val,
+        p_hl_val);
+    }    
     if ((local_instrc.opcode >= 0xA0) && (local_instrc.opcode <= 0xBF)) {
         get_expected_logic_operations(
         local_instrc,
@@ -407,13 +437,6 @@ void unt_tcase_builder(instruction_T local_instrc) {
         logging_log("[FAILED] Name:[%s] OPCODE: [0x%02X]\n", build_test.name, build_test.opcode);
         // Don't like this... This is a HARD CODED Test. I need to make this modular.
     }
-
-
-    // CPU Registry Compare.
-    // view_regs(&working_cpu, &ld_test.expected_cpu);
-    // // Print out pass fail for each AF - HL.
-    // reg_compare2(&working_cpu, &ld_test.expected_cpu);
-
 }
 
 
@@ -447,14 +470,20 @@ void entry_test_case(){
     // IE: "Run PUSH DE, Run 5-6 LDs, Run POP DE etc."
     uint8_t concentraaaatee[] = { 0xA0, 0xA1, 0xA2, /* ......... etc etc */ };
 
+    // Special 8bit Arithmatic:
+    uint8_t arith8bit[] = { 0xC6, 0xCE, 0xD6, 0xDE };   // ADD, ADC, SUB, SBC.
     // Special Logic Ops:
     uint8_t logic_ops[] = { 0xE6, 0xEE, 0xF6, 0xFE };   // AND, XOR, OR, CP.
 
     instrc.operand1 = 0x84;
     instrc.operand2 = 0x00;
     for (int i = 0x0; i <= 0x03; i++) {
+        instrc.opcode = arith8bit[i];    // This should execute each one. In order of the Array above.
+        //unt_ld_tcase(instrc);
+        unt_tcase_builder(instrc);
+    }
+    for (int i = 0x0; i <= 0x03; i++) {
         instrc.opcode = logic_ops[i];    // This should execute each one. In order of the Array above.
-        printf("LOGIC OPS Value? 0x%02X\n", logic_ops[i]);
         //unt_ld_tcase(instrc);
         unt_tcase_builder(instrc);
     }
