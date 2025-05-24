@@ -791,7 +791,7 @@ static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 2;
 }
 // SBC (Sub with the cary flag):
 static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value in r8 and the carry flag from A.
