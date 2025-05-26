@@ -33,6 +33,27 @@ extern CPU cpu_reg_simple_tstate;
 #define FC 0x10  // 0001 0000
 
 
+// For some quick and easy opcodes?
+#define IS_ADD_R(op) ((op & 0xF8) == 0x80)
+#define IS_ADC_R(op) ((op & 0xF8) == 0x88)
+#define IS_SUB_R(op) ((op & 0xF8) == 0x90)
+#define IS_SBC_R(op) ((op & 0xF8) == 0x98)
+#define IS_AND_R(op) ((op & 0xF8) == 0xA0)
+#define IS_XOR_R(op) ((op & 0xF8) == 0xA8)
+#define IS_OR_R(op)  ((op & 0xF8) == 0xB0)
+#define IS_CP_R(op)  ((op & 0xF8) == 0xB8)
+
+// These ones might not work right...... 
+#define IS_AND_n8(op)  ((op & 0xC7) == 0xC6)
+#define IS_XOR_n8(op)  ((op & 0xC7) == 0xB8)
+#define IS_OR_n8(op)  ((op & 0xC7) == 0xB8)
+#define IS_CP_n8(op)  ((op & 0xC7) == 0xB8)
+
+#define GET_REG(op)  ((op) & 0x07)
+
+
+
+
 const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
 
 // Condensed flag instructions:
@@ -90,6 +111,17 @@ void reg_compare2(CPU *working, CPU *expected) {
     (working->reg.HL == expected->reg.HL) ? printf("[PASS]=HL\n") : printf("[FAIL] HL\n");
     //(working->reg. == expected->reg.AF) ? printf("[PASS] AF\n") : printf("[FAIL] AF\n");
 }
+
+void reg_whfail(CPU *working, CPU *expected) {
+    // Add each failure point. 
+    if (working->reg.A != expected->reg.A) {
+        // Failed at Register A. ---- Add to "failure mismatch list".
+    }
+
+    
+    printf("Failure at Register point(s): \n" /* the thingy */);
+}
+
 
 bool reg_compare(CPU *working, CPU *expected) {
     return \
@@ -195,7 +227,19 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
     if ((src_code == 6) & (opcode >= 0xC0))         // (INSTR) A, n8
         { if (op1) reg_val = op1; }
 
+    /// NOTE: Test in order by Opcode.
+    if ((opcode & 0xC7) == 0x06) {
+        op_mnemonic = "INC";    // ADD A, X  | ADD A, n8
+        
+    }
+    if ((opcode >= 0x80 && opcode <= 0x87) || (opcode == 0xC6)) {
+        op_mnemonic = "DEC";    // ADD A, X  | ADD A, n8
+        
+    }    
 
+    // Do instead?
+    //if (((opcode & 0xFE) == 0x80) || (opcode = 0xC6))
+    //if ((IS_ADD_R(opcode)) || (opcode = 0xC6))
     if ((opcode >= 0x80 && opcode <= 0x87) || (opcode == 0xC6)) {
         op_mnemonic = "ADD";    // ADD A, X  | ADD A, n8
         
