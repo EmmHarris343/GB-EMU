@@ -1058,8 +1058,10 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
 
     // Z FLAG UNCHANGED, Do not set, or clear.
     clear_cpu_flag(cpu, FLAG_N);  // N Flag Cleared (Subtraction)
-    ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
-    (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
+    ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF)    // NOTE: 16byte half carry goes off of bit 11 instead of bit 4 for 8byte.
+        ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
+    (add_result > 0xFFFF) 
+        ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     
     cpu->reg.HL = final_result;
     cpu->reg.PC ++;
