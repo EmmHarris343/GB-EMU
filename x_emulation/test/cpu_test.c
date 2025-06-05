@@ -54,6 +54,7 @@ extern CPU cpu_reg_simple_tstate;
 
 const char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
 
+
 // Condensed flag instructions:
 void s_f(CPU* c, uint8_t fl) {
     c->reg.F |= fl;
@@ -106,7 +107,9 @@ void reg_compare2(CPU *working, CPU *expected) {
     (working->reg.AF == expected->reg.AF) ? printf("[PASS]=AF :: ") : printf("[FAIL] AF\n");
     (working->reg.BC == expected->reg.BC) ? printf("[PASS]=BC :: ") : printf("[FAIL] BC\n");
     (working->reg.DE == expected->reg.DE) ? printf("[PASS]=DE :: ") : printf("[FAIL] DE\n");
-    (working->reg.HL == expected->reg.HL) ? printf("[PASS]=HL\n") : printf("[FAIL] HL\n");
+    (working->reg.HL == expected->reg.HL) ? printf("[PASS]=HL :: ") : printf("[FAIL] HL\n");
+    (working->reg.PC == expected->reg.PC) ? printf("[PASS]=PC :: ") : printf("[FAIL] PC\n");
+    (working->reg.SP == expected->reg.SP) ? printf("[PASS]=SP\n") : printf("[FAIL] SP\n");
     //(working->reg. == expected->reg.AF) ? printf("[PASS] AF\n") : printf("[FAIL] AF\n");
 }
 
@@ -450,6 +453,61 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
     
     }
 
+void get_expected_16bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {   
+    // These are tests outputs for INC BC, DEC BC. Plus for simplicity sake, ADD r16, r16
+
+    uint8_t opcode = instruction.opcode;
+    uint8_t src_opcode = (opcode >> 4) & 0x03;  // All the DEC, INC, and ADD r16. Encodes the Register in a different bit area. So shift it over more!
+    size_t sz = 32;
+    char* op_mnemonic;
+    
+    uint16_t *rg_lkp[4] = {
+        &exp_cpu->reg.BC, &exp_cpu->reg.DE, &exp_cpu->reg.HL, &exp_cpu->reg.SP
+    };
+    const char* reg_names_arith16bit[4] = { "BC", "DE", "HL", "SP" };
+
+    if ((opcode & 0xCF) == 0x03) {      // Will awlays match 0x03, for 0x03 - 0x33.
+        // The INC BC, DE, HL, SP
+        op_mnemonic = "INC";
+        uint16_t inc_value = *rg_lkp[src_opcode];
+        inc_value ++;
+        *rg_lkp[src_opcode] = inc_value;
+    }
+    if ((opcode & 0xCF) == 0x0B) {      // Will always match to 0x0B, for 0x0B to 0x3B.
+        // DEC BC, DE, HL, SP
+        op_mnemonic = "DEC";
+        uint16_t dec_value = *rg_lkp[src_opcode];
+        dec_value --;
+        *rg_lkp[src_opcode] = dec_value;
+    }
+    if ((opcode & 0xCF) == 0x09) {      // Will always match to 0x0B, for 0x0B to 0x3B.
+        // ADD HL, r16
+        // This one is more complicated, because it wants to track Flags.
+        op_mnemonic = "ADD";
+        uint16_t pre_hl = initial_cpu->reg.HL;
+        uint16_t pre_r16 = *rg_lkp[src_opcode];
+        uint32_t add_result = (pre_hl + pre_r16);
+        uint16_t final_result = (uint16_t)add_result;   // Convert back to 16bit, will truncate anything higher than 0xFF.
+        
+        // Z FLAG UNCHANGED, Do not set, or clear.
+        c_f(exp_cpu, FN);  // ALways cleared
+        ((pre_hl & 0x0FFF) + (pre_r16 & 0x0FFF) > 0x0FFF) // The H Flag.
+            ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);
+        (add_result > 0xFFFF)
+            ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC); // C Flag
+        
+        
+        exp_cpu->reg.HL = final_result;
+    }
+
+    if ((opcode & 0xCF) == 0x09) 
+        { snprintf(spec_message, sz, "%s HL, %s", op_mnemonic, reg_names_arith16bit[src_opcode]); }
+    else
+        { snprintf(spec_message, sz, "%s %s", op_mnemonic, reg_names_arith16bit[src_opcode]); }
+
+    exp_cpu->reg.PC ++;
+}
+
 void unt_tcase_builder(instruction_T local_instrc) {
     printf("---------\nCreating Unit Test. FOR --> OPCODE=0x%02X\n", local_instrc.opcode);
     CPU initial_cpu_state = cpu_reg_simple_tstate;
@@ -502,6 +560,16 @@ void unt_tcase_builder(instruction_T local_instrc) {
         p_hl_val);
     }
 
+    if ((local_instrc.opcode & 0xCF) == 0x03  || (local_instrc.opcode & 0xCF) == 0x0B || (local_instrc.opcode & 0xCF) == 0x09) {
+        get_expected_16bit_arithmetic(
+        local_instrc,
+        &initial_cpu_state,
+        &expected_cpu_state,
+        instruc_name_val,
+        p_hl_val);  
+        /// TODO: Remove p_hl_val. As no 16bit arithmatic uses [HL] pointed values.
+    }
+
     Test_Case_t build_test;
     build_test.name = instruc_name_val;
     build_test.opcode = local_instrc.opcode;
@@ -531,6 +599,8 @@ void unt_tcase_builder(instruction_T local_instrc) {
     view_regs(&build_test.initial_cpu, &build_test.expected_cpu);
     printf("View regs: working cpu, expected cpu\n");
     view_regs(&working_cpu, &build_test.expected_cpu);
+
+    reg_compare2(&working_cpu, &build_test.expected_cpu);
 
     bool rg_return = reg_compare(&working_cpu, &build_test.expected_cpu);
     if (rg_return) {
@@ -583,6 +653,12 @@ void entry_test_case(){
         0x05, 0x15, 0x25, 0x35,   // DEC B, D, H, [HL]
         0x0D, 0x1D, 0x2D, 0x3D  // DEC C, E, L, A
         };
+
+    uint8_t arith16bit[] = { 
+        0x03, 0x13, 0x23, 0x33,
+        0x09, 0x19, 0x29, 0x39,
+        0x0B, 0x1B, 0x2B, 0x3B
+    };
     // Special Logic Ops:
     uint8_t logic_ops[] = { 0xE6, 0xEE, 0xF6, 0xFE };   // AND, XOR, OR, CP.
 
@@ -590,19 +666,21 @@ void entry_test_case(){
     instrc.operand2 = 0x00;
     for (int i = 0x0; i <= 0x03; i++) {
         instrc.opcode = arith8bit[i];    // ADD and SUB
-        //unt_ld_tcase(instrc);
+        unt_tcase_builder(instrc);
+    }    
+    for (int i = 0x0; i <= 0x03; i++) {
+        instrc.opcode = logic_ops[i];    // AQND, OR, XOR...
         unt_tcase_builder(instrc);
     }
     for (int i = 0x0; i <= 0x0F; i++) {
         instrc.opcode = arith8bit_2[i]; // INC / DEC r8
-        //unt_ld_tcase(instrc);
         unt_tcase_builder(instrc);
     }
-    for (int i = 0x0; i <= 0x03; i++) {
-        instrc.opcode = logic_ops[i];    // This should execute each one. In order of the Array above.
-        //unt_ld_tcase(instrc);
+    for (int i = 0x0; i <= 0x0B; i++) {
+        instrc.opcode = arith16bit[i];    // INC r16 | DEC r16 | ADD r16
         unt_tcase_builder(instrc);
     }
+
 }
 
 
