@@ -889,14 +889,18 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
-    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
+    uint8_t r8_val = *reg_table[op_index];
 
-    ((op_r8 & 0x0F) == 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);    // Set H Flag for overlow from bit 3
-    (*reg_table[op_index]) ++;  // Make sure it decrements the actual Register (through a pointer)
-    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set (Z) Zero Flag
-
-    clear_cpu_flag(cpu, FLAG_N);  // N Flag Cleared (SUB Flag)
+    ((r8_val & 0x0F) == 0x0F) // H Flag before INC
+        ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);    // Set H Flag for overlow from bit 3
+    r8_val ++;
+    (r8_val == 0)            // Z Flag after INC
+        ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Set/Clear (Z) Zero Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)    
+    
+    *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
+    // Bytes = 1
 }
 // Decrement Instructions
 static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Register  (-- => B, D, H)
@@ -907,17 +911,17 @@ static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Re
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
-    uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
+    uint8_t r8_val = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
-    set_cpu_flag(cpu, FLAG_N);        // Set subtraction Flag always set.
-    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);     // Set/Clear H borrow flag from bit 4.
-    (*reg_table[op_index]) --;  // Make sure it decrements the actual Register (through a pointer)
-    (op_r8 == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);;    // Set/Clear (Z) Zero Flag
-
-    set_cpu_flag(cpu, FLAG_N);        // Set subtraction Flag always set.
+    ((r8_val & 0x0F) == 0)   // H flag before Dec
+        ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);     // Set/Clear H borrow flag from bit 4.
+    r8_val --;
+    (r8_val == 0)            // Z Flag after DEC
+        ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Set/Clear (Z) Zero Flag
+    set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)
+    
+    *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
-
-
     // Bytes = 1
 }
 
@@ -926,33 +930,34 @@ static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL r
     printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
 
     uint8_t hl_val = external_read(cpu->reg.HL);
-    ((hl_val & 0x0F) == 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);    // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
-    
-    //external_write(cpu->reg.HL,(cpu->reg.HL ++));
-    hl_val ++;
-    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set/Clear (Z) Zero Flag.
-    
-    external_write(cpu->reg.HL, hl_val);    // This saves the changes in the location pointed by [HL]
 
-    clear_cpu_flag(cpu, FLAG_N);      // Clear subtraction flag (N)
+    // HL First:
+    ((hl_val & 0x0F) == 0x0F)   // H Flag before INC
+        ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);
+    hl_val ++;
+    (hl_val == 0)               // Z Flag after INC
+        ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set/Clear (Z) Zero Flag.
+    clear_cpu_flag(cpu, FLAG_N);    // Always clear N flag (Sub)
+
+    external_write(cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
+
     cpu->reg.PC ++;
 
     // Bytes = 1
 }
 static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byte insde the location pointed by [HL]
     printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
-    // NOTE, technically this is INC_p_r16. But there is not other time that happens. Except for [HL].. SO NVM!
-
-    uint8_t hl_val = external_read(cpu->reg.HL);
-    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
+    uint8_t hl_val = external_read(cpu->reg.HL);    //Original HL Value
     
-    //external_write(cpu->reg.HL,(cpu->reg.HL --));
+    ((hl_val & 0x0F) == 0x0) // H Flag before DEC
+        ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     hl_val --;
-    (hl_val == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);            // Set/Clear (Z) Zero Flag.
-    
-    external_write(cpu->reg.HL, hl_val);    // This saves the changes in the location pointed by [HL]
-
+    (hl_val == 0)           // Z Flag After DEC.
+    ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);            // Set/Clear (Z) Zero Flag.
     set_cpu_flag(cpu, FLAG_N);        // Set subtraction flag (N)
+    
+    external_write(cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
+
     cpu->reg.PC ++;
 
     // Bytes = 1

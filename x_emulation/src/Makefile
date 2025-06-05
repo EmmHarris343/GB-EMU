@@ -1,3 +1,5 @@
+# CMD
+# make -f Makefile gb_em
 cc = gcc
 
 
