@@ -11,9 +11,6 @@
 MMU is:
 A series of Pointers, Configurations, and Rules to direct ANY traffic 
 Directs data from: 0000 to FFFF
-Any read, or write, or access functions do no care what it's accessing
-The MMU takes Address Spaces, Ranges, Vales. 
-Directing all of it to the appropriate sub controls. 
 
 
 MMU is/does NOT:
@@ -23,18 +20,6 @@ Does NOT control RAM, HRAM, External Ram or Timer.
 
 */
 
-
-
-// Question. What actually NEEDS to access the memory? 
-// CPU, APU, PPU, Cart.c,   Anything else realistically?
-// Maybe core (But just for EASY testing.)
-
-
-
-// Global Memory: DO NOT NEED THIS HERE!
-// uint8_t WRAM[WRAM_size];
-// uint8_t HRAM[HRAM_size];
-// uint8_t VRAM[VRAM_size];
 
 uint8_t memory_map[M_MAP_size];
 

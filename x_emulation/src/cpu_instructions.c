@@ -1451,7 +1451,7 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     cpu->reg.A = AND_result;
 
     (AND_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
-    clear_cpu_flag(cpu, FLAG_N);  // ALways cleard
+    clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
     set_cpu_flag(cpu, FLAG_H);    // Always set
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared.
 

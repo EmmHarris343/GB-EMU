@@ -84,16 +84,6 @@ void check_flags(CPU* inital_cpu, CPU* expected_cpu) {
 }
 
 void view_regs(CPU* inital_cpu, CPU* expected_cpu) {
-    // 
-    // printf("\n:CPU: === Registers === \n");
-    // printf("  A: 0x%02X\n", inital_cpu->reg.A);
-    // printf("  B: 0x%02X, C: 0x%02X\n", inital_cpu->reg.B, inital_cpu->reg.C);
-    // printf("  D: 0x%02X, E: 0x%02X\n", inital_cpu->reg.D, inital_cpu->reg.E);
-    // printf("  H: 0x%02X, L: 0x%02X\n", inital_cpu->reg.H, inital_cpu->reg.L);
-    // printf("\n");
-
-    
-
     printf("\n:CPU: === Registers === \n");
     printf("  A: (Orig/EX)[0x%02X/ 0x%02X]\n", inital_cpu->reg.A, expected_cpu->reg.A);
     printf("  B: (Orig/EX)[0x%02X/ 0x%02X] | C: (Orig/EX)[0x%02X/ 0x%02X]\n", inital_cpu->reg.B, expected_cpu->reg.B, inital_cpu->reg.C, expected_cpu->reg.C);
@@ -112,17 +102,6 @@ void reg_compare2(CPU *working, CPU *expected) {
     (working->reg.SP == expected->reg.SP) ? printf("[PASS]=SP\n") : printf("[FAIL] SP\n");
     //(working->reg. == expected->reg.AF) ? printf("[PASS] AF\n") : printf("[FAIL] AF\n");
 }
-
-void reg_whfail(CPU *working, CPU *expected) {
-    // Add each failure point. 
-    if (working->reg.A != expected->reg.A) {
-        // Failed at Register A. ---- Add to "failure mismatch list".
-    }
-
-    
-    printf("Failure at Register point(s): \n" /* the thingy */);
-}
-
 
 bool reg_compare(CPU *working, CPU *expected) {
     return \
@@ -278,6 +257,10 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
             ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
         s_f(exp_cpu, FN);   // N (sub) Always Set
         
+
+
+
+
         if (src_spcl == 6) {
             // Do not ACTUALLY write to ram, this is just a test!
         }
@@ -296,10 +279,11 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
         uint8_t final_8bit = (uint8_t)add_result;
         uint8_t a_reg = exp_cpu->reg.A;
 
+
         c_f(exp_cpu, FN);   // N (sub) Always cleared
         (add_result & 0xFF)  == 0 
             ? s_f(exp_cpu, FZ) : c_f(exp_cpu, FZ);  // Z Flag
-        (a_reg & 0x0F) + (reg_val & 0x0F) > 0x0F 
+        (a_reg & 0x0F) + (reg_val & 0x0F) > 0x0F
             ? s_f(exp_cpu, FH) : c_f(exp_cpu, FH);  // H Flag
         (add_result > 0xFF)
             ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
@@ -361,7 +345,7 @@ void get_expected_8bit_arithmetic(instruction_T instruction, CPU* initial_cpu, C
             ? s_f(exp_cpu, FC) : c_f(exp_cpu, FC);  // C Flag
 
         exp_cpu->reg.A = final_8bit;
-        if (opcode == 0xDE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruciton.)
+        if (opcode == 0xDE) { exp_cpu->reg.PC ++; }     // (Advance it once more, for the n8 instruction.)
     }
     exp_cpu->reg.PC ++; // Bytes = 1
     if (opcode >= 0xC6 & opcode <= 0xFF) 
@@ -453,7 +437,7 @@ void get_expected_logic_operations(instruction_T instruction, CPU* initial_cpu, 
     
     }
 
-void get_expected_16bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {   
+void get_expected_16bit_arithmetic(instruction_T instruction, CPU* initial_cpu, CPU* exp_cpu, char* spec_message, uint8_t p_hl_val) {
     // These are tests outputs for INC BC, DEC BC. Plus for simplicity sake, ADD r16, r16
 
     uint8_t opcode = instruction.opcode;
@@ -504,11 +488,118 @@ void get_expected_16bit_arithmetic(instruction_T instruction, CPU* initial_cpu, 
         { snprintf(spec_message, sz, "%s HL, %s", op_mnemonic, reg_names_arith16bit[src_opcode]); }
     else
         { snprintf(spec_message, sz, "%s %s", op_mnemonic, reg_names_arith16bit[src_opcode]); }
-
     exp_cpu->reg.PC ++;
 }
 
-void unt_tcase_builder(instruction_T local_instrc) {
+
+
+
+
+
+
+
+
+const CPU experiment_cpu_state = {
+    .reg.AF = 0x0CB0,       // B0 = 1011 (IE Z set, N not set, H set, C set)
+    .reg.BC = 0x0C0A,
+    .reg.DE = 0x0C1B,
+    .reg.HL = 0x0C2D,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
+    .reg.SP = 0xFFFE,
+    .reg.PC = 0x0979,
+    .state.IME = 0,         // Interupt
+    .state.halt = 0,
+    .state.pause = 0,
+    .state.stop = 0,
+    .state.panic = 0        // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
+};
+
+
+
+// Problem. I can make a check. But I need to know.......
+// If it's addition, or subtraction. 
+void halfc_check(CPU* c, uint8_t a, uint8_t b) {
+    // These are stupid, only checks if an increment (ie: ++, or +1) Would make it overflow from Half Carry.
+    if (a == 0x0F){  }
+    if (b == 0x0F){  }
+    
+}
+
+
+
+
+void experiment_logic(instruction_T instruction, CPU *e_cpu) {
+    uint8_t opcode = instruction.opcode;
+    uint8_t reg_val = 0;
+    if (opcode >= 0xA8 && opcode <= 0xAF) {
+        
+        uint8_t XOR_result = (e_cpu->reg.A ^ reg_val);
+        e_cpu->reg.A = XOR_result;
+        (XOR_result == 0) ? s_f(e_cpu, FZ) : c_f(e_cpu, FZ);
+        c_f(e_cpu, FN);  // ALways cleared
+        c_f(e_cpu, FH);  // Always cleared
+        c_f(e_cpu, FC);  // Always cleared
+    }
+}
+
+void experimend_add(instruction_T instruction, CPU* e_cpu) {
+    uint8_t opcode = instruction.opcode;
+    uint8_t reg_val = 0;
+
+    if ((opcode >= 0x80 && opcode <= 0x87)) {   // Got rid of or, cause this is supposed to be a experimental test.
+        // ADD A, X
+        
+        uint16_t add_result = (e_cpu->reg.A + reg_val);
+        uint8_t final_8bit = (uint8_t)add_result;
+        uint8_t a_reg = e_cpu->reg.A;
+
+        c_f(e_cpu, FN);   // N (sub) Always cleared
+        (add_result & 0xFF)  == 0
+            ? s_f(e_cpu, FZ) : c_f(e_cpu, FZ);  // Z Flag
+        (a_reg & 0x0F) + (reg_val & 0x0F) > 0x0F
+            ? s_f(e_cpu, FH) : c_f(e_cpu, FH);  // H Flag
+        (add_result > 0xFF)
+            ? s_f(e_cpu, FC) : c_f(e_cpu, FC);  // C Flag
+       
+        e_cpu->reg.A = final_8bit;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void unt_tcase_arth16bit(instruction_T local_instrc) {
     printf("---------\nCreating Unit Test. FOR --> OPCODE=0x%02X\n", local_instrc.opcode);
     CPU initial_cpu_state = cpu_reg_simple_tstate;
     CPU expected_cpu_state = cpu_reg_simple_tstate;
@@ -517,67 +608,131 @@ void unt_tcase_builder(instruction_T local_instrc) {
     external_write(initial_cpu_state.reg.HL, p_hl_val);
     char instruc_name_val[32];
 
-    // This is the only part that might be hard.. to be Dynamic to point to the right Function.
-    // But..... I likely need to build, a specific function for each Instruction group.
-    if ((local_instrc.opcode >= 0x80) && (local_instrc.opcode <= 0x9F)) {
-        get_expected_8bit_arithmetic(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);
-    }
-    if (local_instrc.opcode == 0xC6 || local_instrc.opcode == 0xCE || local_instrc.opcode == 0xD6 || local_instrc.opcode == 0xDE) {
-        get_expected_8bit_arithmetic(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);
-    }
-    if ((local_instrc.opcode & 0xC7) == 0x04 || (local_instrc.opcode & 0xC7) == 0x05) {
-        get_expected_8bit_arithmetic(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);
-    }
-    if ((local_instrc.opcode >= 0xA0) && (local_instrc.opcode <= 0xBF)) {
-        get_expected_logic_operations(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);
-    }
-    if (local_instrc.opcode == 0xE6 || local_instrc.opcode == 0xEE || local_instrc.opcode == 0xF6 || local_instrc.opcode == 0xFE) {
-        get_expected_logic_operations(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);
+    get_expected_16bit_arithmetic(
+    local_instrc,
+    &initial_cpu_state,
+    &expected_cpu_state,
+    instruc_name_val,
+    p_hl_val);  
+    /// TODO: Remove p_hl_val. As no 16bit arithmatic uses [HL] pointed values.
+
+}
+
+void unt_tcase_arth8bit(instruction_T local_instrc) {
+    printf("---------\nCreating Unit Test. FOR --> OPCODE=0x%02X\n", local_instrc.opcode);
+    CPU initial_cpu_state = cpu_reg_simple_tstate;
+    CPU expected_cpu_state = cpu_reg_simple_tstate;
+
+    uint8_t p_hl_val = 0xD0;
+    external_write(initial_cpu_state.reg.HL, p_hl_val);
+    char instruc_name_val[32];
+
+    get_expected_8bit_arithmetic(
+    local_instrc,
+    &initial_cpu_state,
+    &expected_cpu_state,
+    instruc_name_val,
+    p_hl_val);
+
+}
+
+void unt_tcase_logic(instruction_T local_instrc) {
+    CPU initial_cpu_state = cpu_reg_simple_tstate;
+    CPU expected_cpu_state = cpu_reg_simple_tstate; 
+    
+    uint8_t p_hl_val = 0xD0;
+    external_write(initial_cpu_state.reg.HL, p_hl_val);
+    char instruc_name_val[32];
+
+    get_expected_logic_operations(
+    local_instrc,
+    &initial_cpu_state,
+    &expected_cpu_state,
+    instruc_name_val,
+    p_hl_val);
+}
+
+
+
+
+void unt_tcase_builder() {
+
+    instruction_T instrc;
+    instrc.opcode = 0x5C;           // Placeholder, so it's initialized. (This probably should be NOP)
+    instrc.operand1 = 0x00;
+    instrc.operand2 = 0x00;
+  
+    CPU initial_cpu_state = cpu_reg_simple_tstate;
+    CPU expected_cpu_state = cpu_reg_simple_tstate;
+    uint8_t p_hl_val = 0xD0;
+    external_write(initial_cpu_state.reg.HL, p_hl_val);
+    char instruc_name_val[32];
+
+    printf("---------\nCreating Unit Test. FOR --> OPCODE=0x%02X\n", instrc.opcode);
+
+
+    // IE: "Run PUSH DE, Run 5-6 LDs, Run POP DE etc"
+    uint8_t concentraaaatee[] = { 0xA0, 0xA1, 0xA2, /* ......... etc etc */ };
+
+    // Special 8bit Arithmatic:
+    uint8_t arith8bit[] = { 0xC6, 0xCE, 0xD6, 0xDE };   // ADD, ADC, SUB, SBC.
+    uint8_t arith8bit_2[] = { 
+        0x04, 0x14, 0x24, 0x34,     // INC B, D, H, [HL]
+        0x0C, 0x1C, 0x2C, 0x3C,     // INC C, E, L, A
+        0x05, 0x15, 0x25, 0x35,   // DEC B, D, H, [HL]
+        0x0D, 0x1D, 0x2D, 0x3D  // DEC C, E, L, A
+    };
+
+    uint8_t arith16bit[] = { 
+        0x03, 0x13, 0x23, 0x33,
+        0x09, 0x19, 0x29, 0x39,
+        0x0B, 0x1B, 0x2B, 0x3B
+    };
+    // Special Logic Ops:
+    uint8_t logic_ops[] = { 0xE6, 0xEE, 0xF6, 0xFE };   // AND, XOR, OR, CP.
+
+    for (int i = 0x80; i <= 0xBF; i++) {
+        instrc.opcode = i;
+        //unt_ld_tcase(instrc);
+        //unt_tcase_builder(instrc);
     }
 
-    if ((local_instrc.opcode & 0xCF) == 0x03  || (local_instrc.opcode & 0xCF) == 0x0B || (local_instrc.opcode & 0xCF) == 0x09) {
-        get_expected_16bit_arithmetic(
-        local_instrc,
-        &initial_cpu_state,
-        &expected_cpu_state,
-        instruc_name_val,
-        p_hl_val);  
-        /// TODO: Remove p_hl_val. As no 16bit arithmatic uses [HL] pointed values.
-    }
+    // instrc.operand1 = 0x84;
+    // instrc.operand2 = 0x00;
+    // for (int i = 0x0; i <= 0x03; i++) {
+    //     instrc.opcode = arith8bit[i];    // ADD and SUB
+    //     unt_tcase_arth8bit(instrc);
+    // }
+    // for (int i = 0x0; i <= 0x03; i++) {
+    //     instrc.opcode = logic_ops[i];    // AND, OR, XOR...
+    //     unt_tcase_logic(instrc);
+    // }
+    // for (int i = 0x0; i <= 0x0F; i++) {
+    //     instrc.opcode = arith8bit_2[i]; // INC / DEC r8
+    //     unt_tcase_arth8bit(instrc);
+    // }
+    // for (int i = 0x0; i <= 0x0B; i++) {
+    //     instrc.opcode = arith16bit[i];    // INC r16 | DEC r16 | ADD r16
+    //     unt_tcase_arth16bit(instrc);
+    // }
+
+
+
+
+
+
+    // This is the only part that might be hard.. to be Dynamic to point to the right Function.
+    // But..... I likely need to build, a specific function for each Instruction group.
+
 
     Test_Case_t build_test;
     build_test.name = instruc_name_val;
-    build_test.opcode = local_instrc.opcode;
-    if (local_instrc.operand1 > 0) {
-        build_test.operand1 = local_instrc.operand1;
+    build_test.opcode = instrc.opcode;
+    if (instrc.operand1 > 0) {
+        build_test.operand1 = instrc.operand1;
     }
-    if (local_instrc.operand2 > 0) {
-        build_test.operand2 = local_instrc.operand2;
+    if (instrc.operand2 > 0) {
+        build_test.operand2 = instrc.operand2;
     }    
     build_test.initial_cpu = initial_cpu_state;
     build_test.expected_cpu = expected_cpu_state;
@@ -587,7 +742,7 @@ void unt_tcase_builder(instruction_T local_instrc) {
     // Because my "test" of what is in ram, actually writes it to ram.. Sooo.
     external_write(working_cpu.reg.HL, p_hl_val);
     
-    int exe_return = execute_test(&working_cpu, local_instrc);
+    int exe_return = execute_test(&working_cpu, instrc);
     if (exe_return  != 0) { 
         printf("ERROR [cpu_test], instruction failed to execute"); 
     }
@@ -616,73 +771,6 @@ void unt_tcase_builder(instruction_T local_instrc) {
 
 
 
-void entry_test_case(){
-    instruction_T instrc;
-    instrc.opcode = 0x5C;           // Placeholder, so it's initialized. (This probably should be NOP)
-    instrc.operand1 = 0x00;
-    instrc.operand2 = 0x00;
-
-    for (int i = 0x80; i <= 0xBF; i++) {
-        instrc.opcode = i;
-        //unt_ld_tcase(instrc);
-        unt_tcase_builder(instrc);
-
-        if (i == 0x7F) { break; }   // Hit the last line. STOP and close
-    }
-
-
-    // // List of opcodes. To run (In sequence).
-    // uint8_t test_opcodes[] = {
-    //     0x80, 0x81, 0x82, // ADD A, B/C/D
-    //     0x88, 0x89,           // ADC A, B/C
-    //     0xC6,             // ADD A, n8
-    //     0xCE,             // ADC A, n8
-    //     // ...and so on
-    // };
-
-    // maybe do, to split into groups
-    // Or ... to arrange "steps" for a instruction
-    // IE: "Run PUSH DE, Run 5-6 LDs, Run POP DE etc"
-    uint8_t concentraaaatee[] = { 0xA0, 0xA1, 0xA2, /* ......... etc etc */ };
-
-    // Special 8bit Arithmatic:
-    uint8_t arith8bit[] = { 0xC6, 0xCE, 0xD6, 0xDE };   // ADD, ADC, SUB, SBC.
-    uint8_t arith8bit_2[] = { 
-        0x04, 0x14, 0x24, 0x34,     // INC B, D, H, [HL]
-        0x0C, 0x1C, 0x2C, 0x3C,     // INC C, E, L, A
-        0x05, 0x15, 0x25, 0x35,   // DEC B, D, H, [HL]
-        0x0D, 0x1D, 0x2D, 0x3D  // DEC C, E, L, A
-        };
-
-    uint8_t arith16bit[] = { 
-        0x03, 0x13, 0x23, 0x33,
-        0x09, 0x19, 0x29, 0x39,
-        0x0B, 0x1B, 0x2B, 0x3B
-    };
-    // Special Logic Ops:
-    uint8_t logic_ops[] = { 0xE6, 0xEE, 0xF6, 0xFE };   // AND, XOR, OR, CP.
-
-    instrc.operand1 = 0x84;
-    instrc.operand2 = 0x00;
-    for (int i = 0x0; i <= 0x03; i++) {
-        instrc.opcode = arith8bit[i];    // ADD and SUB
-        unt_tcase_builder(instrc);
-    }    
-    for (int i = 0x0; i <= 0x03; i++) {
-        instrc.opcode = logic_ops[i];    // AQND, OR, XOR...
-        unt_tcase_builder(instrc);
-    }
-    for (int i = 0x0; i <= 0x0F; i++) {
-        instrc.opcode = arith8bit_2[i]; // INC / DEC r8
-        unt_tcase_builder(instrc);
-    }
-    for (int i = 0x0; i <= 0x0B; i++) {
-        instrc.opcode = arith16bit[i];    // INC r16 | DEC r16 | ADD r16
-        unt_tcase_builder(instrc);
-    }
-
-}
-
 
 
 
@@ -702,13 +790,4 @@ void integration_test_instruction() {
 
     // IE: Do this a little bit later.
     // Right now, I need to figure out if my instructions work as intended.
-}
-
-
-void run_multiple_cpu_test() {
-    int total_tests = 40;
-
-    for(int i = 0; i < total_tests; i++){
-        /// EXECUTE: CPU Instruction Test.
-    }
 }

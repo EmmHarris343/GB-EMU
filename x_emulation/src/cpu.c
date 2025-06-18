@@ -35,7 +35,7 @@ const CPU cpu_reg_simple_tstate = {
     .reg.DE = 0x032D,
     .reg.HL = 0xC100,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
     .reg.SP = 0xFFFE,
-    .reg.PC = 0x0789,
+    .reg.PC = 0x0779,
     .state.IME = 0,         // Interupt
     .state.halt = 0,
     .state.pause = 0,
@@ -65,6 +65,8 @@ static const uint8_t opcode_lengths[256] = {
     2,1,1,1, 0,1,2,1, 2,1,3,1, 0,0,2,1,     // 0xF0 - 0xFF
     // ... Fill in the rest
 };
+
+
 
 /// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....." 
 void set_flag(int cpu_flag) {
