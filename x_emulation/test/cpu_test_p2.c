@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include "../src/cpu.h"
-#include "../src/cpu_instructions.h"
 
 #include "../src/logger.h"
 
