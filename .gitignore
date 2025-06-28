@@ -7,7 +7,7 @@
 rom/
 doc/
 old/
-
+_notes/
 
 # Ignore compiled executable:
 rom_reader
