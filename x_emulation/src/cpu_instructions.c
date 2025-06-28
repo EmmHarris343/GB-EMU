@@ -48,6 +48,10 @@ void set_cpu_flag(CPU* cpu, uint8_t flag_hex) {
 }
 
 void clear_cpu_flag(CPU* cpu, uint8_t flag_hex) {
+    cpu->reg.F &= ~flag_hex;    // Extra to ensure flag is CLEARED
+}
+
+void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
     cpu->reg.F ^= flag_hex;
 }
 
