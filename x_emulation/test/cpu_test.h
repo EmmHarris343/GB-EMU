@@ -46,15 +46,34 @@ typedef struct {
 } InstructionTest;
 
 typedef struct {
+    instruction_T inst;
+    char *mnemonic;
+    char *from_name;
+    char *name;
+    char *subname;
+} details_T;
+
+typedef struct {
     instruction_T instr;
+    char *sub_tname;
+    uint8_t initial_A;    
+    uint8_t expected_A;
+    uint8_t double_A_A;    
+    uint8_t from_val;
+    uint8_t expected_flags;
+} add8_test_case;
+
+
+typedef struct {
+    instruction_T instr;
+    char *sub_tname;
     uint8_t initial_A;
     uint8_t expected_A;
-    uint8_t from_reg_val;
-    uint8_t operand;
-    uint8_t memory_val;    // For [HL] if needed
+    uint8_t double_A_A;
+    uint8_t from_val;
+    uint8_t carry_state;
     uint8_t expected_flags;
-    
-} add8_test_case;
+} adc8_test_case;
 
 // void run_test_case(const test_case_t *test);
 
