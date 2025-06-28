@@ -90,6 +90,8 @@ int test_sequence() {
     //unit_test_instruction();
     entry_test_case();
 
+
+    printf("Closing Emulator ... bye\n");
     return 0; // Pass all good.
 }
 

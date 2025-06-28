@@ -33,6 +33,29 @@ typedef struct {
     //bool (*custom_check)(const CPU *);  // 
 } Test_Case_t;
 
+typedef void (*predict_fn)(CPU *cpu);
+typedef void (*exec_fn)(CPU *cpu);
+
+
+typedef struct {
+    const char *name;
+    predict_fn predict;
+    exec_fn execute;
+    uint8_t initial_B;
+    uint8_t initial_flags;
+} InstructionTest;
+
+typedef struct {
+    instruction_T instr;
+    uint8_t initial_A;
+    uint8_t expected_A;
+    uint8_t from_reg_val;
+    uint8_t operand;
+    uint8_t memory_val;    // For [HL] if needed
+    uint8_t expected_flags;
+    
+} add8_test_case;
+
 // void run_test_case(const test_case_t *test);
 
 

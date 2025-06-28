@@ -55,7 +55,6 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
     cpu->reg.F ^= flag_hex;
 }
 
-
 /// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier... 
 void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
     // Clear the bits we're modifying

@@ -30,7 +30,7 @@ const CPU cpu_post_bios_state = {
 };
 
 const CPU cpu_reg_simple_tstate = {
-    .reg.AF = 0x01A0,       // B0 = 1011 (IE Z set, N not set, H set, C set)
+    .reg.AF = 0x0100,       // B0 = 1011 (IE Z set, N not set, H set, C set)
     .reg.BC = 0x021B,
     .reg.DE = 0x032D,
     .reg.HL = 0xC100,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
