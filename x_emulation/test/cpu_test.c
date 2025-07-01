@@ -174,7 +174,7 @@ void add_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, add8_test_c
             set_reg_a(ecpu, tcase.expected_A);
         }
         if (regv == 7) {
-            // ADD A, A
+            // (Self ADD) -> ADD A, A
             set_reg_a(rcpu, tcase.double_A_A);
             set_reg_a(ecpu, tcase.expected_A);
         }
