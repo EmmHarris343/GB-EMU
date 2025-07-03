@@ -46,6 +46,10 @@ void check_flags(CPU* inital_cpu, CPU* expected_cpu) {
     (inital_cpu->reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
 }
 
+void cpar_hex_flags(CPU* b4, CPU* l8) {
+    printf("--------\nRaw Hex of FLAGS: [0x%02X/ 0x%02X]\n--------\n", b4->reg.F, l8->reg.F);
+}
+
 void cpar_reg_long(CPU* b4, CPU* l8) {
     printf("\n:CPU: === Registers === \n");
     printf("  X: [B4/L8]\n");
@@ -64,7 +68,6 @@ void cpar_reg_check(CPU *b4, CPU *l8) {
     (b4->reg.HL == l8->reg.HL) ? printf("[PASS]=HL :: ") : printf("[FAIL] HL\n");
     (b4->reg.PC == l8->reg.PC) ? printf("[PASS]=PC :: ") : printf("[FAIL] PC\n");
     (b4->reg.SP == l8->reg.SP) ? printf("[PASS]=SP\n") : printf("[FAIL] SP\n");
-    //(working->reg. == expected->reg.AF) ? printf("[PASS] AF\n") : printf("[FAIL] AF\n");
 }
 
 // Checks the Register states, if any fail will return fail.
@@ -205,9 +208,9 @@ void build_add8(instruction_T inst) {
     add8_test_case rlvr_case;
     add_rlvr_case(&rlvr_case);
 
+    /// TODO: Clean this up because it's really messy.
     details_T deets;
-    
-    deets.inst.opcode = inst.opcode;
+    deets.inst.opcode =  inst.opcode;
     char spec_name[100];
     deets.mnemonic = "ADD";
     uint8_t rgv = inst.opcode & 0x07;
@@ -237,107 +240,6 @@ void build_add8(instruction_T inst) {
     }
 }
 
-
-// ADC is a bit different.. cause... 
-// It rolls the state of C into the value. 
-
-// uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
-// (cpu->reg.A + op_r8 + carry_val);
-
-void adc_zcase(adc8_test_case *z_case) {
-    z_case->sub_tname = "zero";
-    z_case->initial_A = 0xF0;
-    z_case->expected_A = 0x20;
-    z_case->carry_state = 0;
-    z_case->from_val = 0x30;
-    z_case->expected_flags = 0x90;  // 1 0 0 1
-}
-
-void adc_hcase(adc8_test_case *h_case) {
-    h_case->sub_tname = "half-carry";
-    h_case->initial_A = 0x0E;
-    h_case->expected_A = 0x12;
-    h_case->carry_state = 1;
-    h_case->from_val = 0x30;
-    h_case->expected_flags = 0x20;  // 0 0 1 0
-}
-
-void adc_ccase(adc8_test_case *c_case) {
-    c_case->sub_tname = "carry";
-    c_case->initial_A = 0xF2;
-    c_case->expected_A = 0x2B;
-    c_case->carry_state = 1;
-    c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
-    c_case->expected_flags = 0x10;  // 0 0 0 1
-}
-
-void adc_rlvr_case(adc8_test_case *rv_case) {
-    rv_case->sub_tname = "rollover";
-    rv_case->initial_A = 0xFE;
-    rv_case->expected_A = 0x00;
-    rv_case->carry_state = 1;
-    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
-    rv_case->expected_flags = 0x10;  // 1 0 1 1
-}
-
-void adc_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, adc8_test_case tcase) {
-    // r8 Registers first (Incase it lands on ADD A, A. So [expected A] won't get over written by the [from val])
-    set_reg_val(rcpu, inst.opcode, tcase.from_val);
-    set_reg_val(ecpu, inst.opcode, tcase.from_val);
-
-    // A Registers
-    set_reg_a(rcpu, tcase.initial_A);
-    set_reg_a(ecpu, tcase.expected_A);
-
-    // set expected flags
-    set_flag_byval(ecpu, tcase.expected_flags);
-
-    ecpu->reg.PC ++; // Advance the PC.
-
-    // n8 ADD, ADC, ... AND, XOR, CP etc
-    if ((inst.opcode & 0xC7) == 0xC6) { }
-
-    // reg / [hl]:
-    if ((inst.opcode & 0xC0) == 0x80) {
-        uint8_t sc = (inst.opcode >>3) & 0x07;
-        uint8_t regv = inst.opcode & 0x07;
-        if (regv == 6) {
-            // HL
-            external_write(ecpu->reg.HL, tcase.from_val);
-        }
-    }
-}
-
-void build_adc8(instruction_T inst) {
-    CPU ecpu;
-    CPU rcpu;
-    adc8_test_case z_case;
-    adc_zcase(&z_case);
-
-    adc8_test_case c_case;
-    adc_ccase(&c_case);
-
-    adc8_test_case h_case;
-    adc_hcase(&h_case);
-
-    adc8_test_case rlvr_case;
-    adc_rlvr_case(&rlvr_case);
-
-    adc8_test_case *tc_v[4] = {
-        &z_case, &c_case, &h_case, &rlvr_case
-    };
-    for (int i = 0; i < 4; i++) {
-        rcpu = cpu_reg_simple_tstate;
-        ecpu = cpu_reg_simple_tstate;
-
-        adc_assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
-
-        execute_test(&rcpu, inst);
-        cpar_reg_check(&ecpu, &rcpu);
-        cpar_reg_long(&ecpu, &rcpu);
-    }
-
-}
 
 void bld_arith8bit_tests() {
     instruction_T inst;

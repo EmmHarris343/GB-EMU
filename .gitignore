@@ -8,6 +8,7 @@ rom/
 doc/
 old/
 _notes/
+_code_doxygen
 
 # Ignore compiled executable:
 rom_reader
