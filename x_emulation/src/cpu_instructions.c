@@ -690,7 +690,7 @@ static void ADC_A_r8(CPU *cpu, instruction_T instrc) {
     // Bytes = 1
 }
 static void ADC_A_p_HL(CPU *cpu, instruction_T instrc) {
-    printf("ADC A, [HL]. Called, not setup.\n");
+    printf("ADC A, [HL].                  ; Add the value stored in [hl] PLUS the carry flag to Register A\n");
 
     uint8_t hl_val = external_read(cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -708,7 +708,7 @@ static void ADC_A_p_HL(CPU *cpu, instruction_T instrc) {
     cpu->reg.PC ++;
 }
 static void ADC_A_n8(CPU *cpu, instruction_T instrc) {
-    printf("ADC A, n8. Called, not setup.\n");
+    printf("ADC A, n8.                  ; Add the value in n8 PLUS the carry flag to Register A\n");
 
     uint8_t n8_val = instrc.operand1;
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -759,7 +759,7 @@ static void SUB_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract values in
     */
 }
 static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
-    printf("SUB A, [HL]. Called, not setup.\n");
+    printf("SUB A, [HL].              ; Sub Value in Register A, by value in [HL]\n");
 
 
     uint8_t hl_val = external_read(cpu->reg.HL);
@@ -779,7 +779,7 @@ static void SUB_A_p_HL(CPU *cpu, instruction_T instrc) {
 
 }
 static void SUB_A_n8(CPU *cpu, instruction_T instrc) {
-    printf("SUB A, n8. Called.                  ; Subtract Register A by immediate value n8\n");
+    printf("SUB A, n8. Called.                  ; Subtract Register A by value in n8\n");
 
     uint8_t n8 = instrc.operand1;
     uint8_t reg_a = cpu->reg.A;
@@ -836,7 +836,7 @@ static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     */
 }
 static void SBC_A_p_HL(CPU *cpu, instruction_T instrc) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("SBC A, [HL]. Called, not setup.             ; Subtract value in [HL] (and the carry flag) from Register A\n");
+    printf("SBC A, [HL].                  ; Subtract value in [HL] (and the carry flag) from Register A\n");
 
     uint8_t hl_val = external_read(cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -859,7 +859,7 @@ static void SBC_A_p_HL(CPU *cpu, instruction_T instrc) {   // Subtract the byte 
     // FLAGS: see sbc_a_r8
 }
 static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value n8 and the carry flag from A.
-    printf("SBC A, n8. Called.          ; Subtract value in n8 (and the carry flag) from Register A\n");
+    printf("SBC A, n8. Called.                  ; Subtract value in n8 (and the carry flag) from Register A\n");
 
     uint8_t n8 = instrc.operand1;
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -885,7 +885,7 @@ static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value
 
 // Increment & Decrement Instructions:
 static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
-    printf("INC_r8.               ; Registry H ++\n");
+    printf("INC_r8. Called.                  ; Registry H ++\n");
 
     uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {

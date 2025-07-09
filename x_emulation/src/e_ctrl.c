@@ -23,7 +23,7 @@
 #endif
 
 // Testing, because don't have any build flag set.
-#include "../test/cpu_test.h"
+#include "../test_cpu/cpu_test.h"
 
 extern Cartridge cart;
 extern FILE *debug_dump_file;

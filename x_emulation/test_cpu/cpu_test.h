@@ -53,28 +53,6 @@ typedef struct {
     char *subname;
 } details_T;
 
-typedef struct {
-    instruction_T instr;
-    char *sub_tname;
-    uint8_t initial_A;    
-    uint8_t expected_A;
-    uint8_t double_A_A;    
-    uint8_t from_val;
-    uint8_t expected_flags;
-} add8_test_case;
-
-
-typedef struct {
-    instruction_T instr;
-    char *sub_tname;
-    uint8_t initial_A;
-    uint8_t expected_A;
-    uint8_t double_A_A;
-    uint8_t from_val;
-    uint8_t carry_state;
-    uint8_t expected_flags;
-} adc8_test_case;
-
 // void run_test_case(const test_case_t *test);
 
 
