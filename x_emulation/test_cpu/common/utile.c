@@ -28,24 +28,23 @@ void check_flags(CPU* inital_cpu, CPU* expected_cpu) {
     (inital_cpu->reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
 }
 
-void cpar_reg_long(CPU* b4, CPU* l8) {
+void cpar_reg_long(CPU* EC, CPU* RC) {
     printf("\n:CPU: === Registers === \n");
-    printf("  X: [B4/L8]\n");
-    printf("  A: [0x%02X/ 0x%02X]\n", b4->reg.A, l8->reg.A);
-    printf("  B: [0x%02X/ 0x%02X] | C: [0x%02X/ 0x%02X]\n", b4->reg.B, l8->reg.B, b4->reg.C, l8->reg.C);
-    printf("  D: [0x%02X/ 0x%02X] | E: [0x%02X/ 0x%02X]\n", b4->reg.D, l8->reg.D, b4->reg.E, l8->reg.E);
-    printf("  H: [0x%02X/ 0x%02X] | L: [0x%02X/ 0x%02X]\n", b4->reg.H, l8->reg.H, b4->reg.L, l8->reg.L);
+    printf("  X: [EC/RC]\n");
+    printf("  A: [0x%02X/ 0x%02X]\n", EC->reg.A, RC->reg.A);
+    printf("  D: [0x%02X/ 0x%02X] | E: [0x%02X/ 0x%02X]\n", EC->reg.D, RC->reg.D, EC->reg.E, RC->reg.E);
+    printf("  H: [0x%02X/ 0x%02X] | L: [0x%02X/ 0x%02X]\n", EC->reg.H, RC->reg.H, EC->reg.L, RC->reg.L);
     //printf("\n");
-    printf("--------\nRaw Hex of FLAGS: [0x%02X/ 0x%02X]\n--------\n", b4->reg.F, l8->reg.F);
+    printf("--------\nRaw Hex of FLAGS: [EC/RC][0x%02X/ 0x%02X]\n--------\n", EC->reg.F, RC->reg.F);
 }
 
-void cpar_reg_check(CPU *b4, CPU *l8) {
-    (b4->reg.AF == l8->reg.AF) ? printf("[PASS]=AF :: ") : printf("[FAIL] AF\n");
-    (b4->reg.BC == l8->reg.BC) ? printf("[PASS]=BC :: ") : printf("[FAIL] BC\n");
-    (b4->reg.DE == l8->reg.DE) ? printf("[PASS]=DE :: ") : printf("[FAIL] DE\n");
-    (b4->reg.HL == l8->reg.HL) ? printf("[PASS]=HL :: ") : printf("[FAIL] HL\n");
-    (b4->reg.PC == l8->reg.PC) ? printf("[PASS]=PC :: ") : printf("[FAIL] PC\n");
-    (b4->reg.SP == l8->reg.SP) ? printf("[PASS]=SP\n") : printf("[FAIL] SP\n");
+void cpar_reg_check(CPU *EC, CPU *RC) {
+    (EC->reg.AF == RC->reg.AF) ? printf("[PASS]=AF :: ") : printf("[FAIL] AF\n");
+    (EC->reg.BC == RC->reg.BC) ? printf("[PASS]=BC :: ") : printf("[FAIL] BC\n");
+    (EC->reg.DE == RC->reg.DE) ? printf("[PASS]=DE :: ") : printf("[FAIL] DE\n");
+    (EC->reg.HL == RC->reg.HL) ? printf("[PASS]=HL :: ") : printf("[FAIL] HL\n");
+    (EC->reg.PC == RC->reg.PC) ? printf("[PASS]=PC :: ") : printf("[FAIL] PC\n");
+    (EC->reg.SP == RC->reg.SP) ? printf("[PASS]=SP\n") : printf("[FAIL] SP\n");
     //(working->reg. == expected->reg.AF) ? printf("[PASS] AF\n") : printf("[FAIL] AF\n");
 }
 

@@ -17,12 +17,15 @@ void build_sbc(instruction_T inst);
 typedef struct {
     instruction_T instr;
     char *sub_tname;
-    uint8_t initial_A;    
+    uint8_t initial_flags;
+    uint8_t initial_A;
     uint8_t expected_A;
-    uint8_t double_A_A;
     uint8_t from_val;
     uint8_t carry_state;
     uint8_t expected_flags;
+    uint8_t dbl_A_expected;
+    uint8_t dbl_A_from;
+    uint8_t dbl_A_expected_flags;
 } alu8_test_case;
 
 
@@ -35,8 +38,6 @@ typedef struct {
     uint8_t from_val;
     uint8_t expected_flags;
 } add8_test_case;
-
-
 
 
 typedef struct {
