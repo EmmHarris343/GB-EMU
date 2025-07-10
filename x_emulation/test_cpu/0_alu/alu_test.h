@@ -13,6 +13,19 @@ void build_sbc(instruction_T inst);
 
 // Putting this here, because it should be isolated from the other tests.
 
+
+typedef struct {
+    instruction_T instr;
+    char *sub_tname;
+    uint8_t initial_A;    
+    uint8_t expected_A;
+    uint8_t double_A_A;
+    uint8_t from_val;
+    uint8_t carry_state;
+    uint8_t expected_flags;
+} alu8_test_case;
+
+
 typedef struct {
     instruction_T instr;
     char *sub_tname;
@@ -22,6 +35,8 @@ typedef struct {
     uint8_t from_val;
     uint8_t expected_flags;
 } add8_test_case;
+
+
 
 
 typedef struct {

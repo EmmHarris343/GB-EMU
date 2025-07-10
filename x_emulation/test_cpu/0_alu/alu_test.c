@@ -17,171 +17,8 @@ extern char* reg_names[8];
 //char* reg_names[8] = { "B", "C", "D", "E", "H", "L", "[HL]", "A" };
 
 
-/// ADD: Tests
 
-void add_zcase(add8_test_case *z_case) {
-    z_case->sub_tname = "zero";
-    z_case->initial_A = 0x00;
-    z_case->expected_A = 0x00;
-    z_case->double_A_A = 0x00;  // The ADD A, A. Case
-    z_case->from_val = 0x00;    // actual register is calculated by opcode
-    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
-}
-
-void add_hcase(add8_test_case *h_case) {
-    h_case->sub_tname = "half-carry";
-    h_case->initial_A = 0x08;
-    h_case->expected_A = 0x10;
-    h_case->double_A_A = 0x8;   // The ADD A, A. Case
-    h_case->from_val = 0x08;    // actual register is calculated by opcode
-    h_case->expected_flags = 0x20;   // 0 0 1 0 (Z, N, H, C)
-}
-
-void add_ccase(add8_test_case *c_case) {
-    c_case->sub_tname = "carry";
-    c_case->initial_A = 0xF0;
-    c_case->expected_A = 0xC0;
-    c_case->double_A_A = 0xE0;   // The ADD A, A. Case
-    c_case->from_val = 0xD0;     // actual register is calculated by opcode
-    c_case->expected_flags = 0x10;   // 0 0 0 1 (Z, N, H, C)
-}
-
-void add_rlvr_case(add8_test_case *rv_case) {
-    rv_case->sub_tname = "rollover";
-    rv_case->initial_A = 0xFD;
-    rv_case->expected_A = 0x34;
-    rv_case->double_A_A = 0x9A;   // The ADD A, A. Case
-    rv_case->from_val = 0x37;     // actual register is calculated by opcode
-    rv_case->expected_flags = 0x30;   // 1 0 1 1 (Z, N, H, C)
-}
-
-
-void add_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, add8_test_case tcase) {
-    if ((inst.opcode & 0xC0) == 0x80) {             // [inst.opcode & 0xC0] ensures opcode between 0x80 - 0xBF
-        //uint8_t sc = (inst.opcode >>3) & 0x07;
-        uint8_t regv = inst.opcode & 0x07;
-
-        if (regv < 6) {
-            set_reg_val(rcpu, inst.opcode, tcase.from_val);
-            set_reg_val(ecpu, inst.opcode, tcase.from_val);
-
-            // A Registers
-            set_reg_a(rcpu, tcase.initial_A);
-            set_reg_a(ecpu, tcase.expected_A);
-        }
-        if (regv == 6) {
-            // HL
-            external_write(ecpu->reg.HL, tcase.from_val);
-
-            // A Registers
-            set_reg_a(rcpu, tcase.initial_A);
-            set_reg_a(ecpu, tcase.expected_A);
-        }
-        if (regv == 7) {
-            // (Self ADD) -> ADD A, A
-            set_reg_a(rcpu, tcase.double_A_A);
-            set_reg_a(ecpu, tcase.expected_A);
-        }
-        // set expected flags
-        set_flag_byval(ecpu, tcase.expected_flags);
-
-        ecpu->reg.PC ++; // Advance the PC.
-    }
-    // n8 ADD, ADC, ... AND, XOR, CP etc
-    if ((inst.opcode & 0xC7) == 0xC6) { }   // The special ADD A, n8
-    // r8 Registers first (Incase it lands on ADD A, A. So [expected A] won't get over written by the [from val])
-
-}
-
-void build_add8(instruction_T inst) {
-    CPU ecpu;
-    CPU rcpu;
-
-    add8_test_case z_case;
-    add_zcase(&z_case);
-
-    add8_test_case c_case;
-    add_ccase(&c_case);
-
-    add8_test_case h_case;
-    add_hcase(&h_case);
-
-    add8_test_case rlvr_case;
-    add_rlvr_case(&rlvr_case);
-
-    /// TODO: Clean this up because it's really messy.
-    details_T deets;
-    deets.inst.opcode =  inst.opcode;
-    char spec_name[100];
-    deets.mnemonic = "ADD";
-    uint8_t rgv = inst.opcode & 0x07;
-    deets.from_name = reg_names[rgv];
-    deets.subname = "0";
-    
-    size_t sz = 50;
-
-    add8_test_case *tc_v[4] = {
-        &z_case, &h_case, &c_case, &rlvr_case
-    };
-    for (int i = 0; i < 4; i++) {
-        rcpu = cpu_reg_simple_tstate;
-        ecpu = cpu_reg_simple_tstate;
-
-        deets.subname = tc_v[i]->sub_tname;
-
-        add_assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
-        snprintf(spec_name, sz, "%s A, %s-%s", deets.mnemonic, deets.from_name, deets.subname);
-
-        printf("Get subname? :: %s\n", deets.subname);
-
-        execute_test(&rcpu, inst);
-        cpar_reg_check(&ecpu, &rcpu);
-        check_toLog(&rcpu, &ecpu, inst, spec_name);
-        cpar_reg_long(&ecpu, &rcpu);
-    }
-}
-
-void adc_zcase(adc8_test_case *z_case) {
-    z_case->sub_tname = "zero";
-    z_case->initial_A = 0x00;
-    z_case->expected_A = 0x00;
-    z_case->double_A_A = 0x00;
-    z_case->from_val = 0x00;
-    z_case->carry_state = 0;
-    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
-}
-
-void adc_hcase(adc8_test_case *h_case) {
-    h_case->sub_tname = "half-carry";
-    h_case->initial_A = 0x0E;
-    h_case->expected_A = 0x12;
-    h_case->double_A_A = 0x00;
-    h_case->carry_state = 1;
-    h_case->from_val = 0x30;
-    h_case->expected_flags = 0x20;  // 0 0 1 0
-}
-
-void adc_ccase(adc8_test_case *c_case) {
-    c_case->sub_tname = "carry";
-    c_case->initial_A = 0xF2;
-    c_case->expected_A = 0x2B;
-    c_case->carry_state = 1;
-    c_case->double_A_A = 0x00;
-    c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
-    c_case->expected_flags = 0x10;  // 0 0 0 1
-}
-
-void adc_rlvr_case(adc8_test_case *rv_case) {
-    rv_case->sub_tname = "rollover";
-    rv_case->initial_A = 0xFE;
-    rv_case->expected_A = 0x00;
-    rv_case->carry_state = 1;
-    rv_case->double_A_A = 0x00;
-    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
-    rv_case->expected_flags = 0x10;  // 1 0 1 1
-}
-
-void adc_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, adc8_test_case tcase) {
+void assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, alu8_test_case tcase) {
     uint8_t regv = inst.opcode & 0x07;    
     if (regv < 6) {
         set_reg_val(rcpu, inst.opcode, tcase.from_val);
@@ -210,19 +47,145 @@ void adc_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, adc8_test_c
     ecpu->reg.PC ++; // Advance the PC.
 }
 
+
+/// ADD: Tests
+
+void add_zcase(alu8_test_case *z_case) {
+    z_case->sub_tname = "zero";
+    z_case->initial_A = 0x00;
+    z_case->expected_A = 0x00;
+    z_case->double_A_A = 0x00;  // The ADD A, A. Case
+    z_case->from_val = 0x00;    // actual register is calculated by opcode
+    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
+}
+
+void add_hcase(alu8_test_case *h_case) {
+    h_case->sub_tname = "half-carry";
+    h_case->initial_A = 0x08;
+    h_case->expected_A = 0x10;
+    h_case->double_A_A = 0x8;   // The ADD A, A. Case
+    h_case->from_val = 0x08;    // actual register is calculated by opcode
+    h_case->expected_flags = 0x20;   // 0 0 1 0 (Z, N, H, C)
+}
+
+void add_ccase(alu8_test_case *c_case) {
+    c_case->sub_tname = "carry";
+    c_case->initial_A = 0xF0;
+    c_case->expected_A = 0xC0;
+    c_case->double_A_A = 0xE0;   // The ADD A, A. Case
+    c_case->from_val = 0xD0;     // actual register is calculated by opcode
+    c_case->expected_flags = 0x10;   // 0 0 0 1 (Z, N, H, C)
+}
+
+void add_rlvr_case(alu8_test_case *rv_case) {
+    rv_case->sub_tname = "rollover";
+    rv_case->initial_A = 0xFD;
+    rv_case->expected_A = 0x34;
+    rv_case->double_A_A = 0x9A;   // The ADD A, A. Case
+    rv_case->from_val = 0x37;     // actual register is calculated by opcode
+    rv_case->expected_flags = 0x30;   // 1 0 1 1 (Z, N, H, C)
+}
+
+void build_add8(instruction_T inst) {
+    CPU ecpu;
+    CPU rcpu;
+    alu8_test_case z_case;
+    add_zcase(&z_case);
+
+    alu8_test_case c_case;
+    add_ccase(&c_case);
+
+    alu8_test_case h_case;
+    add_hcase(&h_case);
+
+    alu8_test_case rlvr_case;
+    add_rlvr_case(&rlvr_case);    
+
+    /// TODO: Clean this up because it's really messy.
+    details_T deets;
+    deets.inst.opcode =  inst.opcode;
+    char spec_name[100];
+    deets.mnemonic = "ADD";
+    uint8_t rgv = inst.opcode & 0x07;
+    deets.from_name = reg_names[rgv];
+    deets.subname = "0";
+    
+    size_t sz = 50;
+
+    alu8_test_case *tc_v[4] = {
+        &z_case, &h_case, &c_case, &rlvr_case
+    };
+    for (int i = 0; i < 4; i++) {
+        rcpu = cpu_reg_simple_tstate;
+        ecpu = cpu_reg_simple_tstate;
+
+        deets.subname = tc_v[i]->sub_tname;
+
+        assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        snprintf(spec_name, sz, "%s A, %s-%s", deets.mnemonic, deets.from_name, deets.subname);
+
+        printf("Get subname? :: %s\n", deets.subname);
+
+        execute_test(&rcpu, inst);
+        cpar_reg_check(&ecpu, &rcpu);
+        check_toLog(&rcpu, &ecpu, inst, spec_name);
+        cpar_reg_long(&ecpu, &rcpu);
+    }
+}
+
+void adc_zcase(alu8_test_case *z_case) {
+    z_case->sub_tname = "zero";
+    z_case->initial_A = 0x00;
+    z_case->expected_A = 0x00;
+    z_case->double_A_A = 0x00;
+    z_case->from_val = 0x00;
+    z_case->carry_state = 0;
+    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
+}
+
+void adc_hcase(alu8_test_case *h_case) {
+    h_case->sub_tname = "half-carry";
+    h_case->initial_A = 0x0E;
+    h_case->expected_A = 0x12;
+    h_case->double_A_A = 0x00;
+    h_case->carry_state = 1;
+    h_case->from_val = 0x30;
+    h_case->expected_flags = 0x20;  // 0 0 1 0
+}
+
+void adc_ccase(alu8_test_case *c_case) {
+    c_case->sub_tname = "carry";
+    c_case->initial_A = 0xF2;
+    c_case->expected_A = 0x2B;
+    c_case->carry_state = 1;
+    c_case->double_A_A = 0x00;
+    c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
+    c_case->expected_flags = 0x10;  // 0 0 0 1
+}
+
+void adc_rlvr_case(alu8_test_case *rv_case) {
+    rv_case->sub_tname = "rollover";
+    rv_case->initial_A = 0xFE;
+    rv_case->expected_A = 0x00;
+    rv_case->carry_state = 1;
+    rv_case->double_A_A = 0x00;
+    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
+    rv_case->expected_flags = 0x10;  // 1 0 1 1
+}
+
 void build_adc8(instruction_T inst) {
     CPU ecpu;
     CPU rcpu;
-    adc8_test_case z_case;
+    alu8_test_case z_case;
     adc_zcase(&z_case);
 
-    adc8_test_case c_case;
+    alu8_test_case c_case;
     adc_ccase(&c_case);
 
-    adc8_test_case h_case;
+    alu8_test_case h_case;
     adc_hcase(&h_case);
 
-    adc8_test_case rlvr_case;
+    alu8_test_case rlvr_case;
     adc_rlvr_case(&rlvr_case);
 
     /// TODO: Clean this up because it's really messy.
@@ -236,7 +199,7 @@ void build_adc8(instruction_T inst) {
     
     size_t sz = 50;
 
-    adc8_test_case *tc_v[4] = {
+    alu8_test_case *tc_v[4] = {
         &z_case, &h_case, &c_case, &rlvr_case
     };
     for (int i = 0; i < 4; i++) {
@@ -245,7 +208,7 @@ void build_adc8(instruction_T inst) {
 
         deets.subname = tc_v[i]->sub_tname;
 
-        adc_assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
         snprintf(spec_name, sz, "%s A, %s-%s", deets.mnemonic, deets.from_name, deets.subname);
 
         printf("Get subname? :: %s\n", deets.subname);
@@ -264,7 +227,7 @@ void build_adc8(instruction_T inst) {
 
 //////// FAKE, Placeholders
 
-void sub_zcase(sub8_test_case *z_case) {
+void sub_zcase(alu8_test_case *z_case) {
     z_case->sub_tname = "zero";
     z_case->initial_A = 0x00;
     z_case->expected_A = 0x00;
@@ -273,7 +236,7 @@ void sub_zcase(sub8_test_case *z_case) {
     z_case->expected_flags = 0xC0;  // 1 1 0 0
 }
 
-void sub_hcase(sub8_test_case *h_case) {
+void sub_hcase(alu8_test_case *h_case) {
     h_case->sub_tname = "half-carry";
     h_case->initial_A = 0x10;
     h_case->expected_A = 0x0F;
@@ -282,7 +245,7 @@ void sub_hcase(sub8_test_case *h_case) {
     h_case->expected_flags = 0x60;  // 0 1 1 0
 }
 
-void sub_ccase(sub8_test_case *c_case) {
+void sub_ccase(alu8_test_case *c_case) {
     c_case->sub_tname = "carry";
     c_case->initial_A = 0x40;
     c_case->from_val = 0x50;
@@ -291,7 +254,7 @@ void sub_ccase(sub8_test_case *c_case) {
     c_case->expected_flags = 0x50;  // 0 1 0 1
 }
 
-void sub_rlvr_case(sub8_test_case *rv_case) {
+void sub_rlvr_case(alu8_test_case *rv_case) {
     rv_case->sub_tname = "rollover";
     rv_case->initial_A = 0x34;
     rv_case->from_val = 0xFD;
@@ -301,65 +264,51 @@ void sub_rlvr_case(sub8_test_case *rv_case) {
 }
 
 
-
-void sub_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, sub8_test_case tcase) {
-    // r8 Registers first (Incase it lands on ADD A, A. So [expected A] won't get over written by the [from val])
-    set_reg_val(rcpu, inst.opcode, tcase.from_val);
-    set_reg_val(ecpu, inst.opcode, tcase.from_val);
-
-    // A Registers
-    set_reg_a(rcpu, tcase.initial_A);
-    set_reg_a(ecpu, tcase.expected_A);
-
-    // set expected flags
-    set_flag_byval(ecpu, tcase.expected_flags);
-
-    ecpu->reg.PC ++; // Advance the PC.
-
-    // n8 ADD, ADC, ... AND, XOR, CP etc
-    if ((inst.opcode & 0xC7) == 0xC6) { }
-
-    // reg / [hl]:
-    if ((inst.opcode & 0xC0) == 0x80) {
-        //uint8_t sc = (inst.opcode >>3) & 0x07;
-        uint8_t regv = inst.opcode & 0x07;
-        if (regv == 6) {
-            // HL
-            external_write(ecpu->reg.HL, tcase.from_val);
-        }
-    }
-}
-
-
 void build_sub8(instruction_T inst) {
     CPU ecpu;
     CPU rcpu;
-    sub8_test_case z_case;
+    alu8_test_case z_case;
     sub_zcase(&z_case);
 
-    sub8_test_case c_case;
+    alu8_test_case c_case;
     sub_ccase(&c_case);
 
-    sub8_test_case h_case;
+    alu8_test_case h_case;
     sub_hcase(&h_case);
 
-    sub8_test_case rlvr_case;
+    alu8_test_case rlvr_case;
     sub_rlvr_case(&rlvr_case);
 
-    sub8_test_case *tc_v[4] = {
-        &z_case, &c_case, &h_case, &rlvr_case
+    /// TODO: Clean this up because it's really messy.
+    details_T deets;
+    deets.inst.opcode =  inst.opcode;
+    char spec_name[100];
+    deets.mnemonic = "SUB";
+    uint8_t rgv = inst.opcode & 0x07;
+    deets.from_name = reg_names[rgv];
+    deets.subname = "0";
+    
+    size_t sz = 50;
+
+    alu8_test_case *tc_v[4] = {
+        &z_case, &h_case, &c_case, &rlvr_case
     };
     for (int i = 0; i < 4; i++) {
         rcpu = cpu_reg_simple_tstate;
         ecpu = cpu_reg_simple_tstate;
 
-        sub_assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        deets.subname = tc_v[i]->sub_tname;
+
+        assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        snprintf(spec_name, sz, "%s A, %s-%s", deets.mnemonic, deets.from_name, deets.subname);
+
+        printf("Get subname? :: %s\n", deets.subname);
 
         execute_test(&rcpu, inst);
         cpar_reg_check(&ecpu, &rcpu);
+        check_toLog(&rcpu, &ecpu, inst, spec_name);
         cpar_reg_long(&ecpu, &rcpu);
     }
-
 }
 
 
@@ -370,7 +319,7 @@ void build_sub8(instruction_T inst) {
 
 ////// FAKE, placeholders.
 
-void sbc_zcase(sbc8_test_case *z_case) {
+void sbc_zcase(alu8_test_case *z_case) {
     z_case->sub_tname = "zero";
     z_case->initial_A = 0xF0;
     z_case->expected_A = 0x20;
@@ -379,7 +328,7 @@ void sbc_zcase(sbc8_test_case *z_case) {
     z_case->expected_flags = 0x90;  // 1 0 0 1
 }
 
-void sbc_hcase(sbc8_test_case *h_case) {
+void sbc_hcase(alu8_test_case *h_case) {
     h_case->sub_tname = "half-carry";
     h_case->initial_A = 0x0E;
     h_case->expected_A = 0x12;
@@ -388,7 +337,7 @@ void sbc_hcase(sbc8_test_case *h_case) {
     h_case->expected_flags = 0x20;  // 0 0 1 0
 }
 
-void sbc_ccase(sbc8_test_case *c_case) {
+void sbc_ccase(alu8_test_case *c_case) {
     c_case->sub_tname = "carry";
     c_case->initial_A = 0xF2;
     c_case->expected_A = 0x2B;
@@ -397,7 +346,7 @@ void sbc_ccase(sbc8_test_case *c_case) {
     c_case->expected_flags = 0x10;  // 0 0 0 1
 }
 
-void sbc_rlvr_case(sbc8_test_case *rv_case) {
+void sbc_rlvr_case(alu8_test_case *rv_case) {
     rv_case->sub_tname = "rollover";
     rv_case->initial_A = 0xFE;
     rv_case->expected_A = 0x00;
@@ -438,26 +387,26 @@ void sbc_assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, sbc8_test_c
 void build_sbc8(instruction_T inst) {
     CPU ecpu;
     CPU rcpu;
-    sbc8_test_case z_case;
+    alu8_test_case z_case;
     sbc_zcase(&z_case);
 
-    sbc8_test_case c_case;
+    alu8_test_case c_case;
     sbc_ccase(&c_case);
 
-    sbc8_test_case h_case;
+    alu8_test_case h_case;
     sbc_hcase(&h_case);
 
-    sbc8_test_case rlvr_case;
+    alu8_test_case rlvr_case;
     sbc_rlvr_case(&rlvr_case);
 
-    sbc8_test_case *tc_v[4] = {
+    alu8_test_case *tc_v[4] = {
         &z_case, &c_case, &h_case, &rlvr_case
     };
     for (int i = 0; i < 4; i++) {
         rcpu = cpu_reg_simple_tstate;
         ecpu = cpu_reg_simple_tstate;
 
-        sbc_assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
 
         execute_test(&rcpu, inst);
         cpar_reg_check(&ecpu, &rcpu);
