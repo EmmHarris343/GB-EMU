@@ -143,18 +143,19 @@ void build_add8(instruction_T inst) {
 
 void adc_zcase(adc8_test_case *z_case) {
     z_case->sub_tname = "zero";
-    z_case->initial_A = 0xF0;
-    z_case->expected_A = 0x20;
-    z_case->double_A_A = 0x40;     // Placeholder...
+    z_case->initial_A = 0x00;
+    z_case->expected_A = 0x00;
+    z_case->double_A_A = 0x00;
+    z_case->from_val = 0x00;
     z_case->carry_state = 0;
-    z_case->from_val = 0x30;
-    z_case->expected_flags = 0x90;  // 1 0 0 1
+    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
 }
 
 void adc_hcase(adc8_test_case *h_case) {
     h_case->sub_tname = "half-carry";
     h_case->initial_A = 0x0E;
     h_case->expected_A = 0x12;
+    h_case->double_A_A = 0x00;
     h_case->carry_state = 1;
     h_case->from_val = 0x30;
     h_case->expected_flags = 0x20;  // 0 0 1 0
@@ -165,6 +166,7 @@ void adc_ccase(adc8_test_case *c_case) {
     c_case->initial_A = 0xF2;
     c_case->expected_A = 0x2B;
     c_case->carry_state = 1;
+    c_case->double_A_A = 0x00;
     c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
     c_case->expected_flags = 0x10;  // 0 0 0 1
 }
@@ -174,6 +176,7 @@ void adc_rlvr_case(adc8_test_case *rv_case) {
     rv_case->initial_A = 0xFE;
     rv_case->expected_A = 0x00;
     rv_case->carry_state = 1;
+    rv_case->double_A_A = 0x00;
     rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
     rv_case->expected_flags = 0x10;  // 1 0 1 1
 }
@@ -263,38 +266,38 @@ void build_adc8(instruction_T inst) {
 
 void sub_zcase(sub8_test_case *z_case) {
     z_case->sub_tname = "zero";
-    z_case->initial_A = 0xF0;
-    z_case->expected_A = 0x20;
-    z_case->carry_state = 0;
-    z_case->from_val = 0x30;
-    z_case->expected_flags = 0x90;  // 1 0 0 1
+    z_case->initial_A = 0x00;
+    z_case->expected_A = 0x00;
+    z_case->double_A_A = 0x00;
+    z_case->from_val = 0x00;    
+    z_case->expected_flags = 0xC0;  // 1 1 0 0
 }
 
 void sub_hcase(sub8_test_case *h_case) {
     h_case->sub_tname = "half-carry";
-    h_case->initial_A = 0x0E;
-    h_case->expected_A = 0x12;
-    h_case->carry_state = 1;
+    h_case->initial_A = 0x10;
+    h_case->expected_A = 0x0F;
+    h_case->double_A_A = 0x00;
     h_case->from_val = 0x30;
-    h_case->expected_flags = 0x20;  // 0 0 1 0
+    h_case->expected_flags = 0x60;  // 0 1 1 0
 }
 
 void sub_ccase(sub8_test_case *c_case) {
     c_case->sub_tname = "carry";
-    c_case->initial_A = 0xF2;
-    c_case->expected_A = 0x2B;
-    c_case->carry_state = 1;
-    c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
-    c_case->expected_flags = 0x10;  // 0 0 0 1
+    c_case->initial_A = 0x40;
+    c_case->from_val = 0x50;
+    c_case->expected_A = 0xF0;
+    c_case->double_A_A = 0x00;
+    c_case->expected_flags = 0x50;  // 0 1 0 1
 }
 
 void sub_rlvr_case(sub8_test_case *rv_case) {
     rv_case->sub_tname = "rollover";
-    rv_case->initial_A = 0xFE;
-    rv_case->expected_A = 0x00;
-    rv_case->carry_state = 1;
-    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
-    rv_case->expected_flags = 0x10;  // 1 0 1 1
+    rv_case->initial_A = 0x34;
+    rv_case->from_val = 0xFD;
+    rv_case->expected_A = 0x37;
+    rv_case->double_A_A = 0x00;
+    rv_case->expected_flags = 0x70;  // 0 1 1 1
 }
 
 
