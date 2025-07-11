@@ -21,7 +21,7 @@ extern char* reg_names[8];
 void assign_cpu_tstate(CPU *rcpu, CPU *ecpu, instruction_T inst, alu8_test_case tcase) {
     uint8_t regv = inst.opcode & 0x07;
     if (tcase.initial_flags) {
-        printf("Yes, Specialy Initial Flag.... Set flags accordingly..\n");
+        printf("Yes, Specialty Initial Flag.... Set flags accordingly..\n");
         set_flag_byval(rcpu, tcase.initial_flags);
     }
 
@@ -309,7 +309,6 @@ void sub_zcase(alu8_test_case *z_case) {
     z_case->dbl_A_from = 0xB0;
     z_case->dbl_A_expected = 0x00;
     z_case->dbl_A_expected_flags = 0xC0;
-
 }
 
 void sub_hcase(alu8_test_case *h_case) {
@@ -321,7 +320,6 @@ void sub_hcase(alu8_test_case *h_case) {
     h_case->dbl_A_from = 0xB0;
     h_case->dbl_A_expected = 0x00;
     h_case->dbl_A_expected_flags = 0xC0;
-
 }
 
 void sub_ccase(alu8_test_case *c_case) {
@@ -406,84 +404,82 @@ void sbc_zcase(alu8_test_case *z_case) {
     z_case->sub_tname = "zero";
     z_case->initial_A = 0x00;
     z_case->expected_A = 0x00;
-    z_case->from_val = 0x00;
-    z_case->carry_state = 0;
-    z_case->expected_flags = 0x80;   // 1 0 0 0 (Z, N, H, C)
-    z_case->dbl_A_from = 0x00;
+    z_case->from_val = 0x00;    
+    z_case->expected_flags = 0xC0;  // 1 1 0 0
+    z_case->dbl_A_from = 0xB0;
     z_case->dbl_A_expected = 0x00;
-    z_case->dbl_A_expected_flags = 0x80;
+    z_case->dbl_A_expected_flags = 0xC0;
 }
 
 void sbc_h_c0_case(alu8_test_case *h_case) {
     h_case->sub_tname = "half-carry_c0";
-    h_case->initial_A = 0x0E;
-    h_case->expected_A = 0x12;
-    h_case->from_val = 0x30;
-    h_case->carry_state = 0;
-    h_case->expected_flags = 0x20;  // 0 0 1 0
-    h_case->dbl_A_from = 0x00;
-    h_case->dbl_A_expected = 0x20;
-    h_case->dbl_A_expected_flags = 0x20;
+    h_case->initial_A = 0xB0;
+    h_case->expected_A = 0xAF;
+    h_case->from_val = 0x01;
+    h_case->expected_flags = 0x60;  // 0 1 1 0
+    h_case->dbl_A_from = 0xB0;
+    h_case->dbl_A_expected = 0x00;
+    h_case->dbl_A_expected_flags = 0xC0;
 }
 
 void sbc_c_c0_case(alu8_test_case *c_case) {
     c_case->sub_tname = "carry_c0";
-    c_case->initial_A = 0xF2;
-    c_case->expected_A = 0x2B;
-    c_case->from_val = 0x38;
-    c_case->carry_state = 0;
-    c_case->expected_flags = 0x10;  // 0 0 0 1
-    c_case->dbl_A_from = 0x00;
+    c_case->initial_A = 0x40;
+    c_case->expected_A = 0xF0;
+    c_case->from_val = 0x50;
+    c_case->expected_flags = 0x50;  // 0 1 0 1
+    c_case->dbl_A_from = 0xB0;
     c_case->dbl_A_expected = 0x00;
-    c_case->dbl_A_expected_flags = 0x10;
+    c_case->dbl_A_expected_flags = 0xC0;
 }
 
 void sbc_rlvr_c0_case(alu8_test_case *rv_case) {
     rv_case->sub_tname = "rollover_c0";
-    rv_case->initial_A = 0xFE;
-    rv_case->expected_A = 0x00;
-    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
-    rv_case->carry_state = 1;
-    rv_case->expected_flags = 0x10;  // 1 0 1 1
-    rv_case->dbl_A_from = 0x00;
+    rv_case->initial_A = 0x34;
+    rv_case->expected_A = 0x37;
+    rv_case->from_val = 0xFD;
+    rv_case->expected_flags = 0x70;  // 0 1 1 1
+    rv_case->dbl_A_from = 0x34;
     rv_case->dbl_A_expected = 0x00;
-    rv_case->dbl_A_expected_flags = 0x10;
+    rv_case->dbl_A_expected_flags = 0xC0;
 }
 
 void sbc_h_c1_case(alu8_test_case *h_case) {
     h_case->sub_tname = "half-carry_c1";
-    h_case->initial_A = 0x0E;
-    h_case->expected_A = 0x12;    
-    h_case->from_val = 0x30;
-    h_case->carry_state = 1;
-    h_case->expected_flags = 0x20;  // 0 0 1 0
-    h_case->dbl_A_from = 0x00;
-    h_case->dbl_A_expected = 0x20;
-    h_case->dbl_A_expected_flags = 0x20;
+    h_case->initial_flags = 0x10;
+    h_case->initial_A = 0xB0;
+    h_case->expected_A = 0xAE;      // 0xB0 - 0x01 - 1 (carry) = 0xAE
+    h_case->from_val = 0x01;
+    h_case->expected_flags = 0x60;          // 0 1 1 0
+    h_case->dbl_A_from = 0xB0;
+    h_case->dbl_A_expected = 0xFF;
+    h_case->dbl_A_expected_flags = 0x70;    // 0 1 1 1
 }
 
 void sbc_c_c1_case(alu8_test_case *c_case) {
     c_case->sub_tname = "carry_c1";
-    c_case->initial_A = 0xF2;
-    c_case->expected_A = 0x2B;
-    c_case->from_val = 0x38;    // F2 + 38 = 2A (with rollover) + 1 (carry flag) = 0x2B.
+    c_case->initial_flags = 0x10;
+    c_case->initial_A = 0xA8;
+    c_case->expected_A = 0xC7;              // This confuses me, but... (difference between A and E = -4) ..... 10 - 4 = C
+    c_case->from_val = 0xE0;
     c_case->carry_state = 1;
-    c_case->expected_flags = 0x10;  // 0 0 0 1
-    c_case->dbl_A_from = 0x00;
-    c_case->dbl_A_expected = 0x00;
-    c_case->dbl_A_expected_flags = 0x10;
+    c_case->expected_flags = 0x50;          // 0 1 0 1
+    c_case->dbl_A_from = 0xB0;
+    c_case->dbl_A_expected = 0xFF;
+    c_case->dbl_A_expected_flags = 0x70;    // 0 1 1 1
 }
 
 void sbc_rlvr_c1_case(alu8_test_case *rv_case) {
     rv_case->sub_tname = "rollover_c1";
-    rv_case->initial_A = 0xFE;
-    rv_case->expected_A = 0x00;
-    rv_case->from_val = 0x01;    // FE + 1 + 1 = 100 (or 00)
+    rv_case->initial_flags = 0x10;
+    rv_case->initial_A = 0xB0;
+    rv_case->expected_A = 0xFF;
+    rv_case->from_val = 0xB0;
     rv_case->carry_state = 1;
-    rv_case->expected_flags = 0x10;  // 1 0 1 1
-    rv_case->dbl_A_from = 0x00;
-    rv_case->dbl_A_expected = 0x00;
-    rv_case->dbl_A_expected_flags = 0x10;
+    rv_case->expected_flags = 0x70;         // 0 1 1 1
+    rv_case->dbl_A_from = 0xB0;
+    rv_case->dbl_A_expected = 0xFF;
+    rv_case->dbl_A_expected_flags = 0x70;   // 0 1 1 1
 }
 
 
@@ -512,6 +508,17 @@ void build_sbc8(instruction_T inst) {
     alu8_test_case rlvr_c1_case = {0};
     sbc_rlvr_c1_case(&rlvr_c1_case);
 
+    /// TODO: Clean this up because it's really messy.
+    details_T deets;
+    char spec_name[100];
+    uint8_t rgv = inst.opcode & 0x07;
+    deets.inst.opcode =  inst.opcode;
+    deets.mnemonic = "SBC";
+    deets.from_name = reg_names[rgv];
+    deets.subname = "0";
+
+    size_t sz = 50;
+
     alu8_test_case *tc_v[7] = {
         &z_case, &h_case, &c_case, &rlvr_case,
         &h_c1_case, &c_c1_case, &rlvr_c1_case
@@ -520,9 +527,15 @@ void build_sbc8(instruction_T inst) {
         rcpu = cpu_reg_simple_tstate;
         ecpu = cpu_reg_simple_tstate;
 
+        deets.subname = tc_v[i]->sub_tname;
+
         assign_cpu_tstate(&rcpu, &ecpu, inst, *tc_v[i]);
+        snprintf(spec_name, sz, "%s A, %s-%s", deets.mnemonic, deets.from_name, deets.subname);
+
+        printf("Get subname? :: %s\n", deets.subname);
 
         execute_test(&rcpu, inst);
+        check_toLog(&rcpu, &ecpu, inst, spec_name);
         cpar_reg_check(&ecpu, &rcpu);
         cpar_reg_long(&ecpu, &rcpu);
     }

@@ -7,7 +7,8 @@
 void build_add8(instruction_T inst);
 void build_adc8(instruction_T inst);
 void build_sub8(instruction_T inst);
-void build_sbc(instruction_T inst);
+void build_sbc8(instruction_T inst);
+
 
 
 

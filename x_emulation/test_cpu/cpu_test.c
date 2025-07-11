@@ -40,10 +40,15 @@ void bld_arith8bit_tests() {
         build_adc8(inst);
     }
 
-    // for (int i = 0x90; i <= 0x97; i++) {        // 80 - 9F (IS all ADD, ADC, SUB, SBC.... A, r8 & A, [HL] instructions)
-    //     inst.opcode = i;
-    //     build_sub8(inst);
-    // }
+    for (int i = 0x90; i <= 0x97; i++) {        // 80 - 9F (IS all ADD, ADC, SUB, SBC.... A, r8 & A, [HL] instructions)
+        inst.opcode = i;
+        build_sub8(inst);
+    }
+
+    for (int i = 0x98; i <= 0x9F; i++) {        // 80 - 9F (IS all ADD, ADC, SUB, SBC.... A, r8 & A, [HL] instructions)
+        inst.opcode = i;
+        build_sbc8(inst);
+    }
 
 
     // for (int i = 0x80; i <= 0x9F; i++) {        // 80 - 9F (IS all ADD, ADC, SUB, SBC.... A, r8 & A, [HL] instructions)
