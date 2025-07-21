@@ -541,3 +541,50 @@ void build_sbc8(instruction_T inst) {
     }
 
 }
+
+
+
+
+
+
+
+
+
+// ---------------------
+
+/// BUILD: Logic ALU instructions, AND, XOR, OR, CP.
+
+
+
+// AND: A0 - A7
+// XOR: A8 - AF
+
+// OR:  B0 - B7
+// CP:  B8- BF
+
+
+
+
+/// AND:
+
+void and_zcase(alu8_test_case *z_case) {
+    z_case->sub_tname = "rollover_c1";
+    z_case->initial_flags = 0x10;
+}
+
+void and_rcase(alu8_test_case *r_case) {
+
+}
+
+
+
+void build_and8(instruction_T inst) {       // and8 is technically redundant, there is no and16.
+
+    alu8_test_case zcase;
+
+    
+
+    // AND: Has, z case (when it lands on zero). 
+    // AND: Appears to always set Half Carry (H) flag.
+
+}
