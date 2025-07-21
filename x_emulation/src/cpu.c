@@ -1,4 +1,5 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
+#include <time.h>
 #include <stdio.h>
 // #include <stdlib.h>
 #include <stdint.h>
@@ -186,7 +187,7 @@ void extract_opcode(uint16_t addr_pc) {
     uint8_t operand2 = 0;   
     
     op_code = mmu_read(addr_pc);
-    printf("OP_CODE (Read from Ram)%04X\n", op_code);
+    //printf("OP_CODE (Read from Ram): %04X\n", op_code);
     if (opcode_lengths[op_code] >= 2) {
         // printf(":CPU: 8Bit Operand ");
         operand1 = mmu_read(addr_pc + 1);
@@ -211,13 +212,26 @@ void step_cpu(int step_count) {
 /// START:
 // Startup and RUN CPU. (Note with a limit of Max Steps)
 void run_cpu(int max_steps) {
-    printf(":CPU: RUN_CPU Started. Running test run: MAX STEPS: %0X\n", max_steps);
+    struct timespec start_time, current_time;
+    uint64_t elasped_ms = 0;
+    printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
+
+
+
+    
     for (int i = 0; i < max_steps; i++) {
-        printf("\n[STEP %03d]", i);
-        extract_opcode(local_cpu.reg.PC);
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+        elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
+                     (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
+        
+        printf("\n[STEP: %03d]\n", i);
+        printf("[TIME: %lu ms]\n", elasped_ms);
+
+        extract_opcode(local_cpu.reg.PC);        
+
         step_cpu(i);
-        //check_registers();
-        //if (cpu_status.halt == 1) i = max_steps;
+
+
         if (local_cpu.state.panic == 1) {
             printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n"); 
             break;
@@ -225,6 +239,53 @@ void run_cpu(int max_steps) {
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
 }
+
+
+
+
+
+// *----
+/// START:
+/// BYTIME:
+// *----
+
+
+void run_cpu_bytime(uint64_t max_time_ms) {
+    struct timespec start_time, current_time;
+    uint64_t elasped_ms = 0;
+    int step_count = 0;
+
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    printf(":CPU: RUN_CPU (Time Val) Started. Running for %lu ms\n ", max_time_ms);
+
+    while (1) {        
+        // Get current time and compute elasped time
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+        elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
+                     (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
+
+        printf("\n[STEP: %03d]\n", step_count);
+        printf("[TIME: %lu ms]\n", elasped_ms);
+        
+        // CPU STEP:
+        extract_opcode(local_cpu.reg.PC);
+        step_cpu(step_count);
+
+
+        // Handling CPU Panic state:
+        if (local_cpu.state.panic == 1) {
+            printf("::CPU:: PANIC HALT Detected! Stopping CPU Loop.\n");
+            break;
+        }
+        
+        if (elasped_ms >= max_time_ms) {
+            printf("\n::CPU:: Reached MS Time limit [%lu ms], STOPPING.\n", max_time_ms);
+            break;
+        }
+        step_count ++;
+    }
+}
+
 
 
 

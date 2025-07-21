@@ -51,6 +51,7 @@ void e_mmu_init(void) {
 
 
 
+
 void dump_hram_test() {
     printf("Printing what's in WRAM..\n");
     uint8_t wram_val = 0x00;
@@ -61,40 +62,6 @@ void dump_hram_test() {
         wram_location ++;
     }
 }
-
-int test_sequence() {
-    printf(":E_CTRL: -- TEST MODE -- Startup Beginning\n");
-
-    // Set to cartridge settings to MBC 1, and Mock a ROM file.
-    if (init_cart_test_mode() != 0) {
-        fprintf(stderr, "Error Initializing Mock ROM Config (Cart.c)\n");
-        return -1;        
-    }
-
-    // Initialize some settings:
-    if (init_loc_ram() != 0) {
-        fprintf(stderr, "Error Initializing LOC RAM:\n");
-        return -1;
-    }
-
-    const char *log_file = "../log/debug_log.txt";
-    if (logging_init(log_file) != 0) {
-        fprintf(stderr, "Error Initializing DEBUG File:\n");
-        return -1;
-    }
-
-    // Setup the MMU memory Map.
-    e_mmu_init();
-
-    //instruction_test();
-    //unit_test_instruction();
-    entry_test_case();
-
-
-    printf("Closing Emulator ... bye\n");
-    return 0; // Pass all good.
-}
-
 
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
@@ -136,10 +103,6 @@ int startup_sequence() {
         fprintf(stderr, "Error Initializing DEBUG File:\n");
         return -1;
     }
-    
-    
-
-    
 
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
 
@@ -169,6 +132,110 @@ int startup_sequence() {
     // Noting left to do, Report success if reached here.
     return 0;
 }
+
+
+int startup_seq_bytime() {
+    printf(":E_CTRL: Exec Time Interval - Beginning\n");
+
+    uint64_t max_time = 1000; // In MS. 8000 MS = 1 second.
+
+    const char *rom_file = "../../rom/pkmn_red.gb";
+    printf("NOTE: Using rom file: %s\n\n", rom_file);
+
+
+    if (load_headers(rom_file) != 0) {
+        fprintf(stderr, "Error Loading Headers:\n");
+        return -1;
+    }
+
+    if (decode_cart_features() != 0) {
+        fprintf(stderr, "Error Decoding Cartrige Features, from Loaded Headers\n");
+        return -1;
+    }
+
+    if (load_cartridge(rom_file) != 0) {
+        fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
+        return -1;
+    }
+    
+    if (initialize_cartridge() != 0) {
+        fprintf(stderr, "Error Initializing Cartridge Settings:\n");
+        return -1;
+    }
+    
+    if (init_loc_ram() != 0) {
+        fprintf(stderr, "Error Initializing LOC RAM:\n");
+        return -1;
+    }
+
+    const char *log_file = "../log/debug_log.txt";
+    if (logging_init(log_file) != 0) {
+        fprintf(stderr, "Error Initializing DEBUG File:\n");
+        return -1;
+    }
+    
+    // --------------------------------------------
+
+    
+
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
+
+   
+    sleep(2);
+    // Setup the MMU memory Map.
+    e_mmu_init();
+
+    // Pass ROM Entry point INTO the CPU module.
+    uint8_t *rom_entry = cart.headers.entry_point;
+    
+    // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
+    cpu_init(rom_entry);
+
+    /// TODO: START CPU Emulation!
+    //int max_steps = 86;       // This will complete the random ROM test.
+
+    run_cpu_bytime(max_time);
+
+
+
+    // Noting left to do, Report success if reached here.
+    return 0;
+}
+
+
+int test_sequence() {
+    printf(":E_CTRL: -- TEST MODE -- Startup Beginning\n");
+
+    // Set to cartridge settings to MBC 1, and Mock a ROM file.
+    if (init_cart_test_mode() != 0) {
+        fprintf(stderr, "Error Initializing Mock ROM Config (Cart.c)\n");
+        return -1;        
+    }
+
+    // Initialize some settings:
+    if (init_loc_ram() != 0) {
+        fprintf(stderr, "Error Initializing LOC RAM:\n");
+        return -1;
+    }
+
+    const char *log_file = "../log/debug_log.txt";
+    if (logging_init(log_file) != 0) {
+        fprintf(stderr, "Error Initializing DEBUG File:\n");
+        return -1;
+    }
+
+    // Setup the MMU memory Map.
+    e_mmu_init();
+
+    //instruction_test();
+    //unit_test_instruction();
+    entry_test_case();
+
+
+    printf("Closing Emulator ... bye\n");
+    return 0; // Pass all good.
+}
+
 
 void reset_sequence() {
 

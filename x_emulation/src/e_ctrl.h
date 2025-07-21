@@ -11,6 +11,7 @@
 
 int startup_sequence();
 int test_sequence();
+int startup_seq_bytime();
 
 
 

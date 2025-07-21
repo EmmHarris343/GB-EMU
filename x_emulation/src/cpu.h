@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define NANOSECONDS_IN_MS 1000000
+
 typedef struct {
     uint8_t opcode;
     uint8_t operand1;
@@ -69,13 +71,15 @@ void external_write(uint16_t addr, uint8_t write_val);
 
 
 
-// CPu Run section:
+// CPU Run section:
 
 void cpu_init(uint8_t *rom_entry);
 
 // Main cpu LOOP:
 void run_cpu(int max_steps);
 
+// CPU Loop (By time):
+void run_cpu_bytime(uint64_t max_time_ms);
 
 
 // TEST Section:
