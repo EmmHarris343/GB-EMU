@@ -58,6 +58,23 @@ typedef struct {
 } CPU;
 
 
+typedef enum {
+    INSTR_NOP,
+    INSTR_ALU,
+    INSTR_LD,
+    INSTR_JUMP,
+    INSTR_CALL,
+    INSTR_POP,
+    INSTR_PUSH,
+    INSTR_RET,
+    INSTR_RST,
+    INSTR_MISC,
+    INSTR_CB,
+    INSTR_UNKNOWN,
+    INSTR_TYPE_COUNT
+} instr_type_T;
+
+
 
 
 

@@ -137,8 +137,6 @@ int startup_sequence() {
 int startup_seq_bytime() {
     printf(":E_CTRL: Exec Time Interval - Beginning\n");
 
-    uint64_t max_time = 1000; // In MS. 8000 MS = 1 second.
-
     const char *rom_file = "../../rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
@@ -191,9 +189,8 @@ int startup_seq_bytime() {
     // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
     cpu_init(rom_entry);
 
-    /// TODO: START CPU Emulation!
-    //int max_steps = 86;       // This will complete the random ROM test.
-
+    /// TODO: START CPU (Timed limited) Emulation!
+    uint64_t max_time = 200; // In MS. 8000 MS = 1 second.
     run_cpu_bytime(max_time);
 
 

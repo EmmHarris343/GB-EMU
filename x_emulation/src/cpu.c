@@ -15,6 +15,11 @@ CPU local_cpu;
 
 instruction_T op_instruction;
 
+uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
+const char* optype_names[] = {
+    "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RET", "RST", "MISC", "CB", "UNKNOWN"
+};
+
 
 const CPU cpu_post_bios_state = {
     .reg.AF = 0x01B0,
@@ -66,6 +71,60 @@ static const uint8_t opcode_lengths[256] = {
     2,1,1,1, 0,1,2,1, 2,1,3,1, 0,0,2,1,     // 0xF0 - 0xFF
     // ... Fill in the rest
 };
+
+static const uint8_t opcode_types[256] = {
+    [0x00] = INSTR_NOP,             // NOP
+    [0x10] = INSTR_MISC,
+    [0x20] = INSTR_JUMP,
+    [0x30] = INSTR_JUMP,
+    [0x18] = INSTR_JUMP,            // JR e8
+    [0x28] = INSTR_JUMP,            // JR Z, e8
+    [0x38] = INSTR_JUMP,            // JR C, e8
+    [0x40 ... 0x75] = INSTR_LD,     // LD r8 r8
+    [0x76] = INSTR_MISC,            // HALT (middle of LD instructions)
+    [0x77 ... 0x7F] = INSTR_LD,     // LD r8 r8
+    [0x80 ... 0xBF] = INSTR_ALU,    // ADD, SUB, XOR, OR, CP etc..
+    [0x03 ... 0x05] = INSTR_ALU,
+    [0x13 ... 0x15] = INSTR_ALU,
+    [0x23 ... 0x25] = INSTR_ALU,
+    [0x33 ... 0x35] = INSTR_ALU,
+    [0x0B ... 0x0D] = INSTR_ALU,
+    [0x1B ... 0x1D] = INSTR_ALU,
+    [0x2B ... 0x2D] = INSTR_ALU,
+    [0x3B ... 0x3D] = INSTR_ALU,
+    [0xCB] = INSTR_CB,              // Prefixed Instructions (CB)
+    [0xC2] = INSTR_JUMP,
+    [0xC3] = INSTR_JUMP,
+    [0xCA] = INSTR_JUMP,
+    [0xD2] = INSTR_JUMP,
+    [0xDA] = INSTR_JUMP,
+    [0xE9] = INSTR_JUMP,
+    [0xC1] = INSTR_POP,             // Pop, Push Call,
+    [0xD1] = INSTR_POP,
+    [0xE1] = INSTR_POP,
+    [0xF1] = INSTR_POP,
+    [0xC5] = INSTR_PUSH,
+    [0xD5] = INSTR_PUSH,
+    [0xE5] = INSTR_PUSH,
+    [0xF5] = INSTR_PUSH,
+    [0xC4] = INSTR_CALL,
+    [0xD4] = INSTR_CALL,
+    [0xCC] = INSTR_CALL,
+    [0xDC] = INSTR_CALL,
+    [0xC8] = INSTR_RET,             // RET:
+    [0xC9] = INSTR_RET,
+    [0xD8] = INSTR_RET,
+    [0xC7] = INSTR_RST,             // RST:
+    [0xD7] = INSTR_RST,
+    [0xE7] = INSTR_RST,
+    [0xF7] = INSTR_RST,
+    [0xCF] = INSTR_RST,
+    [0xDF] = INSTR_RST,
+    [0xEF] = INSTR_RST,
+    [0xFF] = INSTR_RST
+};
+
+
 
 
 
@@ -122,27 +181,9 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
     op_instruction.operand2 = 0;
 
 
-    // Removing these. As the line before setting to CPU_POST_BIOS, sets the DMG01 Flags as well!
-    // Set Flag Registers   (This is actually Registers F)
-    // set_flag(0);    // Z
-    // clear_flag(1);  // N
-    // clear_flag(2);  // H
-    // clear_flag(3);  // C
-
-    // Set the Registers initial state (After Bootrom Pass) -- I think this is what DMG01 looks like after bootup
-
     local_cpu.reg = cpu_post_bios_state.reg;    // This one line instead of writing each one
 
-    // local_cpu.A = 0x01;
-    // local_cpu.B = 0x00;
-    // local_cpu.C = 0x13;
-    // local_cpu.D = 0x00;
-    // local_cpu.E = 0xD8;
-    // local_cpu.H = 0x01;
-    // local_cpu.L = 0x4D;
 
-    // local_cpu.PC = 0x0100;
-    // local_cpu.SP = 0xFFFE;
     printf("Finished init for DMG 01\n");
 }
 
@@ -158,6 +199,12 @@ void check_registers() {
     printf("  D: 0x%02X, E: 0x%02X\n", local_cpu.reg.D, local_cpu.reg.E);
     printf("  H: 0x%02X, L: 0x%02X\n", local_cpu.reg.H, local_cpu.reg.L);
     printf("\n");
+}
+
+void print_instr_counts() {
+    for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
+        printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
+    }
 }
 
 
@@ -180,12 +227,15 @@ uint8_t external_read(uint16_t addr_pc) {
 
 
 /// DECODE:
-// Reads the OPP Code, 
+// Reads the OPP Code
 void extract_opcode(uint16_t addr_pc) {
     uint8_t op_code = 0;
     uint8_t operand1 = 0;
     uint8_t operand2 = 0;   
+
+
     
+
     op_code = mmu_read(addr_pc);
     //printf("OP_CODE (Read from Ram): %04X\n", op_code);
     if (opcode_lengths[op_code] >= 2) {
@@ -196,6 +246,16 @@ void extract_opcode(uint16_t addr_pc) {
         // printf(":CPU: Second 8Bit Operand ");
         operand2 = mmu_read(addr_pc + 2);
     }
+
+    // Calculate opcode type, and save for high level overview.
+    instr_type_T op_type = opcode_types[op_code];
+    if (op_type >= INSTR_TYPE_COUNT) {
+        op_type = INSTR_UNKNOWN;
+    }
+    instr_count[op_type]++ ;
+
+
+
 
     op_instruction.opcode = op_code;
     op_instruction.operand1 = operand1;
@@ -238,6 +298,7 @@ void run_cpu(int max_steps) {
         }
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
+
 }
 
 
@@ -258,7 +319,7 @@ void run_cpu_bytime(uint64_t max_time_ms) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     printf(":CPU: RUN_CPU (Time Val) Started. Running for %lu ms\n ", max_time_ms);
 
-    while (1) {        
+    while (1) {
         // Get current time and compute elasped time
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
@@ -284,6 +345,7 @@ void run_cpu_bytime(uint64_t max_time_ms) {
         }
         step_count ++;
     }
+    print_instr_counts();
 }
 
 

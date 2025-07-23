@@ -2219,6 +2219,12 @@ void run_debug(CPU *cpu) {
     logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
 }
 
+void debug_nop(CPU *cpu) {
+    uint8_t hl_val = external_read(cpu->reg.HL);
+    //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
+    logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
+}
+
 
 void run_test_debug(CPU *cpu) {
     logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->reg.AF, cpu->reg.BC, cpu->reg.DE, cpu->reg.HL, cpu->reg.PC, cpu->reg.SP);
@@ -2247,6 +2253,9 @@ int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
     step_count_icpu = step_count;
     opcodes[instrc.opcode](cpu, instrc);
 
+    if (instrc.opcode == 0x00) {
+        debug_nop(cpu);
+    }
 
     if (step_count % 1000 == 0) {
         run_debug(cpu);
