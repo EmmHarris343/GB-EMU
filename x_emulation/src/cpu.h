@@ -59,6 +59,7 @@ typedef struct {
 
 
 typedef enum {
+    INSTR_UNDF,
     INSTR_NOP,
     INSTR_ALU,
     INSTR_LD,

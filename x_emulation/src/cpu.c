@@ -17,7 +17,7 @@ instruction_T op_instruction;
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 const char* optype_names[] = {
-    "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RET", "RST", "MISC", "CB", "UNKNOWN"
+    "UDEF", "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
 
 
@@ -72,8 +72,14 @@ static const uint8_t opcode_lengths[256] = {
     // ... Fill in the rest
 };
 
+
+
+// The problem with this....
+// Each time there is an empty value or field. It will default to returning 0. (IE, NOP). 
+// So every instruction I haven't plotted out, will default to NOP.
 static const uint8_t opcode_types[256] = {
-    [0x00] = INSTR_NOP,             // NOP
+    [0x01] = INSTR_LD,                // Placeholder.... and LD n16 instruction
+    //[0x00] = INSTR_NOP,             // NOP
     [0x10] = INSTR_MISC,
     [0x20] = INSTR_JUMP,
     [0x30] = INSTR_JUMP,
@@ -125,7 +131,11 @@ static const uint8_t opcode_types[256] = {
 };
 
 
-
+void print_instr_counts() {
+    for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
+        printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
+    }
+}
 
 
 /// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....." 
@@ -201,11 +211,7 @@ void check_registers() {
     printf("\n");
 }
 
-void print_instr_counts() {
-    for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
-        printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
-    }
-}
+
 
 
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
@@ -231,7 +237,7 @@ uint8_t external_read(uint16_t addr_pc) {
 void extract_opcode(uint16_t addr_pc) {
     uint8_t op_code = 0;
     uint8_t operand1 = 0;
-    uint8_t operand2 = 0;   
+    uint8_t operand2 = 0;
 
 
     
@@ -249,6 +255,9 @@ void extract_opcode(uint16_t addr_pc) {
 
     // Calculate opcode type, and save for high level overview.
     instr_type_T op_type = opcode_types[op_code];
+    if (op_code == 0x00) {
+        op_type = INSTR_NOP;
+    }
     if (op_type >= INSTR_TYPE_COUNT) {
         op_type = INSTR_UNKNOWN;
     }
@@ -276,9 +285,6 @@ void run_cpu(int max_steps) {
     uint64_t elasped_ms = 0;
     printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
 
-
-
-    
     for (int i = 0; i < max_steps; i++) {
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
@@ -298,7 +304,6 @@ void run_cpu(int max_steps) {
         }
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
-
 }
 
 
