@@ -67,6 +67,8 @@ typedef enum {
     INSTR_CALL,
     INSTR_POP,
     INSTR_PUSH,
+    INSTR_RL_A,
+    INSTR_RR_A,
     INSTR_RET,
     INSTR_RST,
     INSTR_MISC,

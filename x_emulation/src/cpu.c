@@ -16,10 +16,10 @@ CPU local_cpu;
 instruction_T op_instruction;
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
+uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 const char* optype_names[] = {
-    "UDEF", "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RET", "RST", "MISC", "CB", "UNKNOWN"
+    "UDEF", "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
-
 
 const CPU cpu_post_bios_state = {
     .reg.AF = 0x01B0,
@@ -88,16 +88,24 @@ static const uint8_t opcode_types[256] = {
     [0x38] = INSTR_JUMP,            // JR C, e8
     [0x40 ... 0x75] = INSTR_LD,     // LD r8 r8
     [0x76] = INSTR_MISC,            // HALT (middle of LD instructions)
-    [0x77 ... 0x7F] = INSTR_LD,     // LD r8 r8
-    [0x80 ... 0xBF] = INSTR_ALU,    // ADD, SUB, XOR, OR, CP etc..
-    [0x03 ... 0x05] = INSTR_ALU,
+    [0x09] = INSTR_ALU,             // ADD r16, r16
+    [0x19] = INSTR_ALU,             // ADD r16, r16
+    [0x29] = INSTR_ALU,             // ADD r16, r16
+    [0x39] = INSTR_ALU,             // ADD r16, r16
+    [0x03 ... 0x05] = INSTR_ALU,    // INC r16, INC r8, DEC r8 etc..
     [0x13 ... 0x15] = INSTR_ALU,
     [0x23 ... 0x25] = INSTR_ALU,
     [0x33 ... 0x35] = INSTR_ALU,
-    [0x0B ... 0x0D] = INSTR_ALU,
+    [0x0B ... 0x0D] = INSTR_ALU,    // DEC r16, INC r8, DEC r8 etc...
     [0x1B ... 0x1D] = INSTR_ALU,
     [0x2B ... 0x2D] = INSTR_ALU,
     [0x3B ... 0x3D] = INSTR_ALU,
+    [0x27] = INSTR_MISC,            // DAA
+    [0x37] = INSTR_MISC,            // SCF
+    [0x2F] = INSTR_MISC,            // CPL
+    [0x3F] = INSTR_MISC,            // CCF
+    [0x80 ... 0xBF] = INSTR_ALU,    // BULK ADD, SUB, XOR, OR, CP etc..
+    [0x77 ... 0x7F] = INSTR_LD,     // LD r8 r8    
     [0xCB] = INSTR_CB,              // Prefixed Instructions (CB)
     [0xC2] = INSTR_JUMP,
     [0xC3] = INSTR_JUMP,
@@ -135,6 +143,19 @@ void print_instr_counts() {
     for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
         printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
     }
+
+    printf("----- Now which Opcode is pinged a lot inside UDEF? -----\n");
+    int print_count = 0;
+    for (int i = 0; i < 256; i++) {
+        if (which_op[i] > 0) {     // Only print if the count is above 0.
+            printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);            
+            if (print_count % 5 == 0 ) {
+                printf("\n");
+            }
+            print_count ++;
+        }
+    }
+    printf("\n ----- Finished Opcode Count... -----\n");
 }
 
 
@@ -261,6 +282,11 @@ void extract_opcode(uint16_t addr_pc) {
     if (op_type >= INSTR_TYPE_COUNT) {
         op_type = INSTR_UNKNOWN;
     }
+    if (op_type == 0) {
+        // This is falling under UDEF (Undefined.. yet).. So what's the opcodes being called?
+        which_op[op_code] ++;
+    }
+
     instr_count[op_type]++ ;
 
 
