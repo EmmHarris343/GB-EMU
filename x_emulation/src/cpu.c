@@ -17,8 +17,9 @@ instruction_T op_instruction;
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
+uint64_t which_op_group[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 const char* optype_names[] = {
-    "UDEF", "NOP", "ALU", "LD", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
+    "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
 
 const CPU cpu_post_bios_state = {
@@ -78,16 +79,37 @@ static const uint8_t opcode_lengths[256] = {
 // Each time there is an empty value or field. It will default to returning 0. (IE, NOP). 
 // So every instruction I haven't plotted out, will default to NOP.
 static const uint8_t opcode_types[256] = {
-    [0x01] = INSTR_LD,                // Placeholder.... and LD n16 instruction
-    //[0x00] = INSTR_NOP,             // NOP
-    [0x10] = INSTR_MISC,
+    [0x01] = INSTR_LD16,            // LD r16, n16
+    [0x11] = INSTR_LD16,
+    [0x21] = INSTR_LD16,
+    [0x31] = INSTR_LD16,
+    [0x02] = INSTR_LD,              // LD [r16], A
+    [0x12] = INSTR_LD,
+    [0x22] = INSTR_LD,              // LD [HL+], A
+    [0x32] = INSTR_LD,              // LD [HL-], A
+    [0x06] = INSTR_LD,              // LD r8, n8
+    [0x16] = INSTR_LD,
+    [0x26] = INSTR_LD,
+    [0x36] = INSTR_LD,
+    [0x0A] = INSTR_LD,              // LD r8, [r16]
+    [0x1A] = INSTR_LD,
+    [0x2A] = INSTR_LD,              // LD A, [HL+]
+    [0x3A] = INSTR_LD,              // LD A, [HL-]
+    [0x0E] = INSTR_LD,              // LD r8, n8
+    [0x1E] = INSTR_LD,
+    [0x2E] = INSTR_LD,
+    [0x3E] = INSTR_LD,
+    [0x10] = INSTR_MISC,            // STOP
+    [0x08] = INSTR_LD16,            // LD [a16], SP
+    [0x07] = INSTR_RL_A,    
+    [0x17] = INSTR_RL_A,
+    [0x0F] = INSTR_RR_A,    
+    [0x1F] = INSTR_RR_A,
     [0x20] = INSTR_JUMP,
     [0x30] = INSTR_JUMP,
     [0x18] = INSTR_JUMP,            // JR e8
     [0x28] = INSTR_JUMP,            // JR Z, e8
     [0x38] = INSTR_JUMP,            // JR C, e8
-    [0x40 ... 0x75] = INSTR_LD,     // LD r8 r8
-    [0x76] = INSTR_MISC,            // HALT (middle of LD instructions)
     [0x09] = INSTR_ALU,             // ADD r16, r16
     [0x19] = INSTR_ALU,             // ADD r16, r16
     [0x29] = INSTR_ALU,             // ADD r16, r16
@@ -104,8 +126,10 @@ static const uint8_t opcode_types[256] = {
     [0x37] = INSTR_MISC,            // SCF
     [0x2F] = INSTR_MISC,            // CPL
     [0x3F] = INSTR_MISC,            // CCF
+    [0x40 ... 0x75] = INSTR_LD,     // LD r8 r8
+    [0x76] = INSTR_MISC,            // HALT (middle of LD instructions)
+    [0x77 ... 0x7F] = INSTR_LD,     // LD r8 r8
     [0x80 ... 0xBF] = INSTR_ALU,    // BULK ADD, SUB, XOR, OR, CP etc..
-    [0x77 ... 0x7F] = INSTR_LD,     // LD r8 r8    
     [0xCB] = INSTR_CB,              // Prefixed Instructions (CB)
     [0xC2] = INSTR_JUMP,
     [0xC3] = INSTR_JUMP,
@@ -113,6 +137,14 @@ static const uint8_t opcode_types[256] = {
     [0xD2] = INSTR_JUMP,
     [0xDA] = INSTR_JUMP,
     [0xE9] = INSTR_JUMP,
+    [0xE0] = INSTR_LDH,              // LDH [a8], A
+    [0xF0] = INSTR_LDH,              // LDH A, [a8]
+    [0xE2] = INSTR_LDH,
+    [0xF2] = INSTR_LDH,
+    [0xEA] = INSTR_LD,              // LD [a16], A
+    [0xFA] = INSTR_LD,              // LD A, [a16]
+    [0xF8] = INSTR_LDSP,            // LD HL, SP + e8
+    [0xF9] = INSTR_LDSP,            // LD SP, HL
     [0xC1] = INSTR_POP,             // Pop, Push Call,
     [0xD1] = INSTR_POP,
     [0xE1] = INSTR_POP,
@@ -125,6 +157,15 @@ static const uint8_t opcode_types[256] = {
     [0xD4] = INSTR_CALL,
     [0xCC] = INSTR_CALL,
     [0xDC] = INSTR_CALL,
+    [0xCD] = INSTR_CALL,            // CALL a16
+    [0xC6] = INSTR_ALU,             // ALU A, n8..
+    [0xD6] = INSTR_ALU,
+    [0xE6] = INSTR_ALU,
+    [0xF6] = INSTR_ALU,
+    [0xCE] = INSTR_ALU,             // ALU A, n8... continued
+    [0xDE] = INSTR_ALU,
+    [0xEE] = INSTR_ALU,
+    [0xFE] = INSTR_ALU,
     [0xC8] = INSTR_RET,             // RET:
     [0xC9] = INSTR_RET,
     [0xD8] = INSTR_RET,
@@ -135,7 +176,9 @@ static const uint8_t opcode_types[256] = {
     [0xCF] = INSTR_RST,
     [0xDF] = INSTR_RST,
     [0xEF] = INSTR_RST,
-    [0xFF] = INSTR_RST
+    [0xFF] = INSTR_RST,
+    [0xF3] = INSTR_MISC,            // DI
+    [0xFB] = INSTR_MISC             // EI
 };
 
 
@@ -148,7 +191,7 @@ void print_instr_counts() {
     int print_count = 0;
     for (int i = 0; i < 256; i++) {
         if (which_op[i] > 0) {     // Only print if the count is above 0.
-            printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);            
+            printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);
             if (print_count % 5 == 0 ) {
                 printf("\n");
             }
@@ -276,6 +319,9 @@ void extract_opcode(uint16_t addr_pc) {
 
     // Calculate opcode type, and save for high level overview.
     instr_type_T op_type = opcode_types[op_code];
+
+
+
     if (op_code == 0x00) {
         op_type = INSTR_NOP;
     }

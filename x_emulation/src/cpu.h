@@ -63,6 +63,9 @@ typedef enum {
     INSTR_NOP,
     INSTR_ALU,
     INSTR_LD,
+    INSTR_LD16,
+    INSTR_LDH,
+    INSTR_LDSP,
     INSTR_JUMP,
     INSTR_CALL,
     INSTR_POP,
@@ -76,9 +79,6 @@ typedef enum {
     INSTR_UNKNOWN,
     INSTR_TYPE_COUNT
 } instr_type_T;
-
-
-
 
 
 
