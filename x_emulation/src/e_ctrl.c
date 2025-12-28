@@ -147,7 +147,7 @@ int startup_seq_bytime() {
     }
 
     if (decode_cart_features() != 0) {
-        fprintf(stderr, "Error Decoding Cartrige Features, from Loaded Headers\n");
+        fprintf(stderr, "Error Decoding Cartridge Features, from Loaded Headers\n");
         return -1;
     }
 
