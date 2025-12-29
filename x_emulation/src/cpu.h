@@ -56,8 +56,9 @@ typedef struct {
     uint8_t stop;
     uint8_t pause;
     uint8_t IME;    // Interrupt Master Enable, flag
-    uint16_t IE;     // Interupt
-    uint16_t IF;     // Interupt Flag
+    int IME_delay;  // Delay the interupt until next execution.
+    uint8_t IE;     // Interupt
+    uint8_t IF;     // Interupt Flag
     uint8_t panic;  // My way to detect major failure, and abort.
 } CPU_State;
 

@@ -54,9 +54,10 @@ const CPU cpu_reg_simple_tstate = {
     .reg.HL = 0xC100,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0779,
-    .state.IME = 0,         // Interupt
-    .state.IE = 0xFF0F,
-    .state.IF = 0xFFFF,
+    .state.IME = 0,         // Master Interupt
+    //.state.IME_pending = 0, // IME state after next instruction.
+    .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
+    .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -194,6 +195,8 @@ static const uint8_t opcode_types[256] = {
     [0xFB] = INSTR_MISC             // EI
 };
 
+
+/// TODO: MOVE THIS TO LOGGER.C If possible. Cause this is a mess of code in CPU.C
 void cpu_trace_instrc(CPU *cpu, int type) {
     // Not meant to be human readable.. Simply add CPU state, at a specific STEP. 
     // Example looks like:
@@ -213,11 +216,6 @@ void cpu_trace_instrc(CPU *cpu, int type) {
         cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
     }
 }
-
-void add_tracelog_line(CPU *cpu) {
-
-}
-
 
 void print_instr_counts() {
     for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
@@ -295,7 +293,7 @@ void cpu_init() {         // Initialize this to the DMG   (Original)
     cpu_trace_instrc(&local_cpu, 0);
 
 
-    printf("Finished init for DMG 01\n");
+    printf("Done. Finished init for DMG 01\n");
 }
 
 void check_registers() {

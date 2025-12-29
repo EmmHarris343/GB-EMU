@@ -92,16 +92,22 @@ static void DI(CPU *cpu, instruction_T instrc) {        // DI - Disables interru
     cpu->reg.PC ++;
 
     // Bytes = 1
-    // No flags affected. ---> The Register flags in F that is.
+    // No flags affected. (Inside F Flags)
 }
  
 static void EI(CPU *cpu, instruction_T instrc) {        // EI - Enables interrupt Handling (Flag set to := 1)
-    printf("EI Called.                  ; IME := 1 (Interupt flag 1 - enabled)\n");
-    cpu->state.IME = 1;
-    cpu->reg.PC ++;
+    printf("EI Called.                  ; IME := 1 (Interupt flag 1 - enabled (AFTER DELAY))\n");
     
+    // This uses a delay logic of 2 (counting down after instruction finishes)
+    // This ensures IME is set ONLY after the current instruction (EI) AND the subsequent operation both have finished executing.
+
+    // TL;DR Why? The GB gives an one-additional-instruction grace period before the interupt is executed.
+    
+    cpu->state.IME_delay = 2;
+    cpu->reg.PC ++;
+
     // Bytes = 1
-    // No flags affected. ---> The Register flags in F that is.
+    // No flags affected. (Inside F Flags)
 }
 
 
@@ -1319,7 +1325,10 @@ static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {   // Call address n16 
     else {
         printf("CALL cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
-    }   
+    }
+    // Cycles: 6 taken / 3 untaken
+    // Bytes: 3
+    // Flags: None affected.
 }
 
 static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subroutine.
@@ -1334,6 +1343,7 @@ static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subro
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
     
+    // Cycles: 4
     // Bytes: 1
     // FLAGS: None affected
 }
@@ -1372,19 +1382,23 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
     }
     else {
         printf("RET cc Conditions are NOT met. Skipping..\n");
-        cpu->reg.PC ++;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
+        cpu->reg.PC ++;       // Skip over RET instruction (1 Byte)
     }  
-    
+    // Cycles: 5 taken / 2 untaken
     // Bytes: 1
     // FLAGS: None affected
 }
 static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subroutine and enable Interupts.
     // This is basically equivalent to executing EI then RET, meaning that IME is set right after this instruction.
-    printf("RETI. Called.           ; Set IME Flag (Interupt), Then RETurn / Pop PC from SP\n");
+    printf("RETI. Called.           ; Immediately Set IME Flag (Interupt), Then RETurn / Pop PC from SP\n");
 
-    // Enables interrupts and returns (same as ei immediately followed by ret).
+    // Enables interrupts and returns (almost the same as EI immediately followed by ret).
 
+    // HOWEVER! This does not have a delayed IME set flag state that EI has
+    // EI has to wait until itself and the next instruction finishes before IME is set.
+    // RETI sets IME flag immediately!
 
+    
     // TL;DR :
     // Set IME flag to 1 - enable
     cpu->state.IME = 1;
@@ -1397,7 +1411,9 @@ static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subro
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
 
 
-    // FLAGS: None affected --> In Register F that is.
+    // Cycles: 4
+    // Bytes: 1
+    // Flags: None affected.
 }
 static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CALL, then Jumps to a specific Vector address (basically a predetermined offset)
     printf("RST_vec. Called.                ; Push PC to Stack Pointer (SP), then Jump to specific Vector location\n");
@@ -2254,6 +2270,8 @@ int execute_test(CPU *cpu, instruction_T instrc) {
     //run_test_debug(cpu);
     opcodes[instrc.opcode](cpu, instrc);
 
+    /// TODO: Figure out if I should add the IME delay to the test function. (This might only run 1 instruction.. So it may be pointless)
+
     if (cpu->state.panic == 1) { printf("ENCOUNTERED PANIC, Instruction not yet ready.\n"); return -1; }
     else {
         printf("%sExecuted Test Instruction.%s\n", KYEL, KNRM);
@@ -2271,14 +2289,12 @@ int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
     // step_opcode = instrc.opcode;    // globally available opcode (nothing else included)
     opcodes[instrc.opcode](cpu, instrc);
 
-    if (instrc.opcode == 0x00) {
-        debug_nop(cpu);
-    }
-
-    //cpu_trace_instrc(cpu); // Just add a CPU trace to the log file. For now... EVERY cpu instruction.
-
-    if (step_count % 1000 == 0) {
-        run_debug(cpu);
+    // IME (Interupt delay logic)
+    if (cpu->state.IME_delay) {
+        cpu->state.IME_delay--;
+        if (cpu->state.IME_delay == 0) { // Dec from value of 2 (Assigned by EI). To make sure IME flips After the NEXT instruction has executed
+            cpu->state.IME = 1;
+        }
     }
 
     printf("%sExecution Block Finished.%s\n", KYEL, KNRM);
