@@ -522,7 +522,8 @@ static void JP_cc_a16(CPU *cpu, instruction_T instrc) {
             if ((cpu->reg.F & FLAG_C)) proceed = 1;
             break;
     }
-    if (proceed) cpu->reg.PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    if (proceed) { cpu->reg.PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2); }
+    else { cpu->reg.PC += 3; }
 
     // 3 Bytes
     // No flags Changed
@@ -1444,6 +1445,10 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
 static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise AND between the value in r8 and A
     printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
     // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
+
+    /// TODO: This NULL is a little dangerous... It's understandable why it's there, 
+    // but it can easily cause a crash if a lookup in this reg table was off, or there was a memory read problem.
+
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A 
@@ -1466,7 +1471,7 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
         FLAGS:
         Z = Set if result is 0
         N = 0
-        H = 0
+        H = 1
         C = 0
     */
 }
