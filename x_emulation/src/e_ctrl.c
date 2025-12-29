@@ -27,22 +27,19 @@
 
 extern Cartridge cart;
 extern FILE *debug_dump_file;
+extern FILE *cpu_trace_file;
+extern FILE *trace_log_file;
 
 void e_mmu_init(void) {
     static mmu_map_entry mmu_map[] = {
-        {0x0000, 0x7FFF, cart_read, cart_write },           // Read ROM Data, Intercept WRITE functions
-        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write },   // External (Cart) RAM
-        {0xC000, 0xCFFF, loc_wram_read, loc_wram_write },   // Working RAM
-        {0xE000, 0xFDFF, loc_eram_read, loc_eram_write },   // Echo RAM
-        {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write },   // High RAM (Fast Ram)
-        {0xFE00, 0xFE9F, oam_read, oam_write },
-        {0x8000, 0x9FFF, ppu_read, ppu_write },
-        {0xFF10, 0xFF7F, apu_read, apu_write }
-        // OTHER:
-        // 0xD000 ... 0xDFFF: (4KiB WRAM, Extra bank?)
-        // 0xFF00 ... 0xFF7F: I/O Registers?
-        // 0xFFFF: Interupt space?
-        // Unused: 0xFEA0 ... 0xFEFF (prohibited)
+        {0x0000, 0x7FFF, cart_read, cart_write, BUS_ROM },            // Read ROM Data, Intercept WRITE functions
+        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},   // External Cart RAM (ECRAM)
+        {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
+        {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },   // Working RAM (range not compatible with CGB)
+        {0xE000, 0xFDFF, loc_eram_read, loc_eram_write, BUS_ECHO },   // Echo RAM
+        {0xFE00, 0xFE9F, oam_read, oam_write, BUS_OAM },
+        {0xFF10, 0xFF7F, apu_read, apu_write, BUS_IO },
+        {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM }    // High RAM (Fast Ram)
     };
     const size_t mmu_map_size = sizeof(mmu_map) / sizeof(mmu_map_entry);
     //mmu_init(mmu_map, sizeof(mmu_map) / sizeof(mmu_map_entry));
@@ -100,7 +97,18 @@ int startup_sequence() {
 
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
-        fprintf(stderr, "Error Initializing DEBUG File:\n");
+        fprintf(stderr, "Error Initializing DEBUG log File:\n");
+        return -1;
+    }
+
+    const char *cpu_trc_logfile = "../log/cpu_trace_log.txt";
+    if (cpu_trace_init(cpu_trc_logfile) != 0) {
+        fprintf(stderr, "Error Initializing CPU Trace log File:\n");
+        return -1;
+    }
+    const char *trace_log_file = "../log/trace_log.txt";
+    if (trace_log_init(trace_log_file) != 0) {
+        fprintf(stderr, "Error Initializing Trace log File:\n");
         return -1;
     }
 
@@ -111,19 +119,16 @@ int startup_sequence() {
     // Setup the MMU memory Map.
     e_mmu_init();
 
-    // Pass ROM Entry point INTO the CPU module.
-    uint8_t *rom_entry = cart.headers.entry_point;
-    
-    // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
-    cpu_init(rom_entry);
+    // Initialize CPU to default state
+    cpu_init();
 
     /// TODO: START CPU Emulation!
     //int max_steps = 86;       // This will complete the random ROM test.
 
-    int max_steps = 8000;
+    int max_steps = 900;
     run_cpu(max_steps);
 
-    dump_hram_test();
+    //dump_hram_test();
 
 
     //test_step_instruction();
@@ -168,10 +173,21 @@ int startup_seq_bytime() {
 
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
-        fprintf(stderr, "Error Initializing DEBUG File:\n");
+        fprintf(stderr, "Error Initializing DEBUG log File:\n");
         return -1;
     }
-    
+
+    const char *cpu_trc_logfile = "../log/cpu_trace_log.txt";
+    if (cpu_trace_init(cpu_trc_logfile) != 0) {
+        fprintf(stderr, "Error Initializing CPU Trace log File:\n");
+        return -1;
+    }
+    const char *trace_log_file = "../log/trace_log.txt";
+    if (trace_log_init(trace_log_file) != 0) {
+        fprintf(stderr, "Error Initializing Trace log File:\n");
+        return -1;
+    }
+
     // --------------------------------------------
 
     
@@ -183,14 +199,11 @@ int startup_seq_bytime() {
     // Setup the MMU memory Map.
     e_mmu_init();
 
-    // Pass ROM Entry point INTO the CPU module.
-    uint8_t *rom_entry = cart.headers.entry_point;
-    
-    // Initialize the CPU, (To default setting, pass the Roms Entry Point.)
-    cpu_init(rom_entry);
+    // Initialize CPU to default state
+    cpu_init();
 
     /// TODO: START CPU (Timed limited) Emulation!
-    uint64_t max_time = 200; // In MS. 8000 MS = 1 second.
+    uint64_t max_time = 500; // In MS. 8000 MS = 1 second.
     run_cpu_bytime(max_time);
 
 

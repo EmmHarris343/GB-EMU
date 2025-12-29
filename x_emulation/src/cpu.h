@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stdint.h>
+#include "logger.h"
 
 #define NANOSECONDS_IN_MS 1000000
 
@@ -10,6 +11,12 @@ typedef struct {
     uint8_t operand1;
     uint8_t operand2;
 } instruction_T;
+
+typedef struct {
+    int step_count;
+    uint8_t opcode;
+    uint16_t PC;
+} debug_state;
 
 typedef struct {
     union {
@@ -49,6 +56,8 @@ typedef struct {
     uint8_t stop;
     uint8_t pause;
     uint8_t IME;    // Interrupt Master Enable, flag
+    uint16_t IE;     // Interupt
+    uint16_t IF;     // Interupt Flag
     uint8_t panic;  // My way to detect major failure, and abort.
 } CPU_State;
 
@@ -93,7 +102,7 @@ void external_write(uint16_t addr, uint8_t write_val);
 
 // CPU Run section:
 
-void cpu_init(uint8_t *rom_entry);
+void cpu_init();
 
 // Main cpu LOOP:
 void run_cpu(int max_steps);

@@ -8,10 +8,11 @@
 
 #include "cpu_instructions.h"
 
-#include "logger.h"
+
 
 
 int step_count_icpu = 0;
+uint8_t step_opcode = 0x00;
 extern FILE *debug_dump_file;
 
 typedef void opcode_t(CPU *cpu, instruction_T instrc);
@@ -2225,6 +2226,17 @@ void debug_nop(CPU *cpu) {
     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
 }
 
+// void cpu_trace_instrc(CPU *cpu) {
+//     // Not meant to be human readable.. Simply add CPU state, at a specific STEP. 
+//     // Example looks like:
+//     // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
+//     // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
+
+//     logging_cpu_trace("%d 0x%04X | 0x%02X | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
+//     step_count_icpu, cpu->reg.PC, step_opcode, cpu->reg.A, cpu->reg.F,
+//     cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+// }
+
 
 void run_test_debug(CPU *cpu) {
     logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->reg.AF, cpu->reg.BC, cpu->reg.DE, cpu->reg.HL, cpu->reg.PC, cpu->reg.SP);
@@ -2250,12 +2262,15 @@ int execute_test(CPU *cpu, instruction_T instrc) {
 int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
     printf(" PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->reg.PC, instrc.opcode, instrc.operand1, instrc.operand2);
 
-    step_count_icpu = step_count;
+    // step_count_icpu = step_count;
+    // step_opcode = instrc.opcode;    // globally available opcode (nothing else included)
     opcodes[instrc.opcode](cpu, instrc);
 
     if (instrc.opcode == 0x00) {
         debug_nop(cpu);
     }
+
+    //cpu_trace_instrc(cpu); // Just add a CPU trace to the log file. For now... EVERY cpu instruction.
 
     if (step_count % 1000 == 0) {
         run_debug(cpu);

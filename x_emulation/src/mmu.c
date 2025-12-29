@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+#include "logger.h"
+
 // Using 1, 16-bit Address space. It can point to 65536 memory locations
 
 
@@ -20,6 +22,7 @@ Does NOT control RAM, HRAM, External Ram or Timer.
 
 */
 
+bus_tag_t bus_loc;
 
 uint8_t memory_map[M_MAP_size];
 
@@ -42,10 +45,13 @@ uint8_t mmu_read(uint16_t addr) {
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             read_8bit_val = mmu_map[i].read(addr);
+            //printf("What is MMU_map[i] value? %d", mmu_map[i]);
+            trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
     }
 
+    //trace_mmu_read(addr, 0xFF, (uint8_t)BUS_UNMAPPED);
     return read_8bit_val;
 }
 
@@ -54,10 +60,10 @@ void mmu_write(uint16_t addr, uint8_t write_val){
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             mmu_map[i].write(addr, write_val);
+            trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }
 }
-
 
 void mmu_debugger(uint16_t addr) {
     printf("::: NOTICE ::: MMU DEBUGGER\n");

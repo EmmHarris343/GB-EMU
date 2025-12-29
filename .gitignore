@@ -22,6 +22,7 @@ cpu_op
 # (The main executable for now)
 
 x_emulation/log/debug_log.txt
+x_emulation/log/*
 x_emulation/src/gb_em
 
 

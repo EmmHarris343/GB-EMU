@@ -1,19 +1,25 @@
+
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <time.h>
 #include <stdio.h>
 // #include <stdlib.h>
 #include <stdint.h>
 
+
+
 #include "cpu.h"
 #include "cpu_instructions.h"
 
 #include "mmu_interface.h"
 
-uint8_t local_rom_entry[3];
+
+//uint8_t local_rom_entry[3];
 
 CPU local_cpu;
 
 instruction_T op_instruction;
+
+debug_state dbg_state;
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
@@ -21,6 +27,9 @@ uint64_t which_op_group[256] = {0};       // 64 bit, so it can store a huge amou
 const char* optype_names[] = {
     "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
+
+
+
 
 const CPU cpu_post_bios_state = {
     .reg.AF = 0x01B0,
@@ -30,6 +39,8 @@ const CPU cpu_post_bios_state = {
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0100,
     .state.IME = 0,         // Interupt
+    .state.IE = 0xFF0F,
+    .state.IF = 0xFFFF,    
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -44,6 +55,8 @@ const CPU cpu_reg_simple_tstate = {
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0779,
     .state.IME = 0,         // Interupt
+    .state.IE = 0xFF0F,
+    .state.IF = 0xFFFF,
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -181,24 +194,49 @@ static const uint8_t opcode_types[256] = {
     [0xFB] = INSTR_MISC             // EI
 };
 
+void cpu_trace_instrc(CPU *cpu, int type) {
+    // Not meant to be human readable.. Simply add CPU state, at a specific STEP. 
+    // Example looks like:
+    // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
+    // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
+
+    if (type == 0) {
+        // Init
+        logging_cpu_trace("INIT 0x%04X | | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
+        cpu->reg.PC,cpu->reg.A, cpu->reg.F,
+        cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+        }
+    if (type == 1) {
+        // Normal
+        logging_cpu_trace("%d 0x%04X | 0x%02X | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
+        dbg_state.step_count, cpu->reg.PC, dbg_state.opcode, cpu->reg.A, cpu->reg.F,
+        cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+    }
+}
+
+void add_tracelog_line(CPU *cpu) {
+
+}
+
 
 void print_instr_counts() {
     for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
         printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
     }
 
-    printf("----- Now which Opcode is pinged a lot inside UDEF? -----\n");
-    int print_count = 0;
-    for (int i = 0; i < 256; i++) {
-        if (which_op[i] > 0) {     // Only print if the count is above 0.
-            printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);
-            if (print_count % 5 == 0 ) {
-                printf("\n");
-            }
-            print_count ++;
-        }
-    }
-    printf("\n ----- Finished Opcode Count... -----\n");
+    // Couldn't get this to work correctly. Commenting out. to reduce spam..
+    // printf("----- Now which Opcode is pinged a lot inside UDEF? -----\n");
+    // int print_count = 0;
+    // for (int i = 0; i < 256; i++) {
+    //     if (which_op[i] > 0) {     // Only print if the count is above 0.
+    //         printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);
+    //         if (print_count % 5 == 0 ) {
+    //             printf("\n");
+    //         }
+    //         print_count ++;
+    //     }
+    // }
+    // printf("\n ----- Finished Opcode Count... -----\n");
 }
 
 
@@ -241,13 +279,9 @@ void clear_flag(int cpu_flag) {
     }
 }
 
-void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Original)
+void cpu_init() {         // Initialize this to the DMG   (Original)
 
     printf(":CPU: Initialization, Setting registers and Settings. For VER: %s\n", "DMG 01");
-    // Make Entry point CPU.C Local Variable:
-    for (int i = 0; i <= 3; i++ ){
-        local_rom_entry[i] = rom_entry[i];
-    }
 
     // Set the operands:
     op_instruction.opcode = 0;
@@ -256,6 +290,9 @@ void cpu_init(uint8_t *rom_entry) {         // Initialize this to the DMG   (Ori
 
 
     local_cpu.reg = cpu_post_bios_state.reg;    // This one line instead of writing each one
+
+    //add_cpu_trace(&local_cpu);
+    cpu_trace_instrc(&local_cpu, 0);
 
 
     printf("Finished init for DMG 01\n");
@@ -305,8 +342,9 @@ void extract_opcode(uint16_t addr_pc) {
 
 
     
-
+    // Goes through the MMU to read the data.
     op_code = mmu_read(addr_pc);
+
     //printf("OP_CODE (Read from Ram): %04X\n", op_code);
     if (opcode_lengths[op_code] >= 2) {
         // printf(":CPU: 8Bit Operand ");
@@ -317,10 +355,10 @@ void extract_opcode(uint16_t addr_pc) {
         operand2 = mmu_read(addr_pc + 2);
     }
 
+
+    /// NOTE: OPCODE Summary
     // Calculate opcode type, and save for high level overview.
     instr_type_T op_type = opcode_types[op_code];
-
-
 
     if (op_code == 0x00) {
         op_type = INSTR_NOP;
@@ -345,9 +383,16 @@ void extract_opcode(uint16_t addr_pc) {
 
 // Might change later, but this mostly just Executes the CPU Instruction
 void step_cpu(int step_count) {
+    dbg_state.step_count = step_count;
+    dbg_state.PC = local_cpu.reg.PC;
+    dbg_state.opcode = op_instruction.opcode;
+
+    cpu_trace_instrc(&local_cpu, 1);
+
     if (execute_instruction(&local_cpu, op_instruction, step_count) != 0) {
         printf(":CPU: Error Executing CPU instruction!\n");
     }
+
 }
 
 /// START:
@@ -361,11 +406,11 @@ void run_cpu(int max_steps) {
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
                      (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
-        
+
         printf("\n[STEP: %03d]\n", i);
         printf("[TIME: %lu ms]\n", elasped_ms);
 
-        extract_opcode(local_cpu.reg.PC);        
+        extract_opcode(local_cpu.reg.PC);
 
         step_cpu(i);
 
@@ -376,7 +421,11 @@ void run_cpu(int max_steps) {
         }
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
+    print_instr_counts();
 }
+
+
+
 
 
 
@@ -392,6 +441,7 @@ void run_cpu_bytime(uint64_t max_time_ms) {
     struct timespec start_time, current_time;
     uint64_t elasped_ms = 0;
     int step_count = 0;
+
 
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     printf(":CPU: RUN_CPU (Time Val) Started. Running for %lu ms\n ", max_time_ms);

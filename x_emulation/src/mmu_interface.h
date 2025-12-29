@@ -3,15 +3,18 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include "trace_ids.h"
 
 typedef uint8_t     (*mmu_read_func) (uint16_t addr);
 typedef void        (*mmu_write_func)(uint16_t addr, uint8_t val);
+
 
 typedef struct {
     uint16_t start;
     uint16_t end;
     mmu_read_func read;
     mmu_write_func write;
+    bus_tag_t tag;
 } mmu_map_entry;
 
 void mmu_init(mmu_map_entry *map, int num_entries);

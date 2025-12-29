@@ -3,7 +3,7 @@
 #include "e_core.h"
 #include "e_ctrl.h"
 
-int emulation_mode = 2; // 0 = normal ; 3 = test.
+int emulation_mode = 2; // 0 = normal | 2 = by time |  3 = test.
 
 
 void begin_emulation() {
