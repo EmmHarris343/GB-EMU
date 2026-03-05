@@ -6,6 +6,12 @@ Cartridge cart;         // doing *cart means that I need to allocate the memory,
 #include "string.h"
 
 
+/// BEGIN: Moving things into it's own classes. IE: mbc.c, each MBC 0 - 5.
+/// COMBINE: Loading ROM file, Loading headers, all of that all at once. Instead of split
+/// SIMPLIFY: Decoding headers, loading each MBC setting, matching it to a more simple method.
+/// INIT: Make the init EASIER! not having e_ctrl.c run 10 commands to start it up.
+
+
 /*
         Steps:
         1. Check ROM File
@@ -14,27 +20,30 @@ Cartridge cart;         // doing *cart means that I need to allocate the memory,
         4. Load ROM Fixed Bank into Memory
         5. Load ROM Switchable Bank into Array
 
-*/ 
+*/
 
 /// TODO: WRITE INTERCEPTS:
 /*
 
 Write Table: (Intercepting)
-    0000 - 3FFF => FIXED BANK
+    ---------------------------------------------------------------------------------------
+    0000 - 3FFF => FIXED BANK SPACE
+    ---------------------------------------------------------------------------------------
     0000 - 3FFF (FIXED BANK)    => READ         ACTION: Returns Data in the FIXED BANK ROM.
     0000 - 1FFF (Fixed bank)    => Write        ACTION: Enable/ Disable RAM
     2000 - 3FFF (Fixed Bank)    => Write        ACTION: ROM Bank Switch
 
-    4000 - 7FFF => SWITCH BANK
+    ---------------------------------------------------------------------------------------
+    4000 - 7FFF => SWITCH BANK SPACE
+    ---------------------------------------------------------------------------------------
     4000 - 7FFF (FIXED BANK)    => READ         ACTION: Returns Data in the currently Selected, Switchable ROM BANK
     4000 - 5FFF (Switch BANK)   => Write        ACTION: RAM Bank Switch
     6000 - 7FFF (SWITCH BANK)   => Write        ACTIOH: ROM/RAM Mode 0/1 SWITCH
 
+    ---------------------------------------------------------------------------------------
     A000 - BFFF => EXTERNAL RAM
     A000 - BFFF (EXT RAM)       => READ/ WRITE  ACTION: Reads from External RAM / Writes to External RAM
 */
-
-
 
 
 // Some re-usable functions:
@@ -58,13 +67,13 @@ uint32_t rom_size_by_code(uint8_t rom_size_code) {
 
 uint16_t rom_bank_by_code(uint8_t rom_bank_code) {
     const uint16_t rom_bank_lookup[0x55] = {
-        2, 4, 8, 16, 32, 64, 128, 256, 512,        
+        2, 4, 8, 16, 32, 64, 128, 256, 512,
         [0x52] = 72, [0x53] = 80, [0x54] = 96 // Special $52 - $54 Rom Size codes:
     };
     return rom_bank_lookup[rom_bank_code];
 }
 
-size_t ram_size_by_code(uint8_t ram_code) {    
+size_t ram_size_by_code(uint8_t ram_code) {
     size_t ram_size = 0;
     switch (cart.headers.ram_size_code) {
         case 0x00: ram_size = 0; break;
@@ -79,9 +88,23 @@ size_t ram_size_by_code(uint8_t ram_code) {
 }
 
 
+/*
+
+I need to be pass the Rom file.
+
+Load the Rom file into memory.
+Read the headers for the Rom file.
+Decode the headers.
+    Determine Which MBC version is being used. If any.
+Load the MBC versions specific configurations.
 
 
 
+*/
+
+
+
+/// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
 int init_cart_test_mode() {
     // Default to DMG 01 | MBC 1
     uint8_t full_header[HEADER_SIZE];
@@ -92,7 +115,7 @@ int init_cart_test_mode() {
 
     cart.headers.cart_type_code = 0x03;          // MBC (Zda MBC1 = 0x02 - 0x03)
     cart.headers.rom_size_code = 0x04;           // Rom (Zda uses 0x04)
-    cart.headers.ram_size_code = 0x02;           // Ram (Memory size)    
+    cart.headers.ram_size_code = 0x02;           // Ram (Memory size)
 
     // ROM Size / Bank count
     cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
@@ -164,12 +187,16 @@ int load_headers(const char *filename) {
     cart.headers.rom_size_code = full_header[0x48];           // Rom
     cart.headers.ram_size_code = full_header[0x49];           // Ram  (Memory size)
     cart.headers.chksm = full_header[0x4D];
+
+    // Header entry point I haven't really used... maybe delete.
     for (int i = 0; i <= 3; i++) { cart.headers.entry_point[i] = full_header[i]; }     // Load the 3 Byte Entry point
     printf("Done.\n");
 
     return 0;
 }
 
+
+// Old method, sets static configurations.
 int decode_cart_features() {
     printf(":Cart: Decoding Cartridge Features... \n");
     // Set Cartridge type and features.
@@ -178,6 +205,7 @@ int decode_cart_features() {
             cart.config.mbc_type = 0;
             break;
         case 0x01 ... 0x03:
+            // If
             cart.config.mbc_type = 1;
             cart.config.has_rom_banking = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);
             cart.config.has_ram = (cart.headers.cart_type_code == 0x02 || cart.headers.cart_type_code == 0x03);
@@ -191,8 +219,8 @@ int decode_cart_features() {
             break;
     }
 
-    //cart.config.rom_size = rom_size_lookup[rom_size_code];
-    //cart.config.rom_bank_count = rom_bank_lookup[rom_size_code];
+    // cart.config.rom_size = rom_size_lookup[rom_size_code];
+    // cart.config.rom_bank_count = rom_bank_lookup[rom_size_code];
 
     // ROM Size / Bank count
     cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
@@ -207,11 +235,26 @@ int decode_cart_features() {
 }
 
 
+int configur_cartrige() {
+
+
+
+    // ROM Size / Bank count
+    cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
+    cart.config.rom_bank_count = rom_bank_by_code(cart.headers.rom_size_code);
+
+    // RAM Size:
+    cart.config.ram_size = ram_size_by_code(cart.headers.ram_size_code);
+
+    return 0;
+}
+
+
 
 
 int load_cartridge(const char *filename) {
-
-    size_t expt_rom_size = cart.config.rom_size;
+    size_t expt_rom_size = rom_size_by_code(cart.headers.rom_size_code);
+    //size_t expt_rom_size = cart.config.rom_size;
 
     printf(":Cart: Loading full ROM into Memory... \n");
     // Load the entire ROM file
@@ -245,7 +288,7 @@ int load_cartridge(const char *filename) {
 }
 
 
-int initialize_cartridge() {
+int initialize_cartridge_simple() {
     // Load resources and info, set bank values, ram values, etc
     // printf("What does the Has ram look like? %02X, %d\n", cart.config.has_ram, cart.config.has_ram);
     if (cart.config.has_ram == 1) {
@@ -268,6 +311,24 @@ int initialize_cartridge() {
 }
 
 
+int initialize_cartridge(const char *rom_file) {
+
+    if (load_headers(rom_file) != 0) {
+        fprintf(stderr, "Init Cartrige: [LoadHeaders] Error Loading Headers:\n");
+        return -1;
+    }
+
+    // Next step use the mbc.c file, to determine the configurations.
+
+    // Can only safetly load the cartridge after it loads the headers, and knows the ROM size.
+    if (load_cartridge(rom_file) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+
 void execute_ROM_BSWTCH(uint8_t Bank_num) {
     // Take the provided Bank_num. Use it to change the current ROM Bank.
     if (cart.config.rom_bank_count <= Bank_num) {
@@ -282,12 +343,12 @@ void execute_ROM_BSWTCH(uint8_t Bank_num) {
 
 }
 
-
+// Reads either fixed bank/ switchable bank.
 uint8_t read_data(uint16_t addr) {
     uint8_t read_rom_data = 0x0;
-    switch (addr){        
+    switch (addr){
         case 0x0000 ... 0x3FFF:
-            printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");           
+            printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");
             read_rom_data = cart.resrce.rom_data[addr];
             //printf(":Cart: FxB\n");
             //printf(":Cart: Data read from ROM (FxB) -> %02X\n", read_data);
@@ -306,7 +367,7 @@ uint8_t read_data(uint16_t addr) {
         default:
         return 0xFF;    // If somehow values are out of range for Reading rom Data.
     }
-        
+
 }
 
 // This is realistically, going to be RAM space. (maybe other I guess)
@@ -319,32 +380,37 @@ void write_intercept(uint16_t addr, uint8_t write_value) {
     switch(addr) {
         case 0x0000 ... 0x1FFF:
             // Ram Enable
-            printf("Enable RAM\n");
+            printf("cart: [WriteIntercept] Enable RAM Switch\n");
             break;
         case 0x2000 ... 0x3FFF:
             // ROM "file" Bank Switch
+            printf("cart: [WriteIntercept] ROM Bank Switch\n");
             execute_ROM_BSWTCH(write_value);
             break;
         case 0x4000 ... 0x5FFF:
             // RAM Bank Switch
+            printf("cart: [WriteIntercept] RAM Bank Switch\n");
             break;
         case 0x6000 ... 0x7FFF:
             // ROM/RAM Mode 0/1 Switch
+            printf("cart: [WriteIntercept] ROM/RAM Mode 0/1 Switch\n");
             break;
     }
-
 }
 
 
 
 
 
+/*
+
+===-- The Entry point into cart.c from the MMU --===
+
+*/
 
 
-
-// Entry point from MMU:
-
-uint8_t cart_read(uint16_t addr) {
+// cart_RomRead from MMU
+uint8_t cart_RomRead(uint16_t addr) {
     // Memory Locations are 16bit
     // Values stored in those locations are 8bit.
 
@@ -352,10 +418,12 @@ uint8_t cart_read(uint16_t addr) {
     // Read the memory at either, fixed ROM, or Switchable Bank.
     // Return the value read.
     return read_data(addr); // Just pass this back.
-    
+
 }
-void cart_write(uint16_t addr, uint8_t val) {
-    // There is only really 2 fields. 
+
+// cart_RomWrite from MMU ... => to write intercept
+void cart_RomWrite(uint16_t addr, uint8_t val) {
+    // There is only really 2 fields.
     // A write intercept Command.
     // Storing data into RAM (maybe something to do with clock too). That's it.
 
@@ -370,11 +438,17 @@ void cart_write(uint16_t addr, uint8_t val) {
 
 }
 
-uint8_t cart_ram_read(uint16_t addr) {
-    
+// cart_RamRead from MMU
+uint8_t cart_RamRead(uint16_t addr) {
+
     return 0xFF; // Returns dummy response of 0xFF
 
 }
-void cart_ram_write(uint16_t addr, uint8_t val) {
 
+// cart_RamWrite from MMU ... => to write intercept
+void cart_RamWrite(uint16_t addr, uint8_t val) {
+    if (addr >= 0x000 && addr <= 0x7FFF) {
+        printf(":cart: Intercepting Rom Write instruction\n");
+        write_intercept(addr, val);
+    }
 }

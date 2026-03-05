@@ -113,7 +113,12 @@ void trace_cpu() {
     // C 10 0x3405......
 }
 
-void trace_cart() {
+void trace_cart_read() {
+    // X R 0x0000 0 14 ......
+
+}
+
+void trace_cart_write() {
     // X R 0x0000 0 14 ......
 
 }

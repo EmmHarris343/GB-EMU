@@ -10,22 +10,20 @@
 
 
 /*
+
 MMU is:
-A series of Pointers, Configurations, and Rules to direct ANY traffic 
+A series of Pointers, Configurations, and Rules to direct ANY traffic
 Directs data from: 0000 to FFFF
 
 
 MMU is/does NOT:
-Does not store any DATA, 
+Does not store any DATA,
 Does not store current ROM or RAM Banks
 Does NOT control RAM, HRAM, External Ram or Timer.
 
 */
 
-bus_tag_t bus_loc;
-
 uint8_t memory_map[M_MAP_size];
-
 
 static mmu_map_entry *mmu_map = NULL;
 static int mmu_map_size = 0;
@@ -94,7 +92,7 @@ void mmu_debugger(uint16_t addr) {
 // OLD (Just for reference.)
 void bus_entry(uint16_t address) {
     printf("Memory going to be directed");
-    
+
     switch (address){
         case 0x0000 ... 0x3FFF:
             printf("ROM Bank 00 - Fixed Bank");
@@ -132,14 +130,7 @@ void bus_entry(uint16_t address) {
         case 0xFFFF:
             printf("Interupt Space");
             // ?? Interupts do what exactly?
-        default: 
+        default:
             printf("Out of range... FAULT");
     }
 }
-
-
-
-// void test_bank_switch() {
-//     write_intercept(0x2044, 0x01A);     // 0x01A => 26 | SWITCH to bank 26.
-
-// }

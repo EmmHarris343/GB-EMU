@@ -32,8 +32,8 @@ extern FILE *trace_log_file;
 
 void e_mmu_init(void) {
     static mmu_map_entry mmu_map[] = {
-        {0x0000, 0x7FFF, cart_read, cart_write, BUS_ROM },            // Read ROM Data, Intercept WRITE functions
-        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},   // External Cart RAM (ECRAM)
+        {0x0000, 0x7FFF, cart_RomRead, cart_RomWrite, BUS_ROM },      // Read ROM Data, Intercept WRITE functions
+        {0xA000, 0xBFFF, cart_RamRead, cart_RamWrite, BUS_ECRAM},     // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
         {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
         {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },   // Working RAM (range not compatible with CGB)
         {0xE000, 0xFDFF, loc_eram_read, loc_eram_write, BUS_ECHO },   // Echo RAM
@@ -65,7 +65,7 @@ int startup_sequence() {
 
     const char *rom_file = "../../rom/pkmn_red.gb";
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
-    
+
     // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
@@ -84,12 +84,16 @@ int startup_sequence() {
         fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
         return -1;
     }
-    
-    if (initialize_cartridge() != 0) {
+
+    if (initialize_cartridge_simple() != 0) {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
-    
+    // if (initialize_cartridge(rom_file) != 0) {
+    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
+    //     return -1;
+    // }
+
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
@@ -114,7 +118,7 @@ int startup_sequence() {
 
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
 
-   
+
     sleep(2);
     // Setup the MMU memory Map.
     e_mmu_init();
@@ -160,12 +164,16 @@ int startup_seq_bytime() {
         fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
         return -1;
     }
-    
-    if (initialize_cartridge() != 0) {
+
+    if (initialize_cartridge_simple() != 0) {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
-    
+    // if (initialize_cartridge(rom_file) != 0) {
+    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
+    //     return -1;
+    // }
+
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
@@ -190,11 +198,11 @@ int startup_seq_bytime() {
 
     // --------------------------------------------
 
-    
+
 
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
 
-   
+
     sleep(2);
     // Setup the MMU memory Map.
     e_mmu_init();
@@ -203,7 +211,7 @@ int startup_seq_bytime() {
     cpu_init();
 
     /// TODO: START CPU (Timed limited) Emulation!
-    uint64_t max_time = 500; // In MS. 8000 MS = 1 second.
+    uint64_t max_time = 20000; // In MS. 8000 MS = 1 second.
     run_cpu_bytime(max_time);
 
 
@@ -219,7 +227,7 @@ int test_sequence() {
     // Set to cartridge settings to MBC 1, and Mock a ROM file.
     if (init_cart_test_mode() != 0) {
         fprintf(stderr, "Error Initializing Mock ROM Config (Cart.c)\n");
-        return -1;        
+        return -1;
     }
 
     // Initialize some settings:

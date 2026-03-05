@@ -17,7 +17,7 @@ typedef void (*mbc_read_func)(uint16_t addr);
 
 
 
-typedef struct {    
+typedef struct {
     uint8_t entry_point[3];
     uint8_t logo[47];
     uint8_t title[16];       // +1 cause string.. I guess. --- Depending on rom not used at all, and non populated.
@@ -61,7 +61,7 @@ typedef struct {
 
 typedef struct {
     Headers headers;
-    Config config;    
+    Config config;
     Resources resrce;
     mbc_write_func mbc_write;
     mbc_read_func mbc_read;
@@ -74,7 +74,8 @@ typedef struct {
 int load_headers(const char *filename);
 int decode_cart_features();
 int load_cartridge(const char *filename);
-int initialize_cartridge();
+int initialize_cartridge(const char *filename);
+int initialize_cartridge_simple();
 int init_cart_test_mode();
 
 // Test
@@ -85,9 +86,9 @@ void write_intercept(uint16_t address, uint8_t data);
 
 // ENTRY POINTS (e_ctrl/ MMU):
 
-uint8_t cart_read(uint16_t addr);
-void cart_write(uint16_t addr, uint8_t val);
-uint8_t cart_ram_read(uint16_t addr);
-void cart_ram_write(uint16_t addr, uint8_t val);
+uint8_t cart_RomRead(uint16_t addr);
+void cart_RomWrite(uint16_t addr, uint8_t val);
+uint8_t cart_RamRead(uint16_t addr);
+void cart_RamWrite(uint16_t addr, uint8_t val);
 
 #endif
