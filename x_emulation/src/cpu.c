@@ -48,8 +48,8 @@ const CPU cpu_post_bios_state = {
     .reg.PC = 0x0100,
     .state.IME = 0,         // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
-    .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
-    .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
+    .state.IE = 0x00,     // IE at location 0xFFFF = 0x00
+    .state.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -324,7 +324,6 @@ void check_registers() {
 
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
     uint16_t cvrt_byte = (HIGH << 8) | LOW;
-    //printf("Cnvrt FROM LIL Endian => LOW: %02X | HIGH %02X Little Endian Output: %04X\n", LOW, HIGH, cvrt_byte);
     return cvrt_byte;
 }
 

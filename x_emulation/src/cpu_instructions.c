@@ -538,13 +538,13 @@ static void JP_cc_a16(CPU *cpu, instruction_T instrc) {
 
 // Relative Jumps: e8
 static void JR_e8(CPU *cpu, instruction_T instrc) {
-
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instrc.operand1;
-    cpu->reg.PC += e_signed_offset;
+    uint16_t next_pc = cpu->reg.PC+2;  // Value of next PC + 2 Bytes
 
-    printf("Relative jump to: +- %02X\n", e_signed_offset);
+    cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
 
+    printf("Relative jump to: +- 0x%02X. To PC=> 0x%04X\n", e_signed_offset, (uint16_t)(next_pc + e_signed_offset));
 
     // Cycles 3
     // Bytes 2
@@ -555,40 +555,41 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instrc.operand1;
+    uint16_t next_pc = cpu->reg.PC+2;  // Value of PC + 2 Bytes. (PC Advanced by 2)
 
     switch (instrc.opcode) {
         case 0x20:                  // JR, NZ e8
             // (cpu->reg.F & FLAG_Z) ? /* NOP */  : /* Jump */
             if (!(cpu->reg.F & FLAG_Z)) {
-                printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, instrc.operand1, KNRM);
-                cpu->reg.PC += e_signed_offset;
+                printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, e_signed_offset, KNRM);
+                cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
             }
-            else cpu->reg.PC +=2;
+            else cpu->reg.PC = next_pc;
             break;
         case 0x28:
             if (cpu->reg.F & FLAG_Z) {
-                printf("JR Z e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
-                cpu->reg.PC += e_signed_offset;
+                printf("JR Z e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
             }
-            else cpu->reg.PC +=2;
+            else cpu->reg.PC = next_pc;
             break;
         case 0x30:
             if (!(cpu->reg.F & FLAG_C)) {
-                printf("JR NC e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
-                cpu->reg.PC += e_signed_offset;
+                printf("JR NC e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
             }
-            else cpu->reg.PC +=2;
+            else cpu->reg.PC = next_pc;
             break;
         case 0x38:
             if (cpu->reg.F & FLAG_C) {
-                printf("JR C e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
-                cpu->reg.PC += e_signed_offset;
+                printf("JR C e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
             }
-            else cpu->reg.PC +=2;
+            else cpu->reg.PC = next_pc;
             break;
         default:
             printf("ERROR, JR CC did not match ANY OPCODES.. should abort.\n");
-            cpu->reg.PC +=2;
+            cpu->reg.PC = next_pc;
     }
 
     // Cycles: 3 taken / 2 untaken
@@ -976,7 +977,7 @@ static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byt
 }
 
 // CP. ComPARE Instructions:
-static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in pointer HL to A
+static void CP_A_r8(CPU *cpu, instruction_T instrc) {
     // Depending on the OP Code, it changes WHICH instruction is compared.
     printf("CP A, r8.               ; EXP: ComPare (cpu->reg.A - r8_reg) --> Set Flags \n");
 
@@ -995,7 +996,11 @@ static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);
     (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
 
+
+
     cpu->reg.PC++;
+
+    logging_cpu_trace("[CTRL] Compare, A r8. Result: 0x%02X. A=0x%02X, F=0x%02X, op_r8=0x%02X\n", result, cpu->reg.A, cpu->reg.F, op_r8);
 
     // Bytes = 1
 }
@@ -1027,6 +1032,7 @@ static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
 
     cpu->reg.PC += 2;
 
+    logging_cpu_trace("[CTRL] Compare, A n8. Result: 0x%02X. A=0x%02X, F=0x%02X, n8=0x%02X\n", result, cpu->reg.A, cpu->reg.F, n8_val);
     // Bytes = 2
 }
 
@@ -1134,6 +1140,7 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
     cpu->reg.AF = (high_byte << 8) | (low_byte & 0xF0);     // Being safe, as the 0-3 bits are 0, and the flag is only 4-7. Previous code might work, but might not also.
 
     cpu->reg.PC ++;
+    logging_cpu_trace("[CTRL] POP_AF Registers into SP. H:0x%02X L:0x%02X\n", cpu->reg.H, cpu->reg.L);
 
     /*
     This is roughly equivalent to the following imaginary instructions:
@@ -1168,6 +1175,7 @@ static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 
     *reg_table[op_index] = cnvrt_lil_endian(low_byte, high_byte);
 
     cpu->reg.PC ++;
+    logging_cpu_trace("[CTRL] Pop r16 from SP. PC: 0x%04X. LowByte:0x%02X HighByte:0x%02X\n", cpu->reg.PC, low_byte, high_byte);
 
     /*
     This is roughly equivalent to the following imaginary instructions:
@@ -1195,6 +1203,7 @@ static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF 
     external_write(cpu->reg.SP, cpu->reg.F);
 
     cpu->reg.PC ++;     // PUSH_AF is only 1 byte.
+    logging_cpu_trace("[CTRL] PUSH_AF Registers into SP. A:0x%02X F:0x%02X\n", cpu->reg.A, cpu->reg.F);
 
     // Bytes = 1
     // FLAGS: None affected
@@ -1213,23 +1222,25 @@ static void PUSH_r16(CPU *cpu, instruction_T instrc) {      // Push register r16
             external_write(cpu->reg.SP, cpu->reg.B);
             cpu->reg.SP --;
             external_write(cpu->reg.SP, cpu->reg.C);
+            logging_cpu_trace("[CTRL] PUSH Registers into SP. B:0x%02X C:0x%02X\n", cpu->reg.B, cpu->reg.C);
             break;
         case 0xD5:    // DE to stack
             cpu->reg.SP --;
             external_write(cpu->reg.SP, cpu->reg.D);
             cpu->reg.SP --;
             external_write(cpu->reg.SP, cpu->reg.E);
+            logging_cpu_trace("[CTRL] PUSH Registers into SP. D:0x%02X E:0x%02X\n", cpu->reg.D, cpu->reg.E);
             break;
         case 0xE5:    // HL to stack
             cpu->reg.SP --;
             external_write(cpu->reg.SP, cpu->reg.H);
             cpu->reg.SP --;
             external_write(cpu->reg.SP, cpu->reg.L);
+            logging_cpu_trace("[CTRL] PUSH Registers into SP. H:0x%02X L:0x%02X\n", cpu->reg.H, cpu->reg.L);
             break;
     }
 
     cpu->reg.PC ++;
-
     // Bytes = 1
     // FLAGS: None affected
 }
@@ -1247,6 +1258,9 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     // The [remember to come back here] is done by stack pointers / RET (RETurn)
 
     // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
+    uint16_t call_from = cpu->reg.PC;
+    uint16_t return_addr = cpu->reg.PC + 3;
+
     uint16_t pc_loc = (cpu->reg.PC + 3);
 
     uint8_t split_addr_LOW = pc_loc & 0xFF;
@@ -1266,8 +1280,17 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
     // Next jump to Location:
     cpu->reg.PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 
-    // DO not assign PC to anything.
-
+    uint16_t target_addr = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
+    logging_cpu_trace(
+    "[CTRL] CALL from=%04X target=%04X return=%04X SP=%04X op1=%02X op2=%02X\n",
+    call_from,
+    target_addr,
+    return_addr,
+    cpu->reg.SP,
+    instrc.operand1,
+    instrc.operand2
+    );
+    // PC has already been assigned a value. Do not change it.
 
     /*
     The TL;DR
@@ -1344,12 +1367,15 @@ static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subro
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
 
+    logging_cpu_trace("[CTRL]=>RET: PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
+
     // Cycles: 4
     // Bytes: 1
     // FLAGS: None affected
 }
 static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subroutine if condition CC is met
     int proceed = 0;
+    // Takes the addresses in the
 
     printf("RET CC Called.          ; Populate PC from SP, if CC Condition met\n");
     switch (instrc.opcode) {
@@ -1380,6 +1406,7 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
         cpu->reg.SP ++;
 
         cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
+        logging_cpu_trace("[CTRL]=>RET-CC: (CC MET, PROCEEDING) F:0x%02X, PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.F, cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
     }
     else {
         printf("RET cc Conditions are NOT met. Skipping..\n");
@@ -1410,6 +1437,7 @@ static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subro
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
+    logging_cpu_trace("[CTRL] RETI SP into PC. LowByte:0x%02X HighByte:0x%02X. PC_SET Value: 0x%04X\n", low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
 
 
     // Cycles: 4
@@ -1439,6 +1467,8 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
     external_write(cpu->reg.SP, split_addr_LOW);
 
     cpu->reg.PC = jump_addr;
+
+    logging_cpu_trace("[CTRL] PUSH PC into SP. AddrLow:0x%02X AddrHigh:0x%02X. PC_SET Value: 0x%04X, jumpAddr: 0x%04X\n", split_addr_LOW, split_addr_HIGH, jump_addr);
 
 
 

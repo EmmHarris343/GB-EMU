@@ -129,7 +129,7 @@ int startup_sequence() {
     /// TODO: START CPU Emulation!
     //int max_steps = 86;       // This will complete the random ROM test.
 
-    int max_steps = 300;
+    int max_steps = 45;
     run_cpu(max_steps);
 
     //dump_hram_test();

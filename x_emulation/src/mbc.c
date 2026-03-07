@@ -384,7 +384,7 @@ uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
 
     if (addr <= 0x3FFF) {
         // Fixed bank
-        printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");
+        printf(":MBC3: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
         return cart->cartstorage.rom_data[addr];
     }
     if (addr <= 0x7FFF) {
@@ -392,6 +392,8 @@ uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
 
         uint32_t rom_offset =
         (bank * 0x4000) + (addr - 0x4000);
+
+        printf(":MBC3: Read Matches ROM Bank: 0x%02X -> Switch-Bank Val: 0x%02X\n", bank, cart->cartstorage.rom_data[rom_offset]);
 
         return cart->cartstorage.rom_data[rom_offset];
     }
