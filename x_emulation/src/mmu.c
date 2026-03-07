@@ -54,6 +54,7 @@ uint8_t mmu_read(uint16_t addr) {
 }
 
 void mmu_write(uint16_t addr, uint8_t write_val){
+    printf("This is where it crashes.. yes? ::mmu_write:: addr: %04X, write-val:%02X\n", addr, write_val);
     //printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?

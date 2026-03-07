@@ -30,23 +30,19 @@ Also Note, the address range:
 0000–3FFF — ROM Bank 00     | ReadOnly | First 16KiB of ROM (bank 00)
 4000–7FFF — ROM Bank 01-7F  | ReadOnly |
 
-
-
-
 Note for bank reading: 01-7F
 If the main 5-bit ROM banking register is 0, it reads the bank as if it was set to 1.
 For 1 MiB+ ROM
 
-
 */
-void mbc1_state_init(Cartridge *cart) {
+static void mbc1_state_init(Cartridge *cart) {
     cart->state.mbc1.ram_enabled = 0;
     cart->state.mbc1.current_rom_bank = 1;
     cart->state.mbc1.current_ram_bank = 0;
     cart->state.mbc1.mode = 0;
 }
 
-int mbc1_decode(Cartridge *cart, uint8_t type_code) {
+static int mbc1_decode(Cartridge *cart, uint8_t type_code) {
     // Default MBC1 - turn off all features.
     cart->config.has_ram = 0;
     cart->config.has_battery = 0;
@@ -131,13 +127,13 @@ void mbc2 () {  // Unknown priority. Likely lower.
 
     */
 }
-void mbc2_state_init(Cartridge *cart) {
+static void mbc2_state_init(Cartridge *cart) {
     cart->state.mbc2.ram_enabled = 0;
     cart->state.mbc2.current_rom_bank = 1;
     cart->state.mbc2.current_ram_bank = 0;
 }
 
-int mbc2_decode(Cartridge *cart, uint8_t type_code) {
+static int mbc2_decode(Cartridge *cart, uint8_t type_code) {
     // Default MBC2 - turn off all features.
     cart->config.has_battery = 0;
     cart->config.mbc_type = MBC2;
@@ -255,7 +251,7 @@ A000-BFFF: RAM bank or RTC register, depending on current selection
 That is MBC3 in its practical form.
 */
 
-void mbc3_state_init(Cartridge *cart) {
+static void mbc3_state_init(Cartridge *cart) {
     cart->state.mbc3.ram_rtc_enabled = 0;
     cart->state.mbc3.current_rom_bank = 1;
     cart->state.mbc3.current_ram_bank = 0;
@@ -264,7 +260,7 @@ void mbc3_state_init(Cartridge *cart) {
     cart->state.mbc3.rtc_latch_armed = 0;
 }
 
-int mbc3_decode(Cartridge *cart, uint8_t type_code) {
+static int mbc3_decode(Cartridge *cart, uint8_t type_code) {
     // Default MBC3 - turn off all features.
     cart->config.has_ram = 0;
     cart->config.has_battery = 0;
@@ -298,14 +294,92 @@ int mbc3_decode(Cartridge *cart, uint8_t type_code) {
     return 0;
 }
 
-void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
+//     if (cart.config.rom_bank_count <= bank_num) {
+//         fprintf(stderr, "FATAL ERROR! \n      ----> Invalid Bank switch Location. ROM Bank Count: 0x%04X | Desired ROM Bank: 0x%04X\n", cart.config.rom_bank_count, bank_num);
+//         exit(1);  // catch bad rom Bank switching!
+//     }
+//     else {
+//         cart.cartstorage.current_rom_bank = bank_num;
+//         printf("Switched ROM Bank to: 0x%02X, %d\n", bank_num, bank_num);
+//     }
 
-}
+void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
+    if (addr <= 0x1FFF) {
+        /* RAM / RTC enable */
+        cart->state.mbc3.ram_rtc_enabled = ((val & 0x0F) == 0x0A) ? 1 : 0;
+        printf("mbc: [MBC3-WriteIntercept] Enable RAM Switch\n");
+        return;
+    }
+    if (addr <= 0x3FFF) {
+        printf("It got here before it crashed yes?? %04X, %02X\n", addr, val);
+        /* ROM bank select */
+        uint8_t bank = val & 0x7F;
+        if (bank >= cart->config.rom_bank_count) {
+            bank %= cart->config.rom_bank_count;
+
+            if (bank == 0) {
+                bank = 1;
+            }
+        }
+
+        if (cart->config.rom_bank_count == 0) {
+            printf("cart: ERROR rom_bank_count == 0\n");
+            return;
+        }
+
+        printf("rom_bank_count = %u\n", cart->config.rom_bank_count);
+
+        // Clamp the bank to the total rom bank count.
+
+        cart->state.mbc3.current_rom_bank = bank;
+        printf("cart: [MBC3-WriteIntercept] ROM Bank Switch: %02X\n", bank);
+        return;
+    }
+
+    if (addr <= 0x5FFF) {
+        /* RAM bank select or RTC register select */
+        if (val <= 0x03) {
+            cart->state.mbc3.current_ram_bank = val;
+            cart->state.mbc3.ram_bank_mode = 0;
+        } else if (val >= 0x08 && val <= 0x0C) {
+            cart->state.mbc3.rtc_reg_select = val;
+            cart->state.mbc3.ram_bank_mode = 1;
+        }
+        printf("cart: [MBC3-WriteIntercept] RAM Bank / RTC Register Select: %02X\n", val);
+        return;
+    }
+
+    if (addr <= 0x7FFF) {
+        /* RTC latch */
+        if (cart->state.mbc3.rtc_latch_armed == 0 && val == 0x00) {
+            cart->state.mbc3.rtc_latch_armed = 1;
+        } else if (cart->state.mbc3.rtc_latch_armed == 1 && val == 0x01) {
+            /* latch rtc snapshot */
+            cart->state.mbc3.rtc_latch_armed = 0;
+        } else {
+            cart->state.mbc3.rtc_latch_armed = 0;
+        }
+        printf("cart: [MBC3-WriteIntercept] RTC Latch, Val: %02X\n", val);
+        return;
+    }}
 
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
-    uint8_t val;
+    uint8_t read_rom_data = 0x0;
 
-    return val;
+    if (addr <= 0x3FFF) {
+        // Fixed bank
+        printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");
+        return cart->cartstorage.rom_data[addr];
+    }
+    if (addr <= 0x7FFF) {
+        uint8_t bank = cart->state.mbc3.current_rom_bank;
+
+        uint32_t rom_offset =
+        (bank * 0x4000) + (addr - 0x4000);
+
+        return cart->cartstorage.rom_data[rom_offset];
+    }
+    return 0xFF;
 }
 
 void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
@@ -313,9 +387,7 @@ void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
-    uint8_t val;
-
-    return val;
+    return 0xFF; // Returns dummy response of 0xFF
 }
 
 
@@ -359,14 +431,14 @@ void mbc5(Cartridge *cart) {
 
 }
 
-void mbc5_state_init(Cartridge *cart) {
+static void mbc5_state_init(Cartridge *cart) {
     cart->state.mbc5.ram_enabled = 0;
     cart->state.mbc5.rumble_enable = 0;
     cart->state.mbc5.current_rom_bank = 1;
     cart->state.mbc5.current_ram_bank = 0;
 }
 
-int mbc5_decode(Cartridge *cart, uint8_t type_code) {
+static int mbc5_decode(Cartridge *cart, uint8_t type_code) {
     // Default MBC5 - turn off all features.
     cart->config.has_ram = 0;
     cart->config.has_rumble = 0;

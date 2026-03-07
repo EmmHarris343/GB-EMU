@@ -33,7 +33,7 @@ typedef struct {
 // MBC3 state:
 typedef struct {
     uint8_t ram_rtc_enabled;
-    uint16_t current_rom_bank;
+    uint8_t current_rom_bank;   // mbc3 will only need 7bits => fits in uint8_t
     uint8_t current_ram_bank;
     uint8_t rtc_reg_select;
     uint8_t ram_bank_mode;   /* 0 = RAM bank selected, 1 = RTC register selected */
@@ -44,7 +44,7 @@ typedef struct {
 typedef struct {
     uint8_t ram_enabled;
     uint8_t rumble_enable;
-    uint16_t current_rom_bank;
+    uint16_t current_rom_bank;  // MBC5 will need 9bits => needs uint16_t
     uint8_t current_ram_bank;
 } MBC5_state;
 

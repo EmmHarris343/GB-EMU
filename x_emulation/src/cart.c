@@ -1,7 +1,8 @@
-#include "cart_types.h"
-#include "string.h"
 #include "cart.h"
+#include "cart_types.h"
 #include "mbc.h"
+#include "string.h"
+
 
 Cartridge cart;         // doing *cart means that I need to allocate the memory, maybe I will do that, but for now this works
 Headers headers;
@@ -106,66 +107,66 @@ Load the MBC versions specific configurations.
 
 
 
-// /// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
-// int init_cart_test_mode() {
-//     // Default to DMG 01 | MBC 1
-//     uint8_t full_header[HEADER_SIZE];
-//     printf("Starting Mock Rom/ Cartridge Configuration.. \n");
+/// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
+int init_cart_test_mode() {
+    // Default to DMG 01 | MBC 1
+    uint8_t full_header[HEADER_SIZE];
+    printf("Starting Mock Rom/ Cartridge Configuration.. \n");
 
 
-//     /// NOTICE: These are hard coded values. Intended strictly for testing
+    /// NOTICE: These are hard coded values. Intended strictly for testing
 
-//     cart.headers.cart_type_code = 0x03;          // MBC (Zda MBC1 = 0x02 - 0x03)
-//     cart.headers.rom_size_code = 0x04;           // Rom (Zda uses 0x04)
-//     cart.headers.ram_size_code = 0x02;           // Ram (Memory size)
+    headers.cart_type_code = 0x03;          // MBC (Zda MBC1 = 0x02 - 0x03)
+    headers.rom_size_code = 0x04;           // Rom (Zda uses 0x04)
+    headers.ram_size_code = 0x02;           // Ram (Memory size)
 
-//     // ROM Size / Bank count
-//     cart.config.rom_size = rom_size_by_code(cart.headers.rom_size_code);
-//     cart.config.rom_bank_count = rom_bank_by_code(cart.headers.rom_size_code);
+    // ROM Size / Bank count
+    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
 
-//     // RAM Size:
-//     cart.config.ram_size = ram_size_by_code(cart.headers.ram_size_code);
+    // RAM Size:
+    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
 
-//     // Some Other Config Settings.
-//     cart.config.mbc_type = 1;
-//     cart.config.has_rom_banking = 1;
-//     cart.config.has_ram = 1;
-//     cart.config.has_ram_banking = 1;
-//     cart.config.has_battery = 1;
+    // Some Other Config Settings.
+    cart.config.mbc_type = 1;
+    cart.config.has_rom_banking = 1;
+    cart.config.has_ram = 1;
+    cart.config.has_ram_banking = 1;
+    cart.config.has_battery = 1;
 
-//     // Some default Startup Settings for Rom.
-//     if (cart.config.has_ram == 1) {
-//         cart.resource.ram_toggle = 0;
-//     }
-//     if (cart.config.has_ram_banking) {
-//         cart.resource.current_ram_bank = 0x00;
-//     }
-//     if (cart.config.has_rom_banking == 1) {
-//         cart.resource.current_rom_bank = 1;           // Defaulting to bank 1 (WARNING! this behaviour is not consistant in all MBC!)
-//         cart.resource.fixed_b_addr = 0x00;
-//         cart.resource.calcd_switch_addr = (cart.resource.current_rom_bank * 0x4000);     // Not confident I want to use this.
-//     }
+    // Some default Startup Settings for Rom.
+    if (cart.config.has_ram == 1) {
+        cart.state.mbc3.ram_rtc_enabled = 1;
+    }
+    if (cart.config.has_ram_banking) {
+        cart.state.mbc3.current_ram_bank = 0x00;
+    }
+    if (cart.config.has_rom_banking == 1) {
+        cart.state.mbc3.current_rom_bank = 1;           // Defaulting to bank 1 (WARNING! this behaviour is not consistant in all MBC!)
+        //cart.state.mbc3.fixed_b_addr = 0x00;
+        //cart.state.mbc3.calcd_switch_addr = (cart.state.mbc3.current_rom_bank * 0x4000);     // Not confident I want to use this.
+    }
 
-//     printf("Create, and Malloc. A Mock ROM with test Data.\n");
-//     // Fills the rom with mock data.
-//     uint32_t mock_rom_size = cart.config.rom_size;
-//     uint8_t mock_banks = cart.config.rom_bank_count;
+    printf("Create, and Malloc. A Mock ROM with test Data.\n");
+    // Fills the rom with mock data.
+    uint32_t mock_rom_size = cart.config.rom_size;
+    uint8_t mock_banks = cart.config.rom_bank_count;
 
-//     cart.resource.rom_data = malloc(mock_rom_size);
-//     if (!cart.resource.rom_data) {
-//         fprintf(stderr, "Mock ROM Malloc failed!\n");
-//         return -1;
-//     }
+    cart.cartstorage.rom_data = malloc(mock_rom_size);
+    if (!cart.cartstorage.rom_data) {
+        fprintf(stderr, "Mock ROM Malloc failed!\n");
+        return -1;
+    }
 
-//     for (uint32_t bank = 0; bank < mock_banks ; ++bank) {
-//         uint8_t fill = (uint8_t)(bank & 0xFF);              // Makes each bank have different bytes/ data
-//         memset(cart.resource.rom_data + bank * 0x4000, fill, 0x4000);
-//     }
-//     printf("Done.\n");
-//     printf("Finished all Cartridge Configuration & Mock Rom setup.\n");
+    for (uint32_t bank = 0; bank < mock_banks ; ++bank) {
+        uint8_t fill = (uint8_t)(bank & 0xFF);              // Makes each bank have different bytes/ data
+        memset(cart.cartstorage.rom_data + bank * 0x4000, fill, 0x4000);
+    }
+    printf("Done.\n");
+    printf("Finished all Cartridge Configuration & Mock Rom setup.\n");
 
-//     return 0;
-// }
+    return 0;
+}
 
 // DO_NOT_USE Old method, sets static configurations.
 int decode_cart_features() {
@@ -201,7 +202,7 @@ int decode_cart_features() {
     return 0;
 }
 // DO_NOT_USE Old way to setup cartrige
-int configure_cartrige() {
+int configure_cartrige_old() {
     // ROM Size / Bank count
     cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
     cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
@@ -276,6 +277,17 @@ int load_cartridge(const char *filename) {
     return 0;
 }
 
+int configure_cartrige() {
+    // ROM Size / Bank count
+    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
+
+    // RAM Size:
+    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
+
+    return 0;
+}
+
 
 // The main Entry-Point from e_ctrl.c..
 int initialize_cartridge(const char *rom_file) {
@@ -291,6 +303,11 @@ int initialize_cartridge(const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [SetupMBC] Error during mbc setup.\n");
         return -1;
     }
+    if (configure_cartrige() != 0) {
+        fprintf(stderr, "Init Cartrige: [ConfigCartridge] Error during Config Cartridge.\n");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -334,37 +351,6 @@ int initialize_cartridge(const char *rom_file) {
 
 // }
 
-// This is realistically, going to be RAM space. (maybe other I guess)
-void write_data(uint16_t addr) {
-
-}
-
-// // This is a static for only one MBC version. This should be moved to MBC
-void write_intercept(uint16_t addr, uint8_t write_value) {
-    switch(addr) {
-        case 0x0000 ... 0x1FFF:
-            // Ram Enable
-            printf("cart: [WriteIntercept] Enable RAM Switch\n");
-            break;
-        case 0x2000 ... 0x3FFF:
-            // ROM "file" Bank Switch
-            printf("cart: [WriteIntercept] ROM Bank Switch\n");
-            //execute_rom_bankswitch(write_value);
-            break;
-        case 0x4000 ... 0x5FFF:
-            // RAM Bank Switch
-            printf("cart: [WriteIntercept] RAM Bank Switch\n");
-            break;
-        case 0x6000 ... 0x7FFF:
-            // ROM/RAM Mode 0/1 Switch
-            printf("cart: [WriteIntercept] ROM/RAM Mode 0/1 Switch\n");
-            break;
-    }
-}
-
-
-
-
 
 /*
 
@@ -373,47 +359,22 @@ void write_intercept(uint16_t addr, uint8_t write_value) {
 */
 
 
-// cart_RomRead from MMU
+// cart_rom_read from MMU
 uint8_t cart_rom_read(uint16_t addr) {
-    // Memory Locations are 16bit
-    // Values stored in those locations are 8bit.
-
-    /// TODO:
-    // Read the memory at either, fixed ROM, or Switchable Bank.
-    // Return the value read.
-    uint8_t var;
-    //return read_data(addr); // Just pass this back.
-    return var;
+    return cart.ops.read(&cart, addr);
 }
 
-// cart_RomWrite from MMU ... => to write intercept
+// cart_rom_write from MMU ... => to write intercept
 void cart_rom_write(uint16_t addr, uint8_t val) {
-    // There is only really 2 fields.
-    // A write intercept Command.
-    // Storing data into RAM (maybe something to do with clock too). That's it.
-
-    if (addr >= 0x000 && addr <= 0x7FFF) {
-        printf(":cart: Intercepting Write instruction\n");
-        write_intercept(addr, val);
-    }
-    if (addr >= 0xA000 && addr <= 0xBFFF) {
-        printf(":cart: Inside External RAM Write Space\n");
-
-    }
-
+    cart.ops.write(&cart, addr, val);
 }
 
-// cart_RamRead from MMU
+// cart_ram_read from MMU
 uint8_t cart_ram_read(uint16_t addr) {
-
-    return 0xFF; // Returns dummy response of 0xFF
-
+    return cart.ops.read_ext(&cart, addr);
 }
 
-// cart_RamWrite from MMU ... => to write intercept
+// cart_ram_write from MMU ... => to write intercept
 void cart_ram_write(uint16_t addr, uint8_t val) {
-    if (addr >= 0x000 && addr <= 0x7FFF) {
-        printf(":cart: Intercepting Rom Write instruction\n");
-        write_intercept(addr, val);
-    }
+    cart.ops.write_ext(&cart, addr, val);
 }

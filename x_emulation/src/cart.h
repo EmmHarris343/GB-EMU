@@ -15,15 +15,9 @@
 
 
 // Functions inside cart.c (Make it accessable elsewhere)
-int load_headers(const char *filename);
-int decode_cart_features();
-int load_cartridge(const char *filename);
 int initialize_cartridge(const char *filename);
 int initialize_cartridge_simple();
 int init_cart_test_mode();
-
-// Test
-void write_intercept(uint16_t address, uint8_t data);
 
 // ENTRY POINTS (e_ctrl/ MMU):
 uint8_t cart_rom_read(uint16_t addr);

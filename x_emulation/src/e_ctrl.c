@@ -71,30 +71,14 @@ int startup_sequence() {
     // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
-
-    if (load_headers(rom_file) != 0) {
-        fprintf(stderr, "Error Loading Headers:\n");
-        return -1;
-    }
-
-    if (decode_cart_features() != 0) {
-        fprintf(stderr, "Error Decoding Cartrige Features, from Loaded Headers\n");
-        return -1;
-    }
-
-    if (load_cartridge(rom_file) != 0) {
-        fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
-        return -1;
-    }
-
-    if (initialize_cartridge_simple() != 0) {
-        fprintf(stderr, "Error Initializing Cartridge Settings:\n");
-        return -1;
-    }
-    // if (initialize_cartridge(rom_file) != 0) {
+    // if (initialize_cartridge_simple() != 0) {
     //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
     //     return -1;
     // }
+    if (initialize_cartridge(rom_file) != 0) {
+        fprintf(stderr, "Error Initializing Cartridge Settings:\n");
+        return -1;
+    }
 
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
@@ -151,30 +135,10 @@ int startup_seq_bytime() {
     const char *rom_file = "../../rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
-
-    if (load_headers(rom_file) != 0) {
-        fprintf(stderr, "Error Loading Headers:\n");
-        return -1;
-    }
-
-    if (decode_cart_features() != 0) {
-        fprintf(stderr, "Error Decoding Cartridge Features, from Loaded Headers\n");
-        return -1;
-    }
-
-    if (load_cartridge(rom_file) != 0) {
-        fprintf(stderr, "Error Loading ROM file / Cartridge:\n");
-        return -1;
-    }
-
-    if (initialize_cartridge_simple() != 0) {
+    if (initialize_cartridge(rom_file) != 0) {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
-    // if (initialize_cartridge(rom_file) != 0) {
-    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
-    //     return -1;
-    // }
 
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");

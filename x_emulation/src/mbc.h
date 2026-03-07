@@ -18,7 +18,7 @@ extern const Operations mbc2_ops;
 extern const Operations mbc3_ops;
 extern const Operations mbc5_ops;
 
-// The main configuration endpoint for the MBC
+// The main configuration entry point for the MBC
 int mbc_setup(Cartridge *cart, uint8_t type_code);
 
 
