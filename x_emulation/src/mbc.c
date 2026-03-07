@@ -1,5 +1,6 @@
 #include "mbc.h"
 #include "cart_types.h"
+#include "logger.h"
 //#include <stdio.h>  // for print / debugging stuff
 
 int mbc_none_setup(Cartridge *cart) {
@@ -307,19 +308,19 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
     if (addr <= 0x1FFF) {
         /* RAM / RTC enable */
         cart->state.mbc3.ram_rtc_enabled = ((val & 0x0F) == 0x0A) ? 1 : 0;
+        if ((val & 0x0F) == 0x0A) {
+            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
+        }
+
         printf("mbc: [MBC3-WriteIntercept] Enable RAM Switch\n");
         return;
     }
     if (addr <= 0x3FFF) {
-        printf("It got here before it crashed yes?? %04X, %02X\n", addr, val);
         /* ROM bank select */
         uint8_t bank = val & 0x7F;
         if (bank >= cart->config.rom_bank_count) {
             bank %= cart->config.rom_bank_count;
-
-            if (bank == 0) {
-                bank = 1;
-            }
+            if (bank == 0) { bank = 1; }
         }
 
         if (cart->config.rom_bank_count == 0) {
@@ -331,6 +332,12 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 
         // Clamp the bank to the total rom bank count.
 
+        if (cart->state.mbc3.current_rom_bank != bank) {
+            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
+            // Add the bank switch to the CPU trace log. So I know when it happens
+            logging_cpu_trace("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
+        }
+
         cart->state.mbc3.current_rom_bank = bank;
         printf("cart: [MBC3-WriteIntercept] ROM Bank Switch: %02X\n", bank);
         return;
@@ -341,9 +348,12 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         if (val <= 0x03) {
             cart->state.mbc3.current_ram_bank = val;
             cart->state.mbc3.ram_bank_mode = 0;
+            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
+
         } else if (val >= 0x08 && val <= 0x0C) {
             cart->state.mbc3.rtc_reg_select = val;
             cart->state.mbc3.ram_bank_mode = 1;
+            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
         }
         printf("cart: [MBC3-WriteIntercept] RAM Bank / RTC Register Select: %02X\n", val);
         return;
@@ -353,13 +363,19 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         /* RTC latch */
         if (cart->state.mbc3.rtc_latch_armed == 0 && val == 0x00) {
             cart->state.mbc3.rtc_latch_armed = 1;
+            printf("cart: [MBC3-WriteIntercept] Set RTC - Latch armed=1\n");
+            //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC_LATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
         } else if (cart->state.mbc3.rtc_latch_armed == 1 && val == 0x01) {
             /* latch rtc snapshot */
+            printf("cart: [MBC3-WriteIntercept] Set RTC snapshot - Latch armed=0\n");
+            //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC UnLATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
             cart->state.mbc3.rtc_latch_armed = 0;
         } else {
+            printf("cart: [MBC3-WriteIntercept] Reset RTC - Latch armed=0\n");
+            //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC UnLATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
             cart->state.mbc3.rtc_latch_armed = 0;
         }
-        printf("cart: [MBC3-WriteIntercept] RTC Latch, Val: %02X\n", val);
+
         return;
     }}
 

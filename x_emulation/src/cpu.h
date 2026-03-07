@@ -51,7 +51,7 @@ typedef struct {
     uint16_t PC;    // Program Counter
 } CPU_Registers;
 
-typedef struct {        
+typedef struct {
     uint8_t halt;
     uint8_t stop;
     uint8_t pause;
@@ -90,6 +90,9 @@ typedef enum {
     INSTR_TYPE_COUNT
 } instr_type_T;
 
+// Special set state that comes from CPU -> MMU -> CPU.STATE.IE
+uint8_t ie_read(uint16_t addr);
+void ie_write(uint16_t addr, uint8_t val);
 
 
 // External to CPU Instruction Commands

@@ -25,6 +25,13 @@ int trace_log_init(const char *filename);
 void trace_log_close();
 void logging_trace_log(const char *format, ...);
 
+
+int cart_mbc_log_init(const char *filename);
+void cart_mbc_log_close();
+void logging_cart_mbc_log(const char *format, ...);
+
+
+
 void trace_mmu_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 void trace_mmu_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 

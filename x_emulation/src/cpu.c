@@ -21,6 +21,14 @@ instruction_T op_instruction;
 
 debug_state dbg_state;
 
+uint8_t ie_read(uint16_t addr) {
+    return local_cpu.state.IE;
+}
+void ie_write(uint16_t addr, uint8_t val) {
+    local_cpu.state.IE = val;
+}
+
+
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 uint64_t which_op_group[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
@@ -91,7 +99,7 @@ static const uint8_t opcode_lengths[256] = {
 
 
 // The problem with this....
-// Each time there is an empty value or field. It will default to returning 0. (IE, NOP). 
+// Each time there is an empty value or field. It will default to returning 0. (IE, NOP).
 // So every instruction I haven't plotted out, will default to NOP.
 static const uint8_t opcode_types[256] = {
     [0x01] = INSTR_LD16,            // LD r16, n16
@@ -116,9 +124,9 @@ static const uint8_t opcode_types[256] = {
     [0x3E] = INSTR_LD,
     [0x10] = INSTR_MISC,            // STOP
     [0x08] = INSTR_LD16,            // LD [a16], SP
-    [0x07] = INSTR_RL_A,    
+    [0x07] = INSTR_RL_A,
     [0x17] = INSTR_RL_A,
-    [0x0F] = INSTR_RR_A,    
+    [0x0F] = INSTR_RR_A,
     [0x1F] = INSTR_RR_A,
     [0x20] = INSTR_JUMP,
     [0x30] = INSTR_JUMP,
@@ -199,7 +207,7 @@ static const uint8_t opcode_types[256] = {
 
 /// TODO: MOVE THIS TO LOGGER.C If possible. Cause this is a mess of code in CPU.C
 void cpu_trace_instrc(CPU *cpu, int type) {
-    // Not meant to be human readable.. Simply add CPU state, at a specific STEP. 
+    // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
     // Example looks like:
     // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
     // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
@@ -212,7 +220,7 @@ void cpu_trace_instrc(CPU *cpu, int type) {
         }
     if (type == 1) {
         // Normal
-        logging_cpu_trace("%d 0x%04X | 0x%02X | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
+        logging_cpu_trace("STP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%04X IME=0x%02X IE=0x%02X IF=0x%02X\n",
         dbg_state.step_count, cpu->reg.PC, dbg_state.opcode, cpu->reg.A, cpu->reg.F,
         cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
     }
@@ -239,7 +247,7 @@ void print_instr_counts() {
 }
 
 
-/// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....." 
+/// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....."
 void set_flag(int cpu_flag) {
     switch (cpu_flag) {
         case 0: // Z Flag
@@ -340,7 +348,7 @@ void extract_opcode(uint16_t addr_pc) {
     uint8_t operand2 = 0;
 
 
-    
+
     // Goes through the MMU to read the data.
     op_code = mmu_read(addr_pc);
 
@@ -415,7 +423,7 @@ void run_cpu(int max_steps) {
 
 
         if (local_cpu.state.panic == 1) {
-            printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n"); 
+            printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n");
             break;
         }
     }
@@ -453,7 +461,7 @@ void run_cpu_bytime(uint64_t max_time_ms) {
 
         printf("\n[STEP: %03d]\n", step_count);
         printf("[TIME: %lu ms]\n", elasped_ms);
-        
+
         // CPU STEP:
         extract_opcode(local_cpu.reg.PC);
         step_cpu(step_count);
@@ -464,7 +472,7 @@ void run_cpu_bytime(uint64_t max_time_ms) {
             printf("::CPU:: PANIC HALT Detected! Stopping CPU Loop.\n");
             break;
         }
-        
+
         if (elasped_ms >= max_time_ms) {
             printf("\n::CPU:: Reached MS Time limit [%lu ms], STOPPING.\n", max_time_ms);
             break;
@@ -503,7 +511,7 @@ void tstate_set_flag(){
 }
 
 void tstate_set_ram() {
-    // Write to a specific area of RAM, 
+    // Write to a specific area of RAM,
     // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
 
 }
@@ -522,9 +530,9 @@ int intiate_cpu_test(instruction_T *passed_instrc, CPU *cpu, CPU *expected_state
 void run_cpu_test(uint8_t test_op_code) {
     int step_count = 0;             // Will I ever use this for tests?
     //uint8_t special_op_code = 0x5C; // 5C = LD E, H
-    
+
     //tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
-    
+
     tstate_set_registers();
     tstate_set_flag();              // How do I know which flag Needs to be set?
     tstate_set_ram();

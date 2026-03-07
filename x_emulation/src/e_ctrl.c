@@ -7,7 +7,8 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "oam.h"
-#include "apu.h"
+//#include "apu.h"
+#include "io.h"
 // #include "mmu.h"
 #include "mmu_interface.h"
 
@@ -31,17 +32,30 @@ extern Headers headers;
 extern FILE *debug_dump_file;
 extern FILE *cpu_trace_file;
 extern FILE *trace_log_file;
+extern FILE *cart_mbc_log_file;
+
+// Don't do anything with these.
+uint8_t unusable_read(uint16_t addr) {
+    (void)addr;
+    return 0xFF;
+}
+void unusable_write(uint16_t addr, uint8_t val) {
+    (void)addr;
+    (void)val;
+}
 
 void e_mmu_init(void) {
     static mmu_map_entry mmu_map[] = {
-        {0x0000, 0x7FFF, cart_rom_read, cart_rom_write, BUS_ROM },      // Read ROM Data, Intercept WRITE functions
-        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},     // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
+        {0x0000, 0x7FFF, cart_rom_read, cart_rom_write, BUS_ROM },          // Read ROM Data, Intercept WRITE functions
+        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},         // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
         {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
-        {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },   // Working RAM (range not compatible with CGB)
-        {0xE000, 0xFDFF, loc_eram_read, loc_eram_write, BUS_ECHO },   // Echo RAM
+        {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },         // Working RAM (range not compatible with CGB)
+        {0xE000, 0xFDFF, loc_echram_read, loc_echram_write, BUS_ECHO },     // Echo RAM (mirror of WRAM)
         {0xFE00, 0xFE9F, oam_read, oam_write, BUS_OAM },
-        {0xFF10, 0xFF7F, apu_read, apu_write, BUS_IO },
-        {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM }    // High RAM (Fast Ram)
+        {0xFEA0, 0xFEFF, unusable_read, unusable_write, BUS_UNMAPPED},
+        {0xFF00, 0xFF7F, io_read, io_write, BUS_IO},
+        {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM },          // High RAM (Fast Ram)
+        {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
     };
     const size_t mmu_map_size = sizeof(mmu_map) / sizeof(mmu_map_entry);
     //mmu_init(mmu_map, sizeof(mmu_map) / sizeof(mmu_map_entry));
@@ -70,11 +84,6 @@ int startup_sequence() {
 
     // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
-
-    // if (initialize_cartridge_simple() != 0) {
-    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
-    //     return -1;
-    // }
     if (initialize_cartridge(rom_file) != 0) {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
@@ -101,6 +110,11 @@ int startup_sequence() {
         fprintf(stderr, "Error Initializing Trace log File:\n");
         return -1;
     }
+    const char *cart_mbc_log_file = "../log/cart_mbc_log.txt";
+    if (cart_mbc_log_init(cart_mbc_log_file) != 0) {
+        fprintf(stderr, "Error Initializing Trace log File:\n");
+        return -1;
+    }
 
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
 
@@ -115,7 +129,7 @@ int startup_sequence() {
     /// TODO: START CPU Emulation!
     //int max_steps = 86;       // This will complete the random ROM test.
 
-    int max_steps = 900;
+    int max_steps = 300;
     run_cpu(max_steps);
 
     //dump_hram_test();
@@ -158,6 +172,11 @@ int startup_seq_bytime() {
     }
     const char *trace_log_file = "../log/trace_log.txt";
     if (trace_log_init(trace_log_file) != 0) {
+        fprintf(stderr, "Error Initializing Trace log File:\n");
+        return -1;
+    }
+    const char *cart_mbc_log_file = "../log/cart_mbc_log.txt";
+    if (cart_mbc_log_init(cart_mbc_log_file) != 0) {
         fprintf(stderr, "Error Initializing Trace log File:\n");
         return -1;
     }

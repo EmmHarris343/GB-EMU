@@ -56,7 +56,7 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
     cpu->reg.F ^= flag_hex;
 }
 
-/// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier... 
+/// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier...
 void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
     // Clear the bits we're modifying
     if (affect_Z) clear_flag(0);  // Z always cleared on LD HL, SP+e8
@@ -94,15 +94,15 @@ static void DI(CPU *cpu, instruction_T instrc) {        // DI - Disables interru
     // Bytes = 1
     // No flags affected. (Inside F Flags)
 }
- 
+
 static void EI(CPU *cpu, instruction_T instrc) {        // EI - Enables interrupt Handling (Flag set to := 1)
     printf("EI Called.                  ; IME := 1 (Interupt flag 1 - enabled (AFTER DELAY))\n");
-    
+
     // This uses a delay logic of 2 (counting down after instruction finishes)
     // This ensures IME is set ONLY after the current instruction (EI) AND the subsequent operation both have finished executing.
 
     // TL;DR Why? The GB gives an one-additional-instruction grace period before the interupt is executed.
-    
+
     cpu->state.IME_delay = 2;
     cpu->reg.PC ++;
 
@@ -124,12 +124,12 @@ static void NOP(CPU *cpu, instruction_T instrc) {                    // Placehol
 static void STOP(CPU *cpu, instruction_T instrc) {      // Unsure, might be like Pause.
     printf("STOP Called, not setup PANIC HALT\n");
     cpu->state.panic = 1;
-    
+
 
 }
 // DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
 static void DAA(CPU *cpu, instruction_T instrc) {
-    
+
     // DAA => Decimal Adjust Accumulator.
     printf("DAA. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
@@ -149,7 +149,7 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
 
     // If it's set, clear it, otherwise set it.
     (cpu->reg.F & FLAG_C) ? clear_cpu_flag(cpu, FLAG_C) : set_cpu_flag(cpu, FLAG_C);    // Invert the C flag.
-    
+
 
 
     /*
@@ -158,7 +158,7 @@ static void CCF(CPU *cpu, instruction_T instrc) {           // Complement Carry 
         N = 0
         H = 0
         C = Inverted
-    */     
+    */
 }
 static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
     printf("SCF. Called.                ; Set Carry Flag (True)\n");
@@ -205,10 +205,10 @@ static void SCF(CPU *cpu, instruction_T instrc) {           // Set Carry Flag
 static void LD_r8_n8(CPU *cpu, instruction_T instrc) {
     printf("LD r8, n8.                 ; EXP: r8 <- n8    ..    Reg.H <- n8 OR Reg.C <- n8\n");
     uint8_t op_index = (instrc.opcode >> 3) & 0x07;      // <-- This style needed for left, right. DOWN left right, DOWN etc
-    uint8_t *reg_table[8] = { 
-        &cpu->reg.B, &cpu->reg.C, 
-        &cpu->reg.D, &cpu->reg.E, 
-        &cpu->reg.H, &cpu->reg.L, 
+    uint8_t *reg_table[8] = {
+        &cpu->reg.B, &cpu->reg.C,
+        &cpu->reg.D, &cpu->reg.E,
+        &cpu->reg.H, &cpu->reg.L,
         NULL, &cpu->reg.A
     };
     *reg_table[op_index] = instrc.operand1;
@@ -220,10 +220,10 @@ static void LD_r16_n16(CPU *cpu, instruction_T instrc) {
     printf("LD r16 n16. Copy n16 value into r16 Register\n");
     //printf("Values? OP1: %02X OP2: %02X\n", instrc.operand1, instrc.operand2);
     uint8_t op_index = (instrc.opcode >> 4) & 0x03; // <- This style needed for straight down op codes.
-    uint16_t *reg_16table[4] = { 
-        &cpu->reg.BC, 
-        &cpu->reg.DE, 
-        &cpu->reg.HL, 
+    uint16_t *reg_16table[4] = {
+        &cpu->reg.BC,
+        &cpu->reg.DE,
+        &cpu->reg.HL,
         &cpu->reg.SP
     };
     *reg_16table[op_index] = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
@@ -270,11 +270,11 @@ static void LD_A_p_r16(CPU *cpu, instruction_T instrc) {
             cpu->reg.A = external_read(cpu->reg.BC);
             break;
         case 0x1A:
-            // LD A, [DE]            
+            // LD A, [DE]
             cpu->reg.A = external_read(cpu->reg.DE);
             break;
             printf("|DEBUG| : A Regiser: %02X || [DE] value: %02X | Addr: %04X\n", cpu->reg.A, external_read(cpu->reg.DE), cpu->reg.DE);
-            
+
     }
     cpu->reg.PC++;
 }
@@ -292,9 +292,9 @@ static void LD_p_HLI_A(CPU *cpu, instruction_T instrc) {
 }
 static void LD_p_HLD_A(CPU *cpu, instruction_T instrc) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL\n");
- 
+
     uint8_t a_val = cpu->reg.A;
-    external_write(cpu->reg.HL, a_val); 
+    external_write(cpu->reg.HL, a_val);
 
     cpu->reg.HL --;
     cpu->reg.PC --;
@@ -328,12 +328,12 @@ static void LD_A_p_HLD(CPU *cpu, instruction_T instrc) {
 // Load Register A & a16 instructions
 static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
     printf("LD [a16] A, Called => Copy 8bit A Register into 8bit value located in [a16]\n");
-    
+
     uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
-    
+
     printf(":LD: a16 Location val %04X\n", a16);
     external_write(a16, cpu->reg.A);
-    
+
     cpu->reg.PC +=3;
 
     // Bytes = 3
@@ -342,7 +342,7 @@ static void LD_p_a16_A(CPU *cpu, instruction_T instrc) {
 static void LD_A_p_a16(CPU *cpu, instruction_T instrc) {
     printf("LD A [a16], Copy 8bit value in [a16] into Register A\n");
     // Copy the value in RAM pointed to by a16. Into Register A
-    
+
     uint16_t a16 = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 
     cpu->reg.A = external_read(a16);
@@ -379,12 +379,12 @@ static void LDH_A_p_a8(CPU *cpu, instruction_T instrc) {
 }
 static void LDH_p_a8_A(CPU *cpu, instruction_T instrc) {
     printf("LDH [a8], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + a8]\n");
-    
+
     uint8_t a8 = instrc.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
     external_write(combined_addr, cpu->reg.A);
 
-    cpu->reg.PC +=2;    
+    cpu->reg.PC +=2;
 }
 
 
@@ -402,7 +402,7 @@ static void LD_p_a16_SP(CPU *cpu, instruction_T instrc) {
     external_write(n16_addr + 1, SP_HIGH);
 
     cpu->reg.PC ++;
-    
+
 }
 static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in SP + (8bit (e) SIGNED int) into HL Register
     printf("LD HL, (SP + e8). Overwrite the address (SP + e8) into the HL Register\n");
@@ -411,13 +411,13 @@ static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in 
 
     // OVERWRITES the HL Register.
 
-    int8_t e_signed_offset = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +- 
+    int8_t e_signed_offset = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +-
     cpu->reg.HL = (cpu->reg.SP + e_signed_offset);                  // SET HL to the Calulated +- n16 value.
 
     uint8_t SP_LOW = cpu->reg.SP & 0xFF;                        // This is first 8Bits. (Instead of full 16).
     uint8_t e8_flag_calc = (uint8_t)e_signed_offset;        // For easy Calculations, change back into uint8_t (Unsigned)
 
-    // 
+    //
     clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);
 
@@ -445,7 +445,7 @@ static void LD_HL_SP_Pe8(CPU *cpu, instruction_T instrc) {     // Load value in 
 static void LD_SP_HL(CPU *cpu, instruction_T instrc) {
     printf("LD_SP_HL.                   ; Copy register HL into register SP\n");
 
-    cpu->reg.SP = cpu->reg.HL;  // 
+    cpu->reg.SP = cpu->reg.HL;  //
     cpu->reg.PC ++;
 
     // Bytes = 1
@@ -480,6 +480,7 @@ static void LD_##X##_##DHL(CPU *cpu, instruction_T instrc) \
 static void LD_##DHL##_##Y(CPU *cpu, instruction_T instrc) \
 { \
     printf("LD [HL], r8\n");\
+    printf("Registes for OP-72 & OP-73 ---- Reg-Y: 0x%02X, Reg-D: 0x%02X, Reg-E: 0x%02X, Reg-HL: 0x%04X\n", cpu->reg.Y, cpu->reg.D, cpu->reg.E, cpu->reg.HL);\
     external_write(cpu->reg.HL, cpu->reg.Y);\
     cpu->reg.PC += 1;\
 }
@@ -511,7 +512,7 @@ static void JP_a16(CPU *cpu, instruction_T instrc) {
     printf("JP a16.               ; Reg.PC = a16 OR n16\n");
     cpu->reg.PC = cnvrt_lil_endian(instrc.operand1, instrc.operand2);
 }
-static void JP_cc_a16(CPU *cpu, instruction_T instrc) {    
+static void JP_cc_a16(CPU *cpu, instruction_T instrc) {
     int proceed = 0;
 
     switch(instrc.opcode) {
@@ -541,9 +542,9 @@ static void JR_e8(CPU *cpu, instruction_T instrc) {
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instrc.operand1;
     cpu->reg.PC += e_signed_offset;
- 
+
     printf("Relative jump to: +- %02X\n", e_signed_offset);
-    
+
 
     // Cycles 3
     // Bytes 2
@@ -557,8 +558,8 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
 
     switch (instrc.opcode) {
         case 0x20:                  // JR, NZ e8
-            // (cpu->reg.F & FLAG_Z) ? /* NOP */  : /* Jump */ 
-            if (!(cpu->reg.F & FLAG_Z)) { 
+            // (cpu->reg.F & FLAG_Z) ? /* NOP */  : /* Jump */
+            if (!(cpu->reg.F & FLAG_Z)) {
                 printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, instrc.operand1, KNRM);
                 cpu->reg.PC += e_signed_offset;
             }
@@ -572,14 +573,14 @@ static void JR_cc_e8(CPU *cpu, instruction_T instrc) {
             else cpu->reg.PC +=2;
             break;
         case 0x30:
-            if (!(cpu->reg.F & FLAG_C)) { 
+            if (!(cpu->reg.F & FLAG_C)) {
                 printf("JR NC e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->reg.PC += e_signed_offset;
             }
             else cpu->reg.PC +=2;
             break;
         case 0x38:
-            if (cpu->reg.F & FLAG_C) { 
+            if (cpu->reg.F & FLAG_C) {
                 printf("JR C e8 Condition Met -> Relative jump %02X\n", instrc.operand1);
                 cpu->reg.PC += e_signed_offset;
             }
@@ -608,13 +609,13 @@ static void ADD_A_r8(CPU *cpu, instruction_T instrc) {      // Add value of r8 i
 
     // Table calculates WHICH register is called, based on the OP code provided.
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
-        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
+        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
 
-    
+
     uint16_t add_result = (cpu->reg.A + *reg_table[op_index]);
     uint8_t final_8bit = (uint8_t)add_result;
 
@@ -657,7 +658,7 @@ static void ADD_A_n8(CPU *cpu, instruction_T instrc) {
     uint16_t add_result = (cpu->reg.A + n8_val);
     uint8_t final_8bit = (uint8_t)add_result;
 
-    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     ((cpu->reg.A & 0x0F) + (n8_val & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
@@ -673,8 +674,8 @@ static void ADC_A_r8(CPU *cpu, instruction_T instrc) {
 
     // Yes, A + r8 + Carry Flag. -- If it rolls over. That's ok, track it with the Carry Flag.
 
-    uint8_t *reg_table[8] = { 
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+    uint8_t *reg_table[8] = {
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -687,7 +688,7 @@ static void ADC_A_r8(CPU *cpu, instruction_T instrc) {
     uint16_t add_16bit  = (cpu->reg.A + op_r8 + carry_val);
     uint8_t final_8bit = (uint8_t)add_16bit;
 
-    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((cpu->reg.A & 0x0F) + (op_r8 & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
@@ -704,10 +705,10 @@ static void ADC_A_p_HL(CPU *cpu, instruction_T instrc) {
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
     uint16_t add_16bit = (cpu->reg.A + hl_val + carry_val);
-    uint8_t final_8bit = (uint8_t)add_16bit;    
+    uint8_t final_8bit = (uint8_t)add_16bit;
 
 
-    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((cpu->reg.A & 0x0F) + (hl_val & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
@@ -722,10 +723,10 @@ static void ADC_A_n8(CPU *cpu, instruction_T instrc) {
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
     uint16_t add_16bit = (cpu->reg.A + n8_val + carry_val);
-    uint8_t final_8bit = (uint8_t)add_16bit;    
+    uint8_t final_8bit = (uint8_t)add_16bit;
 
 
-    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag    
+    (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((cpu->reg.A & 0x0F) + (n8_val & 0x0F) + carry_val) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     (add_16bit > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
@@ -739,7 +740,7 @@ static void SUB_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract values in
     printf("SUB A, r8. Called.              ; Sub Value in Register A, by r8 value\n");
 
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -809,7 +810,7 @@ static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value
     printf("SBC A, r8. Called.                  ; Subtract value in r8 (and the carry flag) from Register A\n");
 
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -825,7 +826,7 @@ static void SBC_A_r8(CPU *cpu, instruction_T instrc) {     // Subtract the value
 
     (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((reg_a & 0x0F) - (op_r8 & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
-    
+
     // This has + carry, as it checks if the whole result underflowed
     // If register a is less than the TOTAL amount of in op_r8. Then set the flag. (Hence the + carry_val)
     (reg_a < (op_r8 + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
@@ -857,7 +858,7 @@ static void SBC_A_p_HL(CPU *cpu, instruction_T instrc) {   // Subtract the byte 
 
     (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((reg_a & 0x0F) - (hl_val & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
-    
+
     // This has + carry, as it checks if the whole result underflowed
     (reg_a < (hl_val + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
@@ -880,14 +881,14 @@ static void SBC_A_n8(CPU *cpu, instruction_T instrc) {     // Subtract the value
 
     (final_8bit == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
     (((reg_a & 0x0F) - (n8 & 0x0F) - carry_val) < 0) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
-    
+
     // This has + carry, as it checks if the whole result underflowed
     (reg_a < (n8 + carry_val)) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
-    
+
     // Bytes = 2
 }
 
@@ -897,7 +898,7 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
 
     uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t r8_val = *reg_table[op_index];
@@ -907,8 +908,8 @@ static void INC_r8(CPU *cpu, instruction_T instrc) {    // Increment Register r8
     r8_val ++;
     (r8_val == 0)            // Z Flag after INC
         ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Set/Clear (Z) Zero Flag
-    set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)    
-    
+    set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)
+
     *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
     // Bytes = 1
@@ -919,7 +920,7 @@ static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Re
 
     uint8_t op_index = (instrc.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t r8_val = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
@@ -930,7 +931,7 @@ static void DEC_r8(CPU *cpu, instruction_T instrc) {    // Decrement High bit Re
     (r8_val == 0)            // Z Flag after DEC
         ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Set/Clear (Z) Zero Flag
     set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)
-    
+
     *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
     // Bytes = 1
@@ -959,14 +960,14 @@ static void INC_p_HL(CPU *cpu, instruction_T instrc) {  // Increment 16 bit HL r
 static void DEC_p_HL(CPU *cpu, instruction_T instrc) {      // Decrement the Byte insde the location pointed by [HL]
     printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
     uint8_t hl_val = external_read(cpu->reg.HL);    //Original HL Value
-    
+
     ((hl_val & 0x0F) == 0x0) // H Flag before DEC
         ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
     hl_val --;
     (hl_val == 0)           // Z Flag After DEC.
     ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);            // Set/Clear (Z) Zero Flag.
     set_cpu_flag(cpu, FLAG_N);        // Set subtraction flag (N)
-    
+
     external_write(cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
     cpu->reg.PC ++;
@@ -980,17 +981,17 @@ static void CP_A_r8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     printf("CP A, r8.               ; EXP: ComPare (cpu->reg.A - r8_reg) --> Set Flags \n");
 
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
     uint8_t op_index = (instrc.opcode & 0x07);
     uint8_t op_r8 = *reg_table[op_index];                   // The calculated "Source" Register, from the OPCODE.
-    
+
     uint8_t result = (cpu->reg.A - op_r8);
 
     set_cpu_flag(cpu, FLAG_N); // N Flag - Always Set (Subtraction Flag)
     (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
-    
+
     ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);
     (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
 
@@ -1003,13 +1004,13 @@ static void CP_A_p_HL(CPU *cpu, instruction_T instrc) {     // ComPare -> value 
     uint8_t hl_val = external_read(cpu->reg.HL);
     uint8_t result = (cpu->reg.A - hl_val);
 
-    // 
+    //
     set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
     (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
     ((cpu->reg.A & 0x0F) < (hl_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);  // H Flag
     (cpu->reg.A < hl_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
-    
+
     cpu->reg.PC ++;
 }
 static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value in n8 to A
@@ -1017,13 +1018,13 @@ static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
     uint8_t n8_val = instrc.operand1;
     uint8_t result = (cpu->reg.A - instrc.operand1);
 
-    // 
+    //
     set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
     (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
     ((cpu->reg.A & 0x0F) < (n8_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);  // H Flag
     (cpu->reg.A < n8_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
-    
+
     cpu->reg.PC += 2;
 
     // Bytes = 2
@@ -1039,7 +1040,7 @@ static void CP_A_n8(CPU *cpu, instruction_T instrc) {       // ComPare -> value 
 static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     printf("ADD SP, e8. Called, not setup.\n");
 
-    int8_t e_val = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +- 
+    int8_t e_val = (int8_t)instrc.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +-
     uint8_t add_result = (cpu->reg.A + e_val);
 
     // NOTE: ADD_SP_e8  Z and N aare always cleared.
@@ -1047,7 +1048,7 @@ static void ADD_SP_e8(CPU *cpu, instruction_T instrc) {     // e8 = SIGNED int.
     clear_cpu_flag(cpu, FLAG_N); // N Flag Cleared (Subtraction)
     ((cpu->reg.A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
     (add_result > 0xFF) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
-    
+
 
     cpu->reg.A = add_result;
     cpu->reg.PC += 2;
@@ -1061,7 +1062,7 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
         &cpu->reg.BC, &cpu->reg.DE, &cpu->reg.HL, &cpu->reg.SP
     };
     uint8_t register_index = (instrc.opcode >> 4) & 0x03;
-    uint16_t op_r16 = *reg16_table[register_index];                   // The calculated "Source" Register, from the OPCODE.    
+    uint16_t op_r16 = *reg16_table[register_index];                   // The calculated "Source" Register, from the OPCODE.
     uint16_t hl_val = cpu->reg.HL;
 
     uint32_t add_result = (hl_val + op_r16);
@@ -1071,9 +1072,9 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
     clear_cpu_flag(cpu, FLAG_N);  // N Flag Cleared (Subtraction)
     ((hl_val & 0x0FFF) + (op_r16 & 0x0FFF) > 0x0FFF)    // NOTE: 16byte half carry goes off of bit 11 instead of bit 4 for 8byte.
         ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H); // H Flag
-    (add_result > 0xFFFF) 
+    (add_result > 0xFFFF)
         ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
-    
+
     cpu->reg.HL = final_result;
     cpu->reg.PC ++;
 }
@@ -1081,7 +1082,7 @@ static void ADD_HL_r16(CPU *cpu, instruction_T instrc) {
 // Full INC/DEC 16 bit Registers (BC, DE, HL):
 static void INC_r16(CPU *cpu, instruction_T instrc) {
     printf("INC r16.               ; EXP: BC ++\n");
-    
+
     // If I use table use:
     // uint8_t register_index = (instrc.opcode >> 4) & 0x03;
 
@@ -1152,11 +1153,11 @@ static void POP_AF(CPU *cpu, instruction_T instrc) {        // Pop register AF f
 }
 static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 from the stack.
     printf("POP r16 Called.                 ; Populate 16byte Register from SP\n");
-    
+
     uint8_t op_index = (instrc.opcode >> 4) & 0x03;
     uint16_t *reg_table[3] = {
         &cpu->reg.BC, &cpu->reg.DE, &cpu->reg.HL
-    };    
+    };
 
     uint8_t low_byte = external_read(cpu->reg.SP);
     cpu->reg.SP ++;
@@ -1179,10 +1180,10 @@ static void POP_r16(CPU *cpu, instruction_T instrc) {       // Pop register r16 
     // Bytes = 1
     // FLAGS: None affected
 }
-static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack. 
+static void PUSH_AF(CPU *cpu, instruction_T instrc) {       // Push register AF into the stack.
     printf("PUSH_AF, Writes the A value, and the Flags into SP (Stack Pointer) 0x%04X\n", cpu->reg.SP);
 
-    // Decrement SP, 
+    // Decrement SP,
     // Copy A => into SP (stack pointer)        NOTE: Don't overwrite the SP's pointer itself, but save it in HRAM or something, Where ever SP is "pointing" to
     // Decrement SP
     // Copy F (The 1 or 0s in Flags) Into where the SP, points to (Likely HRAM)
@@ -1244,7 +1245,7 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 
     // Call n16 is like "Go to subroutine at n16. And remember to come back here".
     // The [remember to come back here] is done by stack pointers / RET (RETurn)
-    
+
     // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
     uint16_t pc_loc = (cpu->reg.PC + 3);
 
@@ -1253,9 +1254,9 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 
     // YES Low byte First WHEN it's incrementing.. / reading.
     // BUT, because it's Decrementing the SP, High Byte first.
-    
+
     // Push return address onto stack (high byte first)
-    cpu->reg.SP --; 
+    cpu->reg.SP --;
     external_write(cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
     external_write(cpu->reg.SP, split_addr_LOW);
@@ -1275,7 +1276,7 @@ static void CALL_a16(CPU *cpu, instruction_T instrc) {      // Pushes the addres
 
     That will usually be a set of instructions. Or just one instruction.
 
-    Eventually RET will be called, where it will use the PC that was saved in the SP. 
+    Eventually RET will be called, where it will use the PC that was saved in the SP.
     To jump back to just AFTER this call was executed.
 
     Kind of like .........| ..>>continuing..................
@@ -1315,7 +1316,7 @@ static void CALL_cc_a16(CPU *cpu, instruction_T instrc) {   // Call address n16 
         uint8_t split_addr_LOW = pc_loc & 0xFF;
         uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
 
-        cpu->reg.SP --; 
+        cpu->reg.SP --;
         external_write(cpu->reg.SP, split_addr_HIGH);
         cpu->reg.SP --;
         external_write(cpu->reg.SP, split_addr_LOW);
@@ -1342,7 +1343,7 @@ static void RET(CPU *cpu, instruction_T instrc) {           // RETurn from subro
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
-    
+
     // Cycles: 4
     // Bytes: 1
     // FLAGS: None affected
@@ -1383,7 +1384,7 @@ static void RET_cc(CPU *cpu, instruction_T instrc) {        // RETurn from subro
     else {
         printf("RET cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC ++;       // Skip over RET instruction (1 Byte)
-    }  
+    }
     // Cycles: 5 taken / 2 untaken
     // Bytes: 1
     // FLAGS: None affected
@@ -1398,7 +1399,7 @@ static void RETI(CPU *cpu, instruction_T instrc) {          // RETurn from subro
     // EI has to wait until itself and the next instruction finishes before IME is set.
     // RETI sets IME flag immediately!
 
-    
+
     // TL;DR :
     // Set IME flag to 1 - enable
     cpu->state.IME = 1;
@@ -1419,7 +1420,7 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
     printf("RST_vec. Called.                ; Push PC to Stack Pointer (SP), then Jump to specific Vector location\n");
 
     uint8_t vec_table[8] = {
-        0x00, 0x08, 0x10, 0x18, 
+        0x00, 0x08, 0x10, 0x18,
         0x20, 0x28, 0x30, 0x38
     };
 
@@ -1432,7 +1433,7 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
     uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
 
     // Push return address onto stack (high byte first)
-    cpu->reg.SP --; 
+    cpu->reg.SP --;
     external_write(cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
     external_write(cpu->reg.SP, split_addr_LOW);
@@ -1443,8 +1444,8 @@ static void RST_vec(CPU *cpu, instruction_T instrc) {       // Runs Basically CA
 
 
 
-    // Main difference, is like the op_codes that are LD A, r8. It knows by the opcode, which register to load the data from. 
-    // RST Vector is a specific Vector 
+    // Main difference, is like the op_codes that are LD A, r8. It knows by the opcode, which register to load the data from.
+    // RST Vector is a specific Vector
     // An RST vector (0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, and 0x38).
 
     // FLAGS: None affected
@@ -1462,12 +1463,12 @@ static void AND_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
     printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
     // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
 
-    /// TODO: This NULL is a little dangerous... It's understandable why it's there, 
+    /// TODO: This NULL is a little dangerous... It's understandable why it's there,
     // but it can easily cause a crash if a lookup in this reg table was off, or there was a memory read problem.
 
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
-        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
+        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -1529,11 +1530,11 @@ static void AND_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 // OR Instructions:
 static void OR_A_r8(CPU *cpu, instruction_T instrc) {       // Set A to the bitwise OR between the value in r8 and A
     printf("AND A, r8. Called.          ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
-    // If varbiale one bit(x) = 1, OR variable 2 bit(x) = 1. RESULT = One. 
+    // If varbiale one bit(x) = 1, OR variable 2 bit(x) = 1. RESULT = One.
     // ONLY will give result bit(x) 0. if BOTH variable 1 & variable 2 = 0. IE 0&0
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
-        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
+        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -1582,15 +1583,15 @@ static void OR_A_n8(CPU *cpu, instruction_T instrc) {       // Set A to the bitw
     cpu->reg.PC += 2;
 
     // Bytes = 1
-    // FLAGS: see: OR_A_r8   
+    // FLAGS: see: OR_A_r8
 }
 // XOR Instructions:
 static void XOR_A_r8(CPU *cpu, instruction_T instrc) {      // Set A to the bitwise XOR between the value in r8 and A
     printf("XOR A, r8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
 
     uint8_t *reg_table[8] = {
-        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, 
-        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A 
+        &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
+        &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
     uint8_t op_index = (instrc.opcode & 0x07);
@@ -1647,7 +1648,7 @@ static void XOR_A_n8(CPU *cpu, instruction_T instrc) {      // Set A to the bitw
 static void CPL(CPU *cpu, instruction_T instrc) {           // ComPLement accumulator (A = ~A); also called bitwise NOT a
     printf("CPL. Called.                    ; ComPLement accumulator, \n");
     cpu->reg.A = ~cpu->reg.A;   // A = NOT A. Basically flip the bits around.
-    
+
     set_cpu_flag(cpu, FLAG_N);    // N Flag Set (Subtraction Flag)
     set_cpu_flag(cpu, FLAG_H);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
 
@@ -1674,7 +1675,7 @@ static void RRA(CPU *cpu, instruction_T instrc) {           // Rotate register A
     uint8_t rotated_a = (a_reg >> 1) | (carry_in << 7);     // Rotate Right, Set bit 7
     cpu->reg.A = rotated_a;
 
-    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);  
+    (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
     clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);
     clear_cpu_flag(cpu, FLAG_H);
@@ -1720,12 +1721,12 @@ static void RLA(CPU *cpu, instruction_T instrc) {           // Rotate Register A
 
 static void RLCA(CPU *cpu, instruction_T instrc) {          // Rotate Register A left. (without carry flag input)
     printf("RLCA Called.                    ; Rotate Register A Left, wont use carry flag input\n");
-    
+
     uint8_t a_reg = cpu->reg.A;
     uint8_t carry_out = ((a_reg >> 7) & 0x1);           // Isolate and extract bit 7
     uint8_t rotated_a = (a_reg << 1) | carry_out;       // Shift left, set bit 0
     cpu->reg.A = rotated_a;
-    
+
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
     clear_cpu_flag(cpu, FLAG_Z);  // Z Flag
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
@@ -1768,7 +1769,7 @@ static void RL_r8(CPU *cpu, instruction_T instrc) {         // Rotate Byte in Re
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = ((r8_reg >> 7) & 0x1);              // Isolate and extract bit 7
     uint8_t rotated_r8 = (r8_reg << 1) | carry_in;          // Shift left, set bit 0
-    
+
     *reg_table[op_index] = rotated_r8;                      // Set register to value.
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);      // C Flag
@@ -1794,7 +1795,7 @@ static void RL_p_HL(CPU *cpu, instruction_T instrc) {       // Rotate the byte p
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
     uint8_t rotated_hl = (hl_val << 1) | carry_in;          // Shift byte left, set bit 0 value.
-    
+
     external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);          // C Flag
@@ -1870,7 +1871,7 @@ static void RR_r8(CPU *cpu, instruction_T instrc) {         // Rotate Register r
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = (r8_reg & 0x1);
     uint8_t rotated_r8 = (r8_reg >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
-    
+
     *reg_table[op_index] = rotated_r8;                      // Set register to value.
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);      // C Flag
@@ -1994,7 +1995,7 @@ static void SRA_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Arith
         C = Set according to result
     */
 }
-static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL. --> 
+static void SRA_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Arithmetically the byte pointed to by HL. -->
     printf("SRA [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
@@ -2010,7 +2011,7 @@ static void SRL_r8(CPU *cpu, instruction_T instrc) {        // Shift Right Logic
         N = 0
         H = 0
         C = Set according to result
-    */    
+    */
 }
 static void SRL_p_HL(CPU *cpu, instruction_T instrc) {      // Shift Right Logically the byte pointed to by [HL]. -->
     printf("SLR [HL]. Called, not setup.\n");
@@ -2048,7 +2049,7 @@ static void SWAP_r8(CPU *cpu, instruction_T instrc) {       // Swap the upper 4 
         N = 0
         H = 0
         C = 0
-    */    
+    */
 }
 static void SWAP_p_HL(CPU *cpu, instruction_T instrc) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
     printf("SWAP [HL]. Called, not setup.\n");
@@ -2118,7 +2119,7 @@ static void RES_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 
     uint8_t u3_num = (instrc.opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(cpu->reg.HL);
-    
+
     hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
     external_write(cpu->reg.HL, hl_val);
 
@@ -2165,9 +2166,9 @@ static void SET_u3_p_HL(CPU *cpu, instruction_T instrc) {   // Set bit u3 in the
 /// NOTICE:
 // CB Prefixed BIT, RES, SET, Handlers.
 
-// Handlers help point to the correct function (RES X, r8), (RES X, [HL]).. 
+// Handlers help point to the correct function (RES X, r8), (RES X, [HL])..
 // AND which parameters for each Function:
-// BIT 0, B. or BIT 4, H. 
+// BIT 0, B. or BIT 4, H.
 // RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
     printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
@@ -2177,7 +2178,7 @@ static void CB_BIT_Handler(CPU *cpu, instruction_T instrc){
 
 static void CB_RES_Handler(CPU *cpu, instruction_T instrc){
     printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
-    
+
     ((instrc.opcode & 0x07) == 0x06) ? RES_u3_p_HL(cpu, instrc) : RES_u3_r8(cpu, instrc);
 }
 
@@ -2201,8 +2202,8 @@ static void CB_PREFIX(CPU *cpu, instruction_T instrc) {
     printf("CB PREFIX Called.               ; Load next Byte, to call Prefixed OPCODE\n");
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
-    // Advance the PC, and read it at the same time. 
-    uint8_t prefixed_opcode = external_read(cpu->reg.PC++);       // Read CB Opcoad at PC++ location. 
+    // Advance the PC, and read it at the same time.
+    uint8_t prefixed_opcode = external_read(cpu->reg.PC++);       // Read CB Opcoad at PC++ location.
     printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
 
     cb_opcodes[prefixed_opcode](cpu, instrc);
@@ -2223,7 +2224,7 @@ static opcode_t *opcodes[256] = {
 /* 5X*/  LD_D_B,     LD_D_C,        NOP,        LD_D_E,   LD_D_H,      LD_D_L,   LD_D_DHL,   LD_D_A,   /* || */ LD_E_B,       LD_E_C,     LD_E_D,      NOP,       LD_E_H,      LD_E_L,    LD_E_DHL,   LD_E_A,
 /* 6X */ LD_H_B,     LD_H_C,        LD_H_D,     LD_H_E,   NOP,         LD_H_L,   LD_H_DHL,   LD_H_A,   /* || */ LD_L_B,       LD_L_C,     LD_L_D,      LD_L_E,    LD_L_H,      NOP,       LD_L_DHL,   LD_L_A,
 /* 7X */ LD_DHL_B,   LD_DHL_C,      LD_DHL_D,   LD_DHL_E, LD_DHL_H,    LD_DHL_L, HALT,       LD_DHL_A, /* || */ LD_A_B,       LD_A_C,     LD_A_D,      LD_A_E,    LD_A_H,      LD_A_L,    LD_A_DHL,   NOP,
-/* 8X */ ADD_A_r8,   ADD_A_r8,      ADD_A_r8,   ADD_A_r8, ADD_A_r8,    ADD_A_r8, ADD_A_p_HL,   ADD_A_r8, /* || */ ADC_A_r8,     ADC_A_r8,   ADC_A_r8,    ADC_A_r8,  ADC_A_r8,    ADC_A_r8,  ADC_A_p_HL,   ADC_A_r8,  
+/* 8X */ ADD_A_r8,   ADD_A_r8,      ADD_A_r8,   ADD_A_r8, ADD_A_r8,    ADD_A_r8, ADD_A_p_HL,   ADD_A_r8, /* || */ ADC_A_r8,     ADC_A_r8,   ADC_A_r8,    ADC_A_r8,  ADC_A_r8,    ADC_A_r8,  ADC_A_p_HL,   ADC_A_r8,
 /* 9X */ SUB_A_r8,   SUB_A_r8,      SUB_A_r8,   SUB_A_r8, SUB_A_r8,    SUB_A_r8, SUB_A_p_HL,   SUB_A_r8, /* || */ SBC_A_r8,     SBC_A_r8,   SBC_A_r8,    SBC_A_r8,  SBC_A_r8,    SBC_A_r8,  SBC_A_p_HL,   SBC_A_r8,
 /* AX */ AND_A_r8,   AND_A_r8,      AND_A_r8,   AND_A_r8, AND_A_r8,    AND_A_r8, AND_A_p_HL,   AND_A_r8, /* || */ XOR_A_r8,     XOR_A_r8,   XOR_A_r8,    XOR_A_r8,  XOR_A_r8,    XOR_A_r8,  XOR_A_p_HL,   XOR_A_r8,
 /* BX */ OR_A_r8,    OR_A_r8,       OR_A_r8,    OR_A_r8,  OR_A_r8,     OR_A_r8,  OR_A_p_HL,    OR_A_r8,  /* || */ CP_A_r8,      CP_A_r8,    CP_A_r8,     CP_A_r8,   CP_A_r8,     CP_A_r8,   CP_A_p_HL,    CP_A_r8,
@@ -2248,7 +2249,7 @@ void debug_nop(CPU *cpu) {
 }
 
 // void cpu_trace_instrc(CPU *cpu) {
-//     // Not meant to be human readable.. Simply add CPU state, at a specific STEP. 
+//     // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
 //     // Example looks like:
 //     // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
 //     // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1

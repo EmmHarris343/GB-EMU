@@ -3,7 +3,7 @@
 #include "e_core.h"
 #include "e_ctrl.h"
 
-int emulation_mode = 2; // 0 = normal | 2 = by time |  3 = test.
+int emulation_mode = 0; // 0 = normal | 2 = by time |  3 = test.
 
 
 void begin_emulation() {
@@ -11,7 +11,7 @@ void begin_emulation() {
 }
 
 void stop_emulation() {
-    
+
 }
 
 
@@ -25,7 +25,7 @@ int main() {
         {
             fprintf(stderr, "Error during startup Sequence. ABORT:\n");
             //return -2;
-    
+
         }
     }
     // Normal CPU Run, BY TIME!
@@ -35,9 +35,9 @@ int main() {
         {
             fprintf(stderr, "Error during startup Sequence. ABORT:\n");
             //return -2;
-    
+
         }
-    }    
+    }
 
 
     // -- TEST MODE -- !
@@ -47,7 +47,7 @@ int main() {
         {
             fprintf(stderr, "Error during startup Sequence. ABORT:\n");
             //return -2;
-    
+
         }
     }
 
@@ -58,6 +58,6 @@ int main() {
     // Start Main CPU Loop.
 
 
- 
+
     return 0;
 }
