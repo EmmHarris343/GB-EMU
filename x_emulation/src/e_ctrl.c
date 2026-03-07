@@ -1,6 +1,7 @@
 #include "e_ctrl.h"
 
 #include "cart.h"
+#include "cart_types.h"
 #include "loc_ram.h"
 
 #include "cpu.h"
@@ -26,14 +27,15 @@
 #include "../test_cpu/cpu_test.h"
 
 extern Cartridge cart;
+extern Headers headers;
 extern FILE *debug_dump_file;
 extern FILE *cpu_trace_file;
 extern FILE *trace_log_file;
 
 void e_mmu_init(void) {
     static mmu_map_entry mmu_map[] = {
-        {0x0000, 0x7FFF, cart_RomRead, cart_RomWrite, BUS_ROM },      // Read ROM Data, Intercept WRITE functions
-        {0xA000, 0xBFFF, cart_RamRead, cart_RamWrite, BUS_ECRAM},     // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
+        {0x0000, 0x7FFF, cart_rom_read, cart_rom_write, BUS_ROM },      // Read ROM Data, Intercept WRITE functions
+        {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},     // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
         {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
         {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },   // Working RAM (range not compatible with CGB)
         {0xE000, 0xFDFF, loc_eram_read, loc_eram_write, BUS_ECHO },   // Echo RAM
@@ -116,7 +118,7 @@ int startup_sequence() {
         return -1;
     }
 
-    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
 
 
     sleep(2);
@@ -200,7 +202,7 @@ int startup_seq_bytime() {
 
 
 
-    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", cart.headers.cart_type_code, cart.headers.rom_size_code, cart.headers.ram_size_code);
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
 
 
     sleep(2);
