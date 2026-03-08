@@ -1,7 +1,10 @@
+#include "string.h"
+
 #include "cart.h"
 #include "cart_types.h"
 #include "mbc.h"
-#include "string.h"
+#include "gb.h"
+
 
 
 Cartridge cart;         // doing *cart means that I need to allocate the memory, maybe I will do that, but for now this works
@@ -274,14 +277,14 @@ int configure_cartrige() {
 
 
 // The main Entry-Point from e_ctrl.c..
-int initialize_cartridge(const char *rom_file) {
+int cartridge_init(GB *gb, const char *rom_file) {
     if (load_headers(rom_file) != 0) {
         fprintf(stderr, "Init Cartrige: [LoadHeaders] Error Loading Headers:\n");
         return -1;
     }
     if (load_cartridge(rom_file) != 0) {
         fprintf(stderr, "Init Cartrige: [LoadCartridge] Error loading the cartridge data. (rom file)\n");
-        return 1;
+        return -1;
     }
     if (mbc_setup(&cart, headers.cart_type_code) != 0) {
         fprintf(stderr, "Init Cartrige: [SetupMBC] Error during mbc setup.\n");
@@ -291,7 +294,6 @@ int initialize_cartridge(const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [ConfigCartridge] Error during Config Cartridge.\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -344,21 +346,21 @@ int initialize_cartridge(const char *rom_file) {
 
 
 // cart_rom_read from MMU
-uint8_t cart_rom_read(uint16_t addr) {
+uint8_t cart_rom_read(GB *gb, uint16_t addr) {
     return cart.ops.read(&cart, addr);
 }
 
 // cart_rom_write from MMU ... => to write intercept
-void cart_rom_write(uint16_t addr, uint8_t val) {
+void cart_rom_write(GB *gb, uint16_t addr, uint8_t val) {
     cart.ops.write(&cart, addr, val);
 }
 
 // cart_ram_read from MMU
-uint8_t cart_ram_read(uint16_t addr) {
+uint8_t cart_ram_read(GB *gb, uint16_t addr) {
     return cart.ops.read_ext(&cart, addr);
 }
 
 // cart_ram_write from MMU ... => to write intercept
-void cart_ram_write(uint16_t addr, uint8_t val) {
+void cart_ram_write(GB *gb, uint16_t addr, uint8_t val) {
     cart.ops.write_ext(&cart, addr, val);
 }

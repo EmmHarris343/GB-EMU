@@ -1,10 +1,16 @@
-
-#include "mmu.h"
-#include "mmu_interface.h"
-
 #include <stdlib.h>
 
 #include "logger.h"
+
+#include "mmu.h"
+#include "cart.h"
+#include "loc_ram.h"
+#include "ppu.h"
+#include "oam.h"
+#include "io.h"
+#include "gb.h"
+
+
 
 // Using 1, 16-bit Address space. It can point to 65536 memory locations
 
@@ -23,42 +29,54 @@ Does NOT control RAM, HRAM, External Ram or RTC Timer.
 
 */
 
-uint8_t memory_map[M_MAP_size];
-
-static mmu_map_entry *mmu_map = NULL;
-static int mmu_map_size = 0;
-
-void mmu_init(mmu_map_entry *map, int num_entries) {
-    mmu_map = map;
-    mmu_map_size = num_entries;
+// This is for memory space that cannot be used.
+uint8_t unusable_read(GB *gb, uint16_t addr) {
+    (void)addr;
+    return 0xFF;
+}
+void unusable_write(GB *gb, uint16_t addr, uint8_t val) {
+    (void)addr;
+    (void)val;
 }
 
-uint8_t mmu_read(uint16_t addr) {
+static MMU_MapRoute mmu_map[] = {
+    {0x0000, 0x7FFF, cart_rom_read, cart_rom_write, BUS_ROM },          // Read ROM Data, Intercept WRITE functions
+    {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},         // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
+    {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
+    {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },         // Working RAM (range not compatible with CGB)
+    {0xE000, 0xFDFF, loc_echram_read, loc_echram_write, BUS_ECHO },     // Echo RAM (mirror of WRAM)
+    {0xFE00, 0xFE9F, oam_read, oam_write, BUS_OAM },
+    {0xFEA0, 0xFEFF, unusable_read, unusable_write, BUS_UNMAPPED},
+    {0xFF00, 0xFF7F, io_read, io_write, BUS_IO},
+    {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM },          // High RAM (Fast Ram)
+    {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
+};
+const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
+
+uint8_t mmu_read(GB *gb, uint16_t addr) {
     //printf(":MMU: Read 0x%04X\n", addr);
     uint8_t read_8bit_val = 0x00;
-    if (mmu_map == NULL) {
-        printf("ERROR: mmu_map is null!\n");
+    if (mmu_map_size <= 0) {
+        printf("ERROR: mmu_map is emtpy!\n");
         exit(1);
     }
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
-            read_8bit_val = mmu_map[i].read(addr);
+            read_8bit_val = mmu_map[i].read(gb, addr);
             //printf("What is MMU_map[i] value? %d", mmu_map[i]);
             trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
     }
-
-    //trace_mmu_read(addr, 0xFF, (uint8_t)BUS_UNMAPPED);
     return read_8bit_val;
 }
 
-void mmu_write(uint16_t addr, uint8_t write_val){
+void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     printf("::mmu_write:: addr: 0x%04X, write-val: 0x%02X\n", addr, write_val);
     //printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
-            mmu_map[i].write(addr, write_val);
+            mmu_map[i].write(gb, addr, write_val);
             trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }
@@ -67,9 +85,9 @@ void mmu_write(uint16_t addr, uint8_t write_val){
 void mmu_debugger(uint16_t addr) {
     printf("::: NOTICE ::: MMU DEBUGGER\n");
     printf(":MMU: Addr %04X\n", addr);
-    printf(":MMU: map size = %d\n", mmu_map_size);
+    printf(":MMU: map size = %zu\n", mmu_map_size);
 
-    if (mmu_map == NULL) {
+    if (mmu_map_size <= 0) {
         printf("ERROR: mmu_map is null!\n");
         exit(1);
     }

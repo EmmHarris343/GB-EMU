@@ -7,8 +7,8 @@
 #include "gb.h"
 #include "cpu.h"
 #include "cpu_instructions.h"
+#include "mmu.h"
 
-#include "mmu_interface.h"
 #include "logger.h"
 
 CPU local_cpu;
@@ -17,35 +17,12 @@ CPU local_cpu;
 instruction_T op_instruction;
 debug_state dbg_state;
 
-uint8_t ie_read(uint16_t addr) {
-    return local_cpu.state.IE;
-}
-void ie_write(uint16_t addr, uint8_t val) {
-    local_cpu.state.IE = val;
-}
-
-
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 uint64_t which_op_group[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 const char* optype_names[] = {
     "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
-
-void check_registers() {
-    printf("\n:CPU: === Registers === \n");
-    (local_cpu.reg.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_N) ? printf("  N Flag set | ") : printf("  N Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_H) ? printf("  H Flag set | ") : printf("  H Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
-    printf("\n");
-    printf("  A: 0x%02X\n", local_cpu.reg.A);
-    printf("  B: 0x%02X, C: 0x%02X\n", local_cpu.reg.B, local_cpu.reg.C);
-    printf("  D: 0x%02X, E: 0x%02X\n", local_cpu.reg.D, local_cpu.reg.E);
-    printf("  H: 0x%02X, L: 0x%02X\n", local_cpu.reg.H, local_cpu.reg.L);
-    printf("\n");
-}
-
 
 const CPU cpu_post_bios_state = {
     .reg.AF = 0x01B0,
@@ -91,7 +68,6 @@ const CPU cpu_reg_simple_tstate = {
 // return cycles;
 
 // OR! Let each opcode handler return the actual cycles used.
-
 // ADD MORE!!! - This is the cycles for each OPCODE.
 static const uint8_t opcode_cycles[256] = {
     /* 00 */ 4, 12, 8, 8,
@@ -225,6 +201,20 @@ static const uint8_t opcode_types[256] = {
     [0xFB] = INSTR_MISC             // EI
 };
 
+// void check_registers() {
+//     printf("\n:CPU: === Registers === \n");
+//     (local_cpu.reg.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
+//     (local_cpu.reg.F & FLAG_N) ? printf("  N Flag set | ") : printf("  N Flag NOT set | ");
+//     (local_cpu.reg.F & FLAG_H) ? printf("  H Flag set | ") : printf("  H Flag NOT set | ");
+//     (local_cpu.reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
+//     printf("\n");
+//     printf("  A: 0x%02X\n", local_cpu.reg.A);
+//     printf("  B: 0x%02X, C: 0x%02X\n", local_cpu.reg.B, local_cpu.reg.C);
+//     printf("  D: 0x%02X, E: 0x%02X\n", local_cpu.reg.D, local_cpu.reg.E);
+//     printf("  H: 0x%02X, L: 0x%02X\n", local_cpu.reg.H, local_cpu.reg.L);
+//     printf("\n");
+// }
+
 
 /// TODO: MOVE THIS TO LOGGER.C If possible. Cause this is a mess of code in CPU.C
 void cpu_trace_instrc(CPU *cpu, int type) {
@@ -254,46 +244,46 @@ void print_instr_counts() {
 }
 
 
-/// TODO: Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....."
-void set_flag(int cpu_flag) {
-    switch (cpu_flag) {
-        case 0: // Z Flag
-            //printf("Set z Flag\n");
-            local_cpu.reg.F |= FLAG_Z;
-            break;
-        case 1: // N Flag
-            //printf("Set N Flag\n");
-            local_cpu.reg.F |= FLAG_N;
-            break;
-        case 2: // H Flag
-            //printf("Set H Flag\n");
-            local_cpu.reg.F |= FLAG_H;
-            break;
-        case 3: // C Flag
-            //printf("Set C Flag\n");
-            local_cpu.reg.F |= FLAG_C;
-            break;
-    }
-}
+/// TODO: REMOVE THIS. NOT NEEDED. Flag system works, but isn't the most intuitive, as flags have "0 = Z, 1 = N, 2 = 3....."
+// void set_flag(int cpu_flag) {
+//     switch (cpu_flag) {
+//         case 0: // Z Flag
+//             //printf("Set z Flag\n");
+//             local_cpu.reg.F |= FLAG_Z;
+//             break;
+//         case 1: // N Flag
+//             //printf("Set N Flag\n");
+//             local_cpu.reg.F |= FLAG_N;
+//             break;
+//         case 2: // H Flag
+//             //printf("Set H Flag\n");
+//             local_cpu.reg.F |= FLAG_H;
+//             break;
+//         case 3: // C Flag
+//             //printf("Set C Flag\n");
+//             local_cpu.reg.F |= FLAG_C;
+//             break;
+//     }
+// }
 
-void clear_flag(int cpu_flag) {
-    switch (cpu_flag) {
-        case 0: // Z Flag
-            local_cpu.reg.F &= ~FLAG_Z;
-            break;
-        case 1: // N Flag
-            local_cpu.reg.F &= ~FLAG_N;
-            break;
-        case 2: // H Flag
-            local_cpu.reg.F &= ~FLAG_H;
-            break;
-        case 3: // C Flag
-            local_cpu.reg.F &= ~FLAG_C;
-            break;
-    }
-}
+// void clear_flag(int cpu_flag) {
+//     switch (cpu_flag) {
+//         case 0: // Z Flag
+//             local_cpu.reg.F &= ~FLAG_Z;
+//             break;
+//         case 1: // N Flag
+//             local_cpu.reg.F &= ~FLAG_N;
+//             break;
+//         case 2: // H Flag
+//             local_cpu.reg.F &= ~FLAG_H;
+//             break;
+//         case 3: // C Flag
+//             local_cpu.reg.F &= ~FLAG_C;
+//             break;
+//     }
+// }
 
-void cpu_init() {         // Initialize this to the DMG   (Original)
+void cpu_init(GB *gb) {         // Initialize this to the DMG   (Original)
 
     printf(":CPU: Initialization, Setting registers and Settings. For VER: %s\n", "DMG 01");
 
@@ -302,12 +292,13 @@ void cpu_init() {         // Initialize this to the DMG   (Original)
     op_instruction.operand1 = 0;
     op_instruction.operand2 = 0;
 
+    CPU cpu = gb->cpu;
 
     // Sets the CPU.REG to the post_bios reg config.
-    local_cpu.reg = cpu_post_bios_state.reg;
+    cpu.reg = cpu_post_bios_state.reg;
 
     //add_cpu_trace(&local_cpu);
-    cpu_trace_instrc(&local_cpu, 0);
+    cpu_trace_instrc(&cpu, 0);
 
 
     printf("Done. Finished init for DMG 01\n");
@@ -318,13 +309,13 @@ uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
     return cvrt_byte;
 }
 
-void external_write(uint16_t addr, uint8_t write_val) {
-    mmu_write(addr, write_val);
+void external_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    mmu_write(gb, addr, write_val);
 }
 
-uint8_t external_read(uint16_t addr_pc) {
+uint8_t external_read(GB *gb, uint16_t addr_pc) {
     uint8_t int8_val = 0;
-    int8_val = mmu_read(addr_pc);
+    int8_val = mmu_read(gb, addr_pc);
 
     return int8_val;
 }
@@ -332,26 +323,23 @@ uint8_t external_read(uint16_t addr_pc) {
 
 /// DECODE:
 // Reads the OPP Code
-void extract_opcode(uint16_t addr_pc) {
+void extract_opcode(GB *gb, uint16_t addr_pc) {
     uint8_t op_code = 0;
     uint8_t operand1 = 0;
     uint8_t operand2 = 0;
 
-
-
     // Goes through the MMU to read the data.
-    op_code = mmu_read(addr_pc);
+    op_code = mmu_read(gb, addr_pc);
 
     //printf("OP_CODE (Read from Ram): %04X\n", op_code);
     if (opcode_lengths[op_code] >= 2) {
         // printf(":CPU: 8Bit Operand ");
-        operand1 = mmu_read(addr_pc + 1);
+        operand1 = mmu_read(gb, addr_pc + 1);
     }
     if (opcode_lengths[op_code] == 3) {
         // printf(":CPU: Second 8Bit Operand ");
-        operand2 = mmu_read(addr_pc + 2);
+        operand2 = mmu_read(gb, addr_pc + 2);
     }
-
 
     /// NOTE: OPCODE Summary
     // Calculate opcode type, and save for high level overview.
@@ -378,13 +366,15 @@ void extract_opcode(uint16_t addr_pc) {
     op_instruction.operand2 = operand2;
 }
 
+
+/// TODO: probably just remove this, go thorugh a different route.
 // Might change later, but this mostly just Executes the CPU Instruction
-void step_cpu(int step_count) {
+void step_cpu(GB *gb, int step_count) {
     dbg_state.step_count = step_count;
     dbg_state.PC = local_cpu.reg.PC;
     dbg_state.opcode = op_instruction.opcode;
 
-    cpu_trace_instrc(&local_cpu, 1);
+    cpu_trace_instrc(&gb->cpu, 1);
 
     // if (execute_instruction(&local_cpu, GB, op_instruction, step_count) != 0) {
     //     printf(":CPU: Error Executing CPU instruction!\n");
@@ -403,12 +393,11 @@ uint32_t cpu_step(GB *gb) {
 // *----
 
 // "RUN" the cpu, but limit it by [max_steps] parameter.
-void run_cpu(int max_steps) {
+void run_cpu(GB *gb, int max_steps) {
     struct timespec start_time, current_time;
     uint64_t elasped_ms = 0;
 
     int step_count = 0;
-
 
     printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
 
@@ -424,11 +413,11 @@ void run_cpu(int max_steps) {
         printf("\n[STEP: %03d]\n", step_count);
         printf("[TIME: %lu ms]\n", elasped_ms);
 
-        extract_opcode(local_cpu.reg.PC);
-        step_cpu(i);
+        extract_opcode(gb, gb->cpu.reg.PC);
+        step_cpu(gb, i);
 
 
-        if (local_cpu.state.panic == 1) {
+        if (gb->cpu.state.panic == 1) {
             printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n");
             break;
         }
@@ -450,11 +439,10 @@ void run_cpu(int max_steps) {
 // *----
 
 
-void run_cpu_bytime(uint64_t max_time_ms) {
+void run_cpu_bytime(GB *gb, uint64_t max_time_ms) {
     struct timespec start_time, current_time;
     uint64_t elasped_ms = 0;
     int step_count = 0;
-
 
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     printf(":CPU: RUN_CPU (Time Val) Started. Running for %lu ms\n ", max_time_ms);
@@ -469,12 +457,12 @@ void run_cpu_bytime(uint64_t max_time_ms) {
         printf("[TIME: %lu ms]\n", elasped_ms);
 
         // CPU STEP:
-        extract_opcode(local_cpu.reg.PC);
-        step_cpu(step_count);
+        extract_opcode(gb, gb->cpu.reg.PC);
+        step_cpu(gb, step_count);
 
 
         // Handling CPU Panic state:
-        if (local_cpu.state.panic == 1) {
+        if (gb->cpu.state.panic == 1) {
             printf("::CPU:: PANIC HALT Detected! Stopping CPU Loop.\n");
             break;
         }
@@ -496,9 +484,9 @@ void run_cpu_bytime(uint64_t max_time_ms) {
 /// ONLY:
 /// MODULES:
 // *----
-void tstate_set_registers() {
+void tstate_set_registers(GB *gb) {
     // Set the Registers initial state (After Bootrom Pass)
-    local_cpu.reg = cpu_reg_simple_tstate.reg;
+    gb->cpu.reg = cpu_reg_simple_tstate.reg;
 
 }
 void tstate_set_flag(){
@@ -519,36 +507,36 @@ void tstate_set_ram() {
 
 }
 
-int intiate_cpu_test(instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
+int intiate_cpu_test(GB *gb, instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
     // Set OPCODE Instruction
     op_instruction = *passed_instrc;
-    local_cpu = *cpu;
+    gb->cpu = *cpu;
 
 
     return 0;
 }
 
 // This ensures everything is done, then finally calls the Execute Instruction
-void run_cpu_test(uint8_t test_op_code) {
+void run_cpu_test(GB *gb, uint8_t test_op_code) {
     int step_count = 0;             // Will I ever use this for tests?
     //uint8_t special_op_code = 0x5C; // 5C = LD E, H
 
     //tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
 
-    tstate_set_registers();
+    tstate_set_registers(gb);
     tstate_set_flag();              // How do I know which flag Needs to be set?
     tstate_set_ram();
 
     printf(":CPU: Initial CPU state set. Ready for Execution of Test\n");
 
     printf("Showing Registers first, making sure working..\n\n");
-    check_registers();
+    //check_registers();
 
 
-    // if (execute_test(&local_cpu, , op_instruction) != 0) {
+    // if (execute_test(&gb->cpu, , op_instruction) != 0) {
     //     printf(":CPU: Error Executing CPU instruction!\n");
     // }
 
     printf("Post Execution Registers... \n");
-    check_registers();
+    //check_registers();
 }

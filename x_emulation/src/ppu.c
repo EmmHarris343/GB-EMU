@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include "gb.h"
 static uint8_t VRAM[VRAM_SIZE];
 
 
@@ -30,15 +31,15 @@ struct timer_s {
 
 
 
-int init_ppu() {
-    printf("Initialize ERAM, WRAM, HRAM..\n");
+int init_ppu(GB *gb) {
+    printf("Initialize VRAM\n");
     memset(VRAM, 0, VRAM_SIZE);
 
     return 0;
 }
 
 
-uint8_t ppu_read(uint16_t addr){
+uint8_t ppu_read(GB *gb, uint16_t addr){
     printf(":ppu: Hit VRAM Read!\n");
     if (addr < 0x8000 || addr > 0x9FFF) {
         // Invalid
@@ -47,7 +48,7 @@ uint8_t ppu_read(uint16_t addr){
     return VRAM[addr - 0x8000];
 
 }
-void ppu_write(uint16_t addr, uint8_t val){
+void ppu_write(GB *gb, uint16_t addr, uint8_t val){
     printf(":ppu: Hit VRAM WRITE!\n");
     if (addr < 0x8000 || addr > 0x9FFF) {
         // Invalid

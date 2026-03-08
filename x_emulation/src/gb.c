@@ -92,6 +92,8 @@ gb_run_steps
 gb_run_frame
 gb_run_until
 
++ a bunch of API calls, to handle interupts, and certain machine-level useful states.
+
 */
 
 
@@ -100,11 +102,30 @@ gb_run_until
 
 // Top-Level "Machine" Setup/ Initializer
 int gb_init(GB *gb) {
-    // cart_init(...)
-    // mmu_init(...)
-    // cpu_init(...)
-    // ppu_init(...)
-    // apu_init(...)
+    printf("Initializing GB...");
+
+    const char *rom_file = "../../rom/pkmn_red.gb"; // Not ideal,  I should pass it.. or load it from something.
+    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
+    printf("NOTE: Using rom file: %s\n\n", rom_file);
+
+    cpu_init(gb);
+    //mmu_init(gb);
+    if (cartridge_init(gb, rom_file) != 0) {
+        fprintf(stderr, "Error Initializing GB Cartridge:\n");
+        return -1;
+    }
+    if (loc_ram_init(gb) != 0) {
+        fprintf(stderr, "Error Initializing GB Loc_Ram config:\n");
+        return -1;
+    }
+    if (ppu_init(gb) != 0) {
+        fprintf(stderr, "Error Initializing GB PPU config:\n");
+        return -1;
+    }
+    if (apu_init(gb) != 0) {
+        fprintf(stderr, "Error Initializing GB APU config:\n");
+        return -1;
+    }
 
     return 0;
 }
@@ -151,4 +172,12 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 
     // timer_tick(&gb->timer, gb, cycles);
     // ppu_tick(&gb->ppu, gb, cycles);
+}
+
+
+uint8_t ie_read(GB *gb, uint16_t addr) {
+    return gb->cpu.state.IE;
+}
+void ie_write(GB *gb, uint16_t addr, uint8_t val) {
+    gb->cpu.state.IE = val;
 }

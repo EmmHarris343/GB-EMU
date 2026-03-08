@@ -1,6 +1,7 @@
 #include "io.h"
+#include "gb.h"
 
-uint8_t io_read(uint16_t addr) {
+uint8_t io_read(GB *gb, uint16_t addr) {
     switch (addr) {
         case 0xFF:
             return 144;
@@ -9,7 +10,7 @@ uint8_t io_read(uint16_t addr) {
     }
 }
 
-void io_write(uint16_t addr, uint8_t val)
+void io_write(GB *gb, uint16_t addr, uint8_t val)
 {
     // set to nothing and move on.
     (void)addr;

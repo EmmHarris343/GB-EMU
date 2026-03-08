@@ -15,12 +15,8 @@ int step_count_icpu = 0;
 uint8_t step_opcode = 0x00;
 extern FILE *debug_dump_file;
 
-//
-
-//(GB *gb, CPU *cpu, instruction_T instruction)
+// The reference for the pointers to functions, to select instruction based on OP_CODE
 typedef void opcode_t(GB *gb, CPU *cpu, instruction_T instruction);
-//typedef void opcode_t(CPU *cpu, instruction_T instrc);
-
 
 
 #define KNRM  "\x1B[0m"
@@ -61,23 +57,23 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
 }
 
 /// CONSIDER: Using a ADDITION_8bit Set flags... Might make things easier...
-void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
-    // Clear the bits we're modifying
-    if (affect_Z) clear_flag(0);  // Z always cleared on LD HL, SP+e8
-    if (affect_N) clear_flag(1);  // N always cleared on addition
+// void set_add_flags_8bit(uint8_t a, uint8_t b, int affect_Z, int affect_N) {
+//     // Clear the bits we're modifying
+//     if (affect_Z) clear_flag(0);  // Z always cleared on LD HL, SP+e8
+//     if (affect_N) clear_flag(1);  // N always cleared on addition
 
-    // Half carry: bit 3 overflow into bit 4
-    if (((a & 0xF) + (b & 0xF)) > 0xF)
-        set_flag(2);  // H
-    else
-        clear_flag(2);
+//     // Half carry: bit 3 overflow into bit 4
+//     if (((a & 0xF) + (b & 0xF)) > 0xF)
+//         set_flag(2);  // H
+//     else
+//         clear_flag(2);
 
-    // Full carry: bit 7 overflow into bit 8
-    if ((uint16_t)a + (uint16_t)b > 0xFF)
-        set_flag(3);  // C
-    else
-        clear_flag(3);
-}
+//     // Full carry: bit 7 overflow into bit 8
+//     if ((uint16_t)a + (uint16_t)b > 0xFF)
+//         set_flag(3);  // C
+//     else
+//         clear_flag(3);
+// }
 
 
 
@@ -240,7 +236,7 @@ static void LD_r16_n16(GB *gb, CPU *cpu, instruction_T instruction) {
 static void LD_p_HL_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // Copy data from n8, into where HL is being pointed to
     printf("LD [HL] n8 Called.                  ; LD n8 Value into [HL]\n");
 
-    external_write(cpu->reg.HL, instruction.operand1);
+    external_write(gb, cpu->reg.HL, instruction.operand1);
     cpu->reg.PC += 2;
     // Bytes = 2
     // No flags Affected
@@ -257,11 +253,11 @@ static void LD_p_r16_A(GB *gb, CPU *cpu, instruction_T instruction) {
     switch (instruction.opcode) {
         case 0x02:
             // LD [BC], A
-            external_write(cpu->reg.BC, cpu->reg.A);
+            external_write(gb, cpu->reg.BC, cpu->reg.A);
             break;
         case 0x12:
             // LD [DE], A
-            external_write(cpu->reg.DE, cpu->reg.A);
+            external_write(gb, cpu->reg.DE, cpu->reg.A);
             break;
     }
     cpu->reg.PC++;
@@ -271,13 +267,13 @@ static void LD_A_p_r16(GB *gb, CPU *cpu, instruction_T instruction) {
     switch (instruction.opcode) {
         case 0x0A:
             // LD A, [BC]
-            cpu->reg.A = external_read(cpu->reg.BC);
+            cpu->reg.A = external_read(gb, cpu->reg.BC);
             break;
         case 0x1A:
             // LD A, [DE]
-            cpu->reg.A = external_read(cpu->reg.DE);
+            cpu->reg.A = external_read(gb, cpu->reg.DE);
             break;
-            printf("|DEBUG| : A Regiser: %02X || [DE] value: %02X | Addr: %04X\n", cpu->reg.A, external_read(cpu->reg.DE), cpu->reg.DE);
+            printf("|DEBUG| : A Regiser: %02X || [DE] value: %02X | Addr: %04X\n", cpu->reg.A, external_read(gb, cpu->reg.DE), cpu->reg.DE);
 
     }
     cpu->reg.PC++;
@@ -288,7 +284,7 @@ static void LD_p_HLI_A(GB *gb, CPU *cpu, instruction_T instruction) {
 
     uint8_t a_val = cpu->reg.A;
     printf("|DEBUG| : A:%02X HL Addr: %04X\n", a_val, cpu->reg.HL);
-    external_write(cpu->reg.HL, a_val);
+    external_write(gb, cpu->reg.HL, a_val);
 
     // Increment HL & the PC By one.
     cpu->reg.HL ++;
@@ -298,7 +294,7 @@ static void LD_p_HLD_A(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL\n");
 
     uint8_t a_val = cpu->reg.A;
-    external_write(cpu->reg.HL, a_val);
+    external_write(gb, cpu->reg.HL, a_val);
 
     cpu->reg.HL --;
     cpu->reg.PC --;
@@ -306,7 +302,7 @@ static void LD_p_HLD_A(GB *gb, CPU *cpu, instruction_T instruction) {
 static void LD_A_p_HLI(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("LD A, [HLI].               ; A <- [HL] (Then HL++)\n");
     // LD A, [HL+], Copy value pointed from HL, into A register, then Increment HL
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     cpu->reg.A = hl_val;
 
     printf("--- Diag, what is value pointed by HL? 0x%02X\n", hl_val);
@@ -319,7 +315,7 @@ static void LD_A_p_HLI(GB *gb, CPU *cpu, instruction_T instruction) {
 static void LD_A_p_HLD(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("LD A, [HLD] (LD A, [HL-]), Copy value pointed from HL, into A register, then Decrement HL\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     cpu->reg.A = hl_val;
     printf("  --- Diag, what is value pointed by HL? 0x%02X\n", hl_val);
 
@@ -336,7 +332,7 @@ static void LD_p_a16_A(GB *gb, CPU *cpu, instruction_T instruction) {
     uint16_t a16 = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
 
     printf(":LD: a16 Location val %04X\n", a16);
-    external_write(a16, cpu->reg.A);
+    external_write(gb, a16, cpu->reg.A);
 
     cpu->reg.PC +=3;
 
@@ -349,7 +345,7 @@ static void LD_A_p_a16(GB *gb, CPU *cpu, instruction_T instruction) {
 
     uint16_t a16 = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
 
-    cpu->reg.A = external_read(a16);
+    cpu->reg.A = external_read(gb, a16);
 
     cpu->reg.PC += 3;
     // Bytes = 3
@@ -361,7 +357,7 @@ static void LDH_p_C_A(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH 
     printf("LDH A [C]. Called.                          ; LD value pointed by (High Range)[0xFF + C] into A Register\n");
 
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
-    external_write(combined_addr, cpu->reg.A);
+    external_write(gb, combined_addr, cpu->reg.A);
 
     cpu->reg.PC ++;
 }
@@ -369,7 +365,7 @@ static void LDH_A_p_C(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH 
     printf("LDH [C], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + C]\n");
 
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
-    cpu->reg.A = external_read(combined_addr);
+    cpu->reg.A = external_read(gb, combined_addr);
     cpu->reg.PC ++;
 }
 static void LDH_A_p_a8(GB *gb, CPU *cpu, instruction_T instruction) {
@@ -377,7 +373,7 @@ static void LDH_A_p_a8(GB *gb, CPU *cpu, instruction_T instruction) {
 
     uint8_t a8 = instruction.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
-    cpu->reg.A = external_read(combined_addr);
+    cpu->reg.A = external_read(gb, combined_addr);
 
     cpu->reg.PC +=2;
 }
@@ -386,7 +382,7 @@ static void LDH_p_a8_A(GB *gb, CPU *cpu, instruction_T instruction) {
 
     uint8_t a8 = instruction.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
-    external_write(combined_addr, cpu->reg.A);
+    external_write(gb, combined_addr, cpu->reg.A);
 
     cpu->reg.PC +=2;
 }
@@ -402,8 +398,8 @@ static void LD_p_a16_SP(GB *gb, CPU *cpu, instruction_T instruction) {
     uint8_t SP_LOW = cpu->reg.SP & 0xFF;
     uint8_t SP_HIGH = (cpu->reg.SP >> 8) & 0xFF;
 
-    external_write(n16_addr, SP_LOW);
-    external_write(n16_addr + 1, SP_HIGH);
+    external_write(gb, n16_addr, SP_LOW);
+    external_write(gb, n16_addr + 1, SP_HIGH);
 
     cpu->reg.PC ++;
 
@@ -475,7 +471,7 @@ static void LD_##X##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 static void LD_##X##_##DHL(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
     printf("LD r8, [HL]\n");\
-    cpu->reg.X = external_read(cpu->reg.HL);\
+    cpu->reg.X = external_read(gb, cpu->reg.HL);\
     cpu->reg.PC += 1;\
 }
 
@@ -485,7 +481,7 @@ static void LD_##DHL##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
     printf("LD [HL], r8\n");\
     printf("Registes for OP-72 & OP-73 ---- Reg-Y: 0x%02X, Reg-D: 0x%02X, Reg-E: 0x%02X, Reg-HL: 0x%04X\n", cpu->reg.Y, cpu->reg.D, cpu->reg.E, cpu->reg.HL);\
-    external_write(cpu->reg.HL, cpu->reg.Y);\
+    external_write(gb, cpu->reg.HL, cpu->reg.Y);\
     cpu->reg.PC += 1;\
 }
 
@@ -642,7 +638,7 @@ static void ADD_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Add 
 }
 static void ADD_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Add value pointed by HL into A
     printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into Register A\n");
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint16_t add_result = (cpu->reg.A + hl_val);
     uint8_t final_8bit = (uint8_t)add_result;
 
@@ -706,7 +702,7 @@ static void ADC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
 static void ADC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("ADC A, [HL].                  ; Add the value stored in [hl] PLUS the carry flag to Register A\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
     uint16_t add_16bit = (cpu->reg.A + hl_val + carry_val);
@@ -776,7 +772,7 @@ static void SUB_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("SUB A, [HL].              ; Sub Value in Register A, by value in [HL]\n");
 
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t reg_a = cpu->reg.A;
 
     uint16_t sub_16bit = (cpu->reg.A - hl_val);
@@ -852,7 +848,7 @@ static void SBC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
 static void SBC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Subtract the byte pointed to by HL and the carry flag from A.
     printf("SBC A, [HL].                  ; Subtract value in [HL] (and the carry flag) from Register A\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
     // Use 16bit for Flag checks. 8bit will truncate results
@@ -946,7 +942,7 @@ static void DEC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Decremen
 static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Increment 16 bit HL register, The Value In Pointer ++ HL
     printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     // HL First:
     ((hl_val & 0x0F) == 0x0F)   // H Flag before INC
@@ -956,7 +952,7 @@ static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Incremen
         ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                // Set/Clear (Z) Zero Flag.
     clear_cpu_flag(cpu, FLAG_N);    // Always clear N flag (Sub)
 
-    external_write(cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
+    external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
     cpu->reg.PC ++;
 
@@ -964,7 +960,7 @@ static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Incremen
 }
 static void DEC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Decrement the Byte insde the location pointed by [HL]
     printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
-    uint8_t hl_val = external_read(cpu->reg.HL);    //Original HL Value
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);    //Original HL Value
 
     ((hl_val & 0x0F) == 0x0) // H Flag before DEC
         ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);            // Check Val before DEC. If 0, it will need to borrow from bit 4. (So, then set H flag)
@@ -973,7 +969,7 @@ static void DEC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Decr
     ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);            // Set/Clear (Z) Zero Flag.
     set_cpu_flag(cpu, FLAG_N);        // Set subtraction flag (N)
 
-    external_write(cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
+    external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
     cpu->reg.PC ++;
 
@@ -1010,7 +1006,7 @@ static void CP_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
 }
 static void CP_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // ComPare -> value in pointer HL to A
     printf("CP A, [HL]. ComPare Called.         ; Subtracts pointered from [HL] from A (Sets flags, disregards results)\n");
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t result = (cpu->reg.A - hl_val);
 
     //
@@ -1133,9 +1129,9 @@ static void DEC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
 static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop register AF from the stack.
     printf("POP AF Called.              ; Populate AF Register from SP.\n");
 
-    uint8_t low_byte = external_read(cpu->reg.SP);
+    uint8_t low_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
-    uint8_t high_byte = external_read(cpu->reg.SP);
+    uint8_t high_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
 
     // Believe how I have the flags setup. this should work.
@@ -1170,9 +1166,9 @@ static void POP_r16(GB *gb, CPU *cpu, instruction_T instruction) {       // Pop 
         &cpu->reg.BC, &cpu->reg.DE, &cpu->reg.HL
     };
 
-    uint8_t low_byte = external_read(cpu->reg.SP);
+    uint8_t low_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
-    uint8_t high_byte = external_read(cpu->reg.SP);
+    uint8_t high_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
 
     // Depending on the OPCODE called, will set the specific Register to the Opcode.
@@ -1202,9 +1198,9 @@ static void PUSH_AF(GB *gb, CPU *cpu, instruction_T instruction) {       // Push
 
 
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, cpu->reg.A);
+    external_write(gb, cpu->reg.SP, cpu->reg.A);
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, cpu->reg.F);
+    external_write(gb, cpu->reg.SP, cpu->reg.F);
 
     cpu->reg.PC ++;     // PUSH_AF is only 1 byte.
     logging_cpu_trace("[CTRL] PUSH_AF Registers into SP. A:0x%02X F:0x%02X\n", cpu->reg.A, cpu->reg.F);
@@ -1223,23 +1219,23 @@ static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
     switch (instruction.opcode) {
         case 0xC5:    // BC to stack
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.B);
+            external_write(gb, cpu->reg.SP, cpu->reg.B);
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.C);
+            external_write(gb, cpu->reg.SP, cpu->reg.C);
             logging_cpu_trace("[CTRL] PUSH Registers into SP. B:0x%02X C:0x%02X\n", cpu->reg.B, cpu->reg.C);
             break;
         case 0xD5:    // DE to stack
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.D);
+            external_write(gb, cpu->reg.SP, cpu->reg.D);
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.E);
+            external_write(gb, cpu->reg.SP, cpu->reg.E);
             logging_cpu_trace("[CTRL] PUSH Registers into SP. D:0x%02X E:0x%02X\n", cpu->reg.D, cpu->reg.E);
             break;
         case 0xE5:    // HL to stack
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.H);
+            external_write(gb, cpu->reg.SP, cpu->reg.H);
             cpu->reg.SP --;
-            external_write(cpu->reg.SP, cpu->reg.L);
+            external_write(gb, cpu->reg.SP, cpu->reg.L);
             logging_cpu_trace("[CTRL] PUSH Registers into SP. H:0x%02X L:0x%02X\n", cpu->reg.H, cpu->reg.L);
             break;
     }
@@ -1275,9 +1271,9 @@ static void CALL_a16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
 
     // Push return address onto stack (high byte first)
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, split_addr_HIGH);
+    external_write(gb, cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, split_addr_LOW);
+    external_write(gb, cpu->reg.SP, split_addr_LOW);
 
     printf("What is the Stack Pointer showing? %04X\n", cpu->reg.SP);
 
@@ -1344,9 +1340,9 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
         uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
 
         cpu->reg.SP --;
-        external_write(cpu->reg.SP, split_addr_HIGH);
+        external_write(gb, cpu->reg.SP, split_addr_HIGH);
         cpu->reg.SP --;
-        external_write(cpu->reg.SP, split_addr_LOW);
+        external_write(gb, cpu->reg.SP, split_addr_LOW);
 
         cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
     }
@@ -1364,9 +1360,9 @@ static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETu
     // This RETurns back to the PC saved in the Stack Pointer (SP) from the CALL function.
 
     // TL;DR : Populate the PC from the SP.
-    uint8_t low_byte = external_read(cpu->reg.SP);
+    uint8_t low_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
-    uint8_t high_byte = external_read(cpu->reg.SP);
+    uint8_t high_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
@@ -1404,9 +1400,9 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
     if (proceed) {
         printf("RET CC Met. Populating PC from SP\n");
         // TL;DR : Populate the PC from the SP.
-        uint8_t low_byte = external_read(cpu->reg.SP);
+        uint8_t low_byte = external_read(gb, cpu->reg.SP);
         cpu->reg.SP ++;
-        uint8_t high_byte = external_read(cpu->reg.SP);
+        uint8_t high_byte = external_read(gb, cpu->reg.SP);
         cpu->reg.SP ++;
 
         cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
@@ -1435,9 +1431,9 @@ static void RETI(GB *gb, CPU *cpu, instruction_T instruction) {          // RETu
     // Set IME flag to 1 - enable
     cpu->state.IME = 1;
     // Populate the PC from the SP.
-    uint8_t low_byte = external_read(cpu->reg.SP);
+    uint8_t low_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
-    uint8_t high_byte = external_read(cpu->reg.SP);
+    uint8_t high_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
@@ -1466,9 +1462,9 @@ static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs
 
     // Push return address onto stack (high byte first)
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, split_addr_HIGH);
+    external_write(gb, cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
-    external_write(cpu->reg.SP, split_addr_LOW);
+    external_write(gb, cpu->reg.SP, split_addr_LOW);
 
     cpu->reg.PC = jump_addr;
 
@@ -1529,10 +1525,10 @@ static void AND_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
 static void AND_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set A to the bitwise AND between the byte pointed to by HL and A
     printf("AND A, [HL]. Called.            ; Bitwise AND. 1&1 = 1, rest =0. From Value in [HL]\n");
 
-    uint8_t AND_result = (cpu->reg.A & external_read(cpu->reg.HL));
+    uint8_t AND_result = (cpu->reg.A & external_read(gb, cpu->reg.HL));
     cpu->reg.A = AND_result;
 
-    // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
+    // One liner:       cpu->reg.A &= external_read(gb, cpu->reg.HL)
 
     (AND_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
@@ -1587,10 +1583,10 @@ static void OR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set 
 }
 static void OR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Set A to the bitwise OR between the byte pointed to by HL and A
     printf("OR A, [HL]. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
-    uint8_t OR_result = (cpu->reg.A | external_read(cpu->reg.HL));
+    uint8_t OR_result = (cpu->reg.A | external_read(gb, cpu->reg.HL));
     cpu->reg.A = OR_result;
 
-    // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
+    // One liner:       cpu->reg.A &= external_read(gb, cpu->reg.HL)
 
     (OR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
@@ -1607,7 +1603,7 @@ static void OR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set 
     uint8_t OR_result = (cpu->reg.A | instruction.operand1);
     cpu->reg.A = OR_result;
 
-    // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
+    // One liner:       cpu->reg.A &= external_read(gb, cpu->reg.HL)
 
     (OR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
@@ -1646,10 +1642,10 @@ static void XOR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
 static void XOR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set A to the bitwise XOR between the byte pointed to by HL and A
     printf("XOR A, [HL]. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
 
-    uint8_t XOR_result = (cpu->reg.A ^ external_read(cpu->reg.HL));
+    uint8_t XOR_result = (cpu->reg.A ^ external_read(gb, cpu->reg.HL));
     cpu->reg.A = XOR_result;
 
-    // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
+    // One liner:       cpu->reg.A &= external_read(gb, cpu->reg.HL)
 
     (XOR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);
     clear_cpu_flag(cpu, FLAG_N);  // ALways cleared
@@ -1666,7 +1662,7 @@ static void XOR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     uint8_t XOR_result = (cpu->reg.A ^ instruction.operand1);
     cpu->reg.A = XOR_result;
 
-    // One liner:       cpu->reg.A &= external_read(cpu->reg.HL)
+    // One liner:       cpu->reg.A &= external_read(gb, cpu->reg.HL)
 
     (XOR_result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z condition.
     clear_cpu_flag(cpu, FLAG_N);  // N ALways cleared
@@ -1825,12 +1821,12 @@ static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
 static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by HL left, through the carry flag. <---
     printf("RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
     uint8_t rotated_hl = (hl_val << 1) | carry_in;          // Shift byte left, set bit 0 value.
 
-    external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value
+    external_write(gb, cpu->reg.HL, rotated_hl);    // Set [HL] value
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);          // C Flag
     (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);     // Z Flag
@@ -1875,11 +1871,11 @@ static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
 static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rotate the byte pointed to by [HL] left. <--- (without Carry flag input)
     printf("RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
     uint8_t rotated_hl = (hl_val << 1) | carry_out;         // Shift Byte Left, set bit 0
 
-    external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value
+    external_write(gb, cpu->reg.HL, rotated_hl);    // Set [HL] value
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
     (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
@@ -1927,12 +1923,12 @@ static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
 static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by [HL] Right. Through the carry flag. -->
     printf("rR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = (hl_val & 0x1);
     uint8_t rotated_hl = (hl_val >> 1) | (carry_in << 7);   // Shift Byte right, set bit 7
 
-    external_write(cpu->reg.HL, rotated_hl);    // Set [HL] value.
+    external_write(gb, cpu->reg.HL, rotated_hl);    // Set [HL] value.
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
     (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
@@ -1977,11 +1973,11 @@ static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     printf("RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
 
 
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = (hl_val & 0x1);
     uint8_t rotated_hl = (hl_val >> 1) | (carry_out << 7);      // Shift Byte Right, set bit 7
 
-    external_write(cpu->reg.HL, rotated_hl);        // Set [HL] value
+    external_write(gb, cpu->reg.HL, rotated_hl);        // Set [HL] value
 
     (carry_out) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);           // C Flag
     (rotated_hl) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);          // Z Flag
@@ -2119,7 +2115,7 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test
     printf("BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);                  // Acts as a divide by 8
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     uint8_t get_state = ((hl_val >> u3_num) & 1);
     (get_state) ? clear_cpu_flag(cpu, FLAG_Z) : set_cpu_flag(cpu, FLAG_Z); // Z flag, Set if specific r8 bit NOT set.
@@ -2152,10 +2148,10 @@ static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
     printf("RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
-    external_write(cpu->reg.HL, hl_val);
+    external_write(gb, cpu->reg.HL, hl_val);
 
     cpu->reg.PC ++;
     // Bytes = 2 (CB logic already advanced once)
@@ -2182,10 +2178,10 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
     printf("SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
-    uint8_t hl_val = external_read(cpu->reg.HL);
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     hl_val |= (1 << u3_num);
 
-    external_write(cpu->reg.HL, hl_val);
+    external_write(gb, cpu->reg.HL, hl_val);
 
     cpu->reg.PC ++;
     // Bytes = 2 (CB logic already advanced once)
@@ -2237,7 +2233,7 @@ static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
     // Advance the PC, and read it at the same time.
-    uint8_t prefixed_opcode = external_read(cpu->reg.PC++);       // Read CB Opcoad at PC++ location.
+    uint8_t prefixed_opcode = external_read(gb, cpu->reg.PC++);       // Read CB Opcoad at PC++ location.
     printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
 
     cb_opcodes[prefixed_opcode](gb, cpu, instruction);
@@ -2270,14 +2266,14 @@ static opcode_t *opcodes[256] = {
 
 
 
-void run_debug(CPU *cpu) {
-    uint8_t hl_val = external_read(cpu->reg.HL);
+void run_debug(GB *gb, CPU *cpu) {
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
     logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
 }
 
-void debug_nop(CPU *cpu) {
-    uint8_t hl_val = external_read(cpu->reg.HL);
+void debug_nop(GB *gb, CPU *cpu) {
+    uint8_t hl_val = external_read(gb, cpu->reg.HL);
     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
 }

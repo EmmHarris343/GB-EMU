@@ -5,17 +5,17 @@
 #include <string.h>
 #include <stdint.h>
 
+typedef struct gb_s GB;
 
-
-// HRAM 
+// HRAM
 #define VRAM_SIZE 0x2000          // 8KB total size, (8192 Byte in Decimal, 2000 in Hex)
 
 
-// Prototypes:
-int init_ppu();
+// Init ppu function
+int ppu_init(GB *gb);
 
-
-uint8_t ppu_read(uint16_t addr);
-void ppu_write(uint16_t addr, uint8_t val);
+// Read/Write ppu functions.
+uint8_t ppu_read(GB *gb, uint16_t addr);
+void ppu_write(GB *gb, uint16_t addr, uint8_t val);
 
 #endif

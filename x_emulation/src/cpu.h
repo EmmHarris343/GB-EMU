@@ -6,7 +6,7 @@
 #define NANOSECONDS_IN_MS 1000000
 
 // Include the gb_s struct from gb.h, this avoids importing gb.h into this header.
-struct gb_s;
+typedef struct gb_s GB;
 
 typedef struct {
     union {
@@ -64,17 +64,18 @@ typedef struct {
 } instruction_T;
 
 
-// Special set state that comes from CPU -> MMU -> CPU.STATE.IE
-uint8_t ie_read(uint16_t addr);
-void ie_write(uint16_t addr, uint8_t val);
+
 
 
 // External to CPU Instruction Commands
 void set_flag(int cpu_flag);
 void clear_flag(int cpu_flag);
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
-uint8_t external_read(uint16_t addr_pc);
-void external_write(uint16_t addr, uint8_t write_val);
+
+
+// Read/ Write functions -> MMU
+uint8_t external_read(GB *gb, uint16_t addr_pc);
+void external_write(GB *gb, uint16_t addr, uint8_t write_val);
 
 
 
@@ -84,22 +85,22 @@ void external_write(uint16_t addr, uint8_t write_val);
 
 
 // Initialize the CPU (Sets the Register values, Flags etc)
-void cpu_init();
+void cpu_init(GB *gb);
 
 // Run CPU (By Step Limit):
-void run_cpu(int max_steps);
+void run_cpu(GB *gb, int max_steps);
 // Run CPU Loop (By Time Limit):
-void run_cpu_bytime(uint64_t max_time_ms);
+void run_cpu_bytime(GB *gb, uint64_t max_time_ms);
 // Run CPU (Test Mode):
-void run_cpu_test(uint8_t test_op_code);    // Note this using the test_cpu modules and files!
+void run_cpu_test(GB *gb, uint8_t test_op_code);    // Note this using the test_cpu modules and files!
 
 // Step the CPU....... this is meant for tracking the cycles.
 // Sooooo... things might change for how this actually works.
-uint32_t cpu_step(struct gb_s *gb);
+uint32_t cpu_step(GB *gb);
 
 
 // Completely Reset the CPU.
-void cpu_reset(CPU *cpu);
+void cpu_reset(GB *gb, CPU *cpu);
 
 
 
