@@ -104,6 +104,9 @@ gb_run_until
 int gb_init(GB *gb) {
     printf("Initializing GB...");
 
+    gb->panic = 0;
+    gb->cpu.state.panic = 0;
+
     const char *rom_file = "../../rom/pkmn_red.gb"; // Not ideal,  I should pass it.. or load it from something.
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
@@ -155,15 +158,16 @@ void gb_tick(GB *gb, uint32_t cycles){
 
 // The run loop, limited by steps.
 int gb_run_steps(GB *gb, int max_steps) {
+    printf("GB RUN => limit by steps\n");
     int step_count;
-
-
     for (step_count = 0; step_count < max_steps; step_count++) {
         if (gb->panic) {    // Include both as it's migrated.
-            break;
+            printf("GB Panic, Cancelling run..\n");
+            return -1;
         }
         if (gb->cpu.state.panic) {
-            break;
+            printf("CPU Panic, Cancelling run..\n");
+            return -1;
         }
         gb_step(gb);
     }

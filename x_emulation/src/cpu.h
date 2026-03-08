@@ -55,6 +55,7 @@ typedef struct {
 typedef struct {
     CPU_Registers reg;  // CPU Registers
     CPU_State state;    // CPU States
+    uint32_t cycle;     // The cycle for this cpu step. (Should reset each step)
 } CPU;
 
 typedef struct {

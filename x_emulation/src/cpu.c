@@ -55,20 +55,6 @@ const CPU cpu_reg_simple_tstate = {
 };
 
 
-// So future-proof by thinking of the table as:
-// a default timing source BUT NOT! the complete truth for every case..
-
-// SO.. This can work:
-// uint32_t cycles = opcode_base_cycles[opcode];
-// cycles = cpu_execute_opcode(gb, opcode, cycles);
-// return cycles;
-
-// OR! Let each opcode handler return the actual cycles used.
-// ADD MORE!!! - This is the cycles for each OPCODE.
-static const uint8_t opcode_cycles[256] = {
-    /* 00 */ 4, 12, 8, 8,
-};
-
 static const uint8_t opcode_lengths[256] = {
     1,3,1,1, 1,1,2,1, 3,1,1,1, 1,1,2,1,     // 0x00 - 0x0F
     2,3,1,1, 1,1,2,1, 2,1,1,1, 1,1,2,1,     // 0x10 - 0x1F
@@ -221,8 +207,9 @@ uint8_t external_read(GB *gb, uint16_t addr_pc) {
 }
 
 
-void opcode_tosummary() {
+void opcode_tosummary(GB *gb) {
     uint8_t op_code = op_instruction.opcode;
+    //uint8_t op_code = gb->instruction.opcode; // TODO: Enable when removing instruction_T global.
 
     // Calculate opcode type, and save for high level overview.
     instr_type_T op_type = opcode_types[op_code];
@@ -255,9 +242,14 @@ void load_opcode(GB *gb, uint16_t addr_pc) {
         operand2 = mmu_read(gb, addr_pc + 2);
     }
 
+    // Set to both. Then maybe get ride of the global.
     op_instruction.opcode = op_code;
     op_instruction.operand1 = operand1;
     op_instruction.operand2 = operand2;
+
+    gb->instruction.opcode = op_code;
+    gb->instruction.operand1 = operand1;
+    gb->instruction.operand2 = operand2;
 }
 
 
@@ -270,7 +262,13 @@ int cpu_init(GB *gb) {
     op_instruction.opcode = 0x00;
     op_instruction.operand1 = 0x00;
     op_instruction.operand2 = 0x00;
+
+    gb->instruction.opcode = 0x00;
+    gb->instruction.operand1 = 0x00;
+    gb->instruction.operand2 = 0x00;
+
     gb->step_count = 0;
+    gb->cpu.cycle = 0;
 
     // Sets the cpu.registers to the 'typical' post-boot rom state.
     gb->cpu.reg = cpu_post_bios_state.reg;
@@ -283,19 +281,20 @@ int cpu_init(GB *gb) {
 
 // Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
 uint32_t cpu_step(GB *gb) {
+    gb->cpu.cycle = 0;  // Reset the cycle back to 0 on each Step.
 
     printf("\n==== CPU Next Instruction ====\n");
     load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t
-    opcode_tosummary();
+    opcode_tosummary(gb);
 
-    gb->instruction = op_instruction;   // This likely creates a copy, either or. Update w/e the instruction was.
+    gb->instruction = op_instruction;
 
     if (execute_instruction(gb, &gb->cpu, op_instruction) != 0) {
         gb->panic = 1;
         return -1;
     }
 
-    return 0;
+    return gb->cpu.cycle;   // Should be set after each execution
 }
 
 /*

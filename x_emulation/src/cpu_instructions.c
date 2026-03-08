@@ -2228,6 +2228,9 @@ static opcode_t *cb_opcodes[256] = {
     [0xC0 ... 0xFF] = CB_SET_Handler,
 };
 
+/// TODO:
+/// PREFIX: This also needs Cycles, (Which should be added to an instruction)
+
 static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("CB PREFIX Called.               ; Load next Byte, to call Prefixed OPCODE\n");
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
@@ -2266,17 +2269,70 @@ static opcode_t *opcodes[256] = {
 
 
 
-void run_debug(GB *gb, CPU *cpu) {
-    uint8_t hl_val = external_read(gb, cpu->reg.HL);
-    //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
-    logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
-}
 
-void debug_nop(GB *gb, CPU *cpu) {
-    uint8_t hl_val = external_read(gb, cpu->reg.HL);
-    //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
-    logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
-}
+
+/// TODO: REMOVE THIS. This is fallback values only.
+/// CHANGE: Update the cycle inside each instruction! **Do what PC does, advance/set it when needed.
+/// WHY: This is 1: copy pasta. 2: Will be wrong for conditional instructions such as... SKIP: 4 cycles DO: 12 cycles.
+
+static const uint32_t opcode_cycles[256] = {    // THIS is a FALLBACK only. As these can/ will be wrong in certain situations.
+    /* 00 */  4, 12,  8,  8,  4,  4,  8,  4, 20,  8,  8,  8,  4,  4,  8,  4,
+    /* 10 */  4, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4,
+    /* 20 */  8, 12,  8,  8,  4,  4,  8,  4,  8,  8,  8,  8,  4,  4,  8,  4,
+    /* 30 */  8, 12,  8,  8, 12, 12, 12,  4,  8,  8,  8,  8,  4,  4,  8,  4,
+
+    /* 40 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* 50 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* 60 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* 70 */  8,  8,  8,  8,  8,  8,  4,  8,  4,  4,  4,  4,  4,  4,  8,  4,
+
+    /* 80 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* 90 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* A0 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+    /* B0 */  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
+
+    /* C0 */  8, 12, 12, 16, 12, 16,  8, 16,  8, 16, 12,  4, 12, 24,  8, 16,
+    /* D0 */  8, 12, 12,  0, 12, 16,  8, 16,  8, 16, 12,  0, 12,  0,  8, 16,
+    /* E0 */ 12, 12,  8,  0,  0, 16,  8, 16, 16,  4, 16,  0,  0,  0,  8, 16,
+    /* F0 */ 12, 12,  8,  4,  0, 16,  8, 16, 12,  8, 16,  4,  0,  0,  8, 16
+};
+/// EXAMPLE: When these can be wrong
+/*
+The Instructions::: JR, JP, RET, CALL.
+The cycles change depending on action taken:
+
+JR cc,e8: add +4 T-cycles if taken
+0x20, 0x28, 0x30, 0x38
+
+RET cc: add +12 T-cycles if taken
+0xC0, 0xC8, 0xD0, 0xD8
+
+JP cc,a16: add +4 T-cycles if taken
+0xC2, 0xCA, 0xD2, 0xDA
+
+CALL cc,a16: add +12 T-cycles if taken
+0xC4, 0xCC, 0xD4, 0xDC
+
+*/
+
+
+
+
+
+
+
+
+// void run_debug(GB *gb, CPU *cpu) {
+//     uint8_t hl_val = external_read(gb, cpu->reg.HL);
+//     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
+//     logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
+// }
+
+// void debug_nop(GB *gb, CPU *cpu) {
+//     uint8_t hl_val = external_read(gb, cpu->reg.HL);
+//     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, cpu->reg.HL, hl_val, cpu->reg.A, cpu->reg.PC);
+//     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
+// }
 
 void log_cpu_trace(GB *gb) {
     // Some basic level of human readable. Quick output of CPU state.
@@ -2289,16 +2345,17 @@ void log_cpu_trace(GB *gb) {
 }
 
 
-void run_test_debug(CPU *cpu) {
-    logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->reg.AF, cpu->reg.BC, cpu->reg.DE, cpu->reg.HL, cpu->reg.PC, cpu->reg.SP);
-}
-
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
     printf("\n%sExecute CPU Instruction..%s\n",KCYN, KNRM);
     printf("[PC]:0x%04X\n[STEP]:%lu \n", gb->cpu.reg.PC, gb->step_count);
     printf("Instruction: OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n\n", instruction.opcode, instruction.operand1, instruction.operand2);
 
     opcodes[instruction.opcode](gb, cpu, instruction);
+
+    printf("[Cycles]:%u - Set by instruction -\n", gb->cpu.cycle);
+    if (gb->cpu.cycle == 0) {   // If the instruction didn't set the cycle. Default back to tablelist.
+        gb->cpu.cycle = opcode_cycles[instruction.opcode];
+    }
 
     // Save to cpu_trace_log ==> Step/PC/OP/ Regs, etc
     log_cpu_trace(gb);
@@ -2312,7 +2369,7 @@ int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
     }
 
 
-    printf("\n[CYCLES]:%lu\n", gb->step_count);
+    printf("[CYCLES]:%u\n", gb->cpu.cycle);
 
     printf("\n%sExecute Instruction Block Finished.%s\n", KYEL, KNRM);
     return 0;
