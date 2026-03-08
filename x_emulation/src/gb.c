@@ -108,7 +108,10 @@ int gb_init(GB *gb) {
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
-    cpu_init(gb);
+    if (cpu_init(gb) != 0){
+        fprintf(stderr, "Error Initializing GB CPU:\n");
+        return -1;
+    }
     //mmu_init(gb);
     if (cartridge_init(gb, rom_file) != 0) {
         fprintf(stderr, "Error Initializing GB Cartridge:\n");
@@ -130,11 +133,35 @@ int gb_init(GB *gb) {
     return 0;
 }
 
-// This would be the entry point for max time, or max steps:
-int gb_run_steps(GB *gb, int max_steps) { // Make this available to e_ctrl.c / e_core.c
+// The
+uint32_t gb_step(GB *gb) {
+    uint32_t cycles;
+
+    cycles = cpu_step(gb);
+    gb_tick(gb, cycles);
+    gb->step_count++;
+
+    return cycles;
+}
+
+// Tick; update the total_cycles / frame_cycles
+void gb_tick(GB *gb, uint32_t cycles){
+    gb->total_cycles += cycles;
+    gb->frame_cycles += cycles;
+
+    // timer_tick(&gb->timer, gb, cycles);
+    // ppu_tick(&gb->ppu, gb, cycles);
+}
+
+// The run loop, limited by steps.
+int gb_run_steps(GB *gb, int max_steps) {
     int step_count;
 
+
     for (step_count = 0; step_count < max_steps; step_count++) {
+        if (gb->panic) {    // Include both as it's migrated.
+            break;
+        }
         if (gb->cpu.state.panic) {
             break;
         }
@@ -144,37 +171,37 @@ int gb_run_steps(GB *gb, int max_steps) { // Make this available to e_ctrl.c / e
     return step_count;
 }
 
+// The run loop, limited by elasped time
+void gb_run_time(GB *gb, uint64_t max_time) {
 
-void gb_run_time(GB *gb, uint64_t max_time) { // Make this available to e_ctrl.c / e_core.c
 
-    // Run for a certain amount of time before closing.
     gb_step(gb);
 }
 
-void gb_run_for_cycles(GB *gb, uint64_t cycle_budget) {
+// The run loop, limited by cycles
+uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
+    uint64_t ran_cycles = 0;
 
+    while (ran_cycles < cycle_budget) {
+        if (gb->panic) {    // Include both as it's migrated.
+            break;
+        }
+        if (gb->cpu.state.panic) {
+            break;
+        }
+        uint32_t step_cycles;
+
+        step_cycles = gb_step(gb);
+        ran_cycles += step_cycles;
+    }
+
+    return ran_cycles;
 }
 
 
-uint32_t gb_step(struct gb_s *gb) {
-    uint32_t cycles;
-
-    cycles = cpu_step(gb);
-    gb_tick(gb, cycles);
-
-    return cycles;
-}
-
-void gb_tick(struct gb_s *gb, uint32_t cycles)
-{
-    gb->total_cycles += cycles;
-    gb->frame_cycles += cycles;
-
-    // timer_tick(&gb->timer, gb, cycles);
-    // ppu_tick(&gb->ppu, gb, cycles);
-}
 
 
+// Special interupt handling. TODO: Move this from CPU
 uint8_t ie_read(GB *gb, uint16_t addr) {
     return gb->cpu.state.IE;
 }

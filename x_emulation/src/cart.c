@@ -8,22 +8,6 @@
 
 Headers headers;
 
-/// BEGIN: Moving things into it's own classes. IE: mbc.c, each MBC 0 - 5.
-/// COMBINE: Loading ROM file, Loading headers, all of that all at once. Instead of split
-/// SIMPLIFY: Decoding headers, loading each MBC setting, matching it to a more simple method.
-/// INIT: Make the init EASIER! not having e_ctrl.c run 10 commands to start it up.
-
-
-/*
-        Steps:
-        1. Check ROM File
-        2. Read Headers from ROM FIle
-        3. Determin ROM Size, MBC, if Bank Switching
-        4. Load ROM Fixed Bank into Memory
-        5. Load ROM Switchable Bank into Array
-
-*/
-
 /// TODO: WRITE INTERCEPTS:
 /*
 

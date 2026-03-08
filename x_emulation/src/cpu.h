@@ -67,9 +67,6 @@ typedef struct {
 
 
 
-// External to CPU Instruction Commands
-// void set_flag(int cpu_flag);
-// void clear_flag(int cpu_flag);
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
 
 
@@ -85,8 +82,18 @@ void external_write(GB *gb, uint16_t addr, uint8_t write_val);
 
 
 // Initialize the CPU (Sets the Register values, Flags etc)
-void cpu_init(GB *gb);
+int cpu_init(GB *gb);
 
+
+// Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
+uint32_t cpu_step(GB *gb);
+
+
+// Reset the CPU completely.
+void cpu_reset(GB *gb, CPU *cpu);
+
+
+/// TODO: Get rid of most of these things.
 // Run CPU (By Step Limit):
 void run_cpu(GB *gb, int max_steps);
 // Run CPU Loop (By Time Limit):
@@ -94,13 +101,9 @@ void run_cpu_bytime(GB *gb, uint64_t max_time_ms);
 // Run CPU (Test Mode):
 void run_cpu_test(GB *gb, uint8_t test_op_code);    // Note this using the test_cpu modules and files!
 
-// Step the CPU....... this is meant for tracking the cycles.
-// Sooooo... things might change for how this actually works.
-uint32_t cpu_step(GB *gb);
 
 
-// Completely Reset the CPU.
-void cpu_reset(GB *gb, CPU *cpu);
+
 
 
 

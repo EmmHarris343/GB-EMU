@@ -78,11 +78,11 @@ int startup_sequence() {
 
     // Initialize the GB at the "machine" level.
     if (gb_init(&gb) != 0) {
-        fprintf(stderr, "Error Initializing Cartridge Settings:\n");
+        fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }
     if (init_log_files() != 0) {
-        printf("Failure Initializing log files");
+        printf("Unable to Initializing log files.");
         return -1;
     }
 

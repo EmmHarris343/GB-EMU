@@ -19,7 +19,7 @@ typedef struct {
     // maybe operand type metadata
 } instruction_meta_t;
 
-int execute_instruction(CPU *cpu, GB *gb, instruction_T instruction, int step_count);
+int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction);
 //int execute_instruction(CPU *cpu, instruction_T instrc, int step_count);
 int execute_test(GB *gb, CPU *cpu, instruction_T instruction);
 

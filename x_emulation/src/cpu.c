@@ -11,15 +11,11 @@
 
 #include "logger.h"
 
-CPU local_cpu;
-
-
 instruction_T op_instruction;
 debug_state dbg_state;
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
-uint64_t which_op_group[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
 const char* optype_names[] = {
     "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
@@ -31,31 +27,31 @@ const CPU cpu_post_bios_state = {
     .reg.HL = 0x014D,
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0100,
-    .state.IME = 0,         // Master Interupt
+    .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
     .state.IE = 0x00,     // IE at location 0xFFFF = 0x00
     .state.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
-    .state.panic = 0        // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
+    .state.panic = 0      // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
 };
 
 const CPU cpu_reg_simple_tstate = {
-    .reg.AF = 0x0100,       // B0 = 1011 (IE Z set, N not set, H set, C set)
+    .reg.AF = 0x0100,     // B0 = 1011 (IE Z set, N not set, H set, C set)
     .reg.BC = 0x021B,
     .reg.DE = 0x032D,
-    .reg.HL = 0xC100,       // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
+    .reg.HL = 0xC100,     // This points to WRAM Work-RAM. (FOR Test Writes/ Reads.)
     .reg.SP = 0xFFFE,
     .reg.PC = 0x0779,
-    .state.IME = 0,         // Master Interupt
+    .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
     .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
     .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
-    .state.panic = 0        // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
+    .state.panic = 0      // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
 };
 
 
@@ -201,6 +197,141 @@ static const uint8_t opcode_types[256] = {
     [0xFB] = INSTR_MISC             // EI
 };
 
+
+
+
+
+
+
+/// TODO: I shouldn't need this function here. Can likely move to cpu_instructions.c
+uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
+    uint16_t cvrt_byte = (HIGH << 8) | LOW;
+    return cvrt_byte;
+}
+
+// External_write/read used by cpu.c + cpu_instructions.c
+void external_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    mmu_write(gb, addr, write_val);
+}
+uint8_t external_read(GB *gb, uint16_t addr_pc) {
+    uint8_t read_val = 0;
+    read_val = mmu_read(gb, addr_pc);
+
+    return read_val;
+}
+
+
+void opcode_tosummary() {
+    uint8_t op_code = op_instruction.opcode;
+
+    // Calculate opcode type, and save for high level overview.
+    instr_type_T op_type = opcode_types[op_code];
+    if (op_code == 0x00) {
+        op_type = INSTR_NOP;
+    }
+    if (op_type >= INSTR_TYPE_COUNT) {
+        op_type = INSTR_UNKNOWN;
+    }
+    if (op_type == 0) {
+        // This is falling under UDEF (Undefined.. yet).. So what's the opcodes being called?
+        which_op[op_code] ++;
+    }
+    instr_count[op_type]++ ;
+}
+
+/// DECODE:
+// Reads the OP Code + Operands
+void load_opcode(GB *gb, uint16_t addr_pc) {
+    uint8_t op_code = 0x00;
+    uint8_t operand1 = 0x00;
+    uint8_t operand2 = 0x00;
+
+    // Reads the OpCode + Operands -> mmu -> based on address/ PC.
+    op_code = mmu_read(gb, addr_pc);
+    if (opcode_lengths[op_code] >= 2) {
+        operand1 = mmu_read(gb, addr_pc + 1);
+    }
+    if (opcode_lengths[op_code] == 3) {
+        operand2 = mmu_read(gb, addr_pc + 2);
+    }
+
+    op_instruction.opcode = op_code;
+    op_instruction.operand1 = operand1;
+    op_instruction.operand2 = operand2;
+}
+
+
+
+// Initalize the CPU, set the defaults for DMG 01 (Original) - Registers, Interupts etc.
+int cpu_init(GB *gb) {
+    printf(":CPU: Initialization, setting registers and settings. For VER: %s\n", "DMG 01");
+
+    // Set the operands to blank (0x00) state:
+    op_instruction.opcode = 0x00;
+    op_instruction.operand1 = 0x00;
+    op_instruction.operand2 = 0x00;
+    gb->step_count = 0;
+
+    // Sets the cpu.registers to the 'typical' post-boot rom state.
+    gb->cpu.reg = cpu_post_bios_state.reg;
+
+    printf("Done. Finished init for DMG 01\n");
+
+    return 0;
+}
+
+
+// Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
+uint32_t cpu_step(GB *gb) {
+
+    printf("\n==== CPU Next Instruction ====\n");
+    load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t
+    opcode_tosummary();
+
+    gb->instruction = op_instruction;   // This likely creates a copy, either or. Update w/e the instruction was.
+
+    if (execute_instruction(gb, &gb->cpu, op_instruction) != 0) {
+        gb->panic = 1;
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+Maybe something like:
+uint32_t cpu_step(GB *gb)
+{
+    CPU *cpu = &gb->cpu;
+    instruction_T instruction;
+    uint32_t cycles;
+
+    instruction = extract_opcode(gb, cpu->reg.PC);
+
+    if (execute_instruction(gb, cpu, instruction) != 0) {
+        gb->cpu.state.panic = 1;
+        return 0;
+    }
+
+    cycles = get_cycles_by_instruction(instruction, cpu);
+
+    return cycles;
+}
+
+*/
+
+
+
+
+
+
+// *----
+/// REMOVE:
+/// ALLOFTHIS:
+/// BELOW:
+// *----
+
+
 // void check_registers() {
 //     printf("\n:CPU: === Registers === \n");
 //     (local_cpu.reg.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
@@ -216,7 +347,6 @@ static const uint8_t opcode_types[256] = {
 // }
 
 
-/// TODO: MOVE THIS TO LOGGER.C If possible. Cause this is a mess of code in CPU.C
 void cpu_trace_instrc(CPU *cpu, int type) {
     // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
     // Example looks like:
@@ -241,6 +371,55 @@ void print_instr_counts() {
     for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
         printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
     }
+}
+
+
+
+void step_cpu(GB *gb, int step_count) {
+    dbg_state.step_count = step_count;
+    //dbg_state.PC = local_cpu.reg.PC;
+    dbg_state.opcode = op_instruction.opcode;
+
+    cpu_trace_instrc(&gb->cpu, 1);
+
+    // if (execute_instruction(&local_cpu, gb, op_instruction, step_count) != 0) {
+    //     printf(":CPU: Error Executing CPU instruction!\n");
+    // }
+}
+
+
+// "RUN" the cpu, but limit it by [max_steps] parameter.
+void run_cpu(GB *gb, int max_steps) {
+    struct timespec start_time, current_time;
+    uint64_t elasped_ms = 0;
+
+    int step_count = 0;
+
+    printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
+
+    // Setup the start time, so it can calculate elasped.
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+
+    for (int i = 0; i < max_steps; i++) {
+        // Get current time and compute elasped time
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+        elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
+                     (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
+
+        printf("\n[STEP: %03d]\n", step_count);
+        printf("[TIME: %lu ms]\n", elasped_ms);
+
+        load_opcode(gb, gb->cpu.reg.PC);
+        step_cpu(gb, i);
+
+
+        if (gb->cpu.state.panic == 1) {
+            printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n");
+            break;
+        }
+    }
+    printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
+    print_instr_counts();
 }
 
 
@@ -283,154 +462,6 @@ void print_instr_counts() {
 //     }
 // }
 
-void cpu_init(GB *gb) {         // Initialize this to the DMG   (Original)
-
-    printf(":CPU: Initialization, Setting registers and Settings. For VER: %s\n", "DMG 01");
-
-    // Set the operands:
-    op_instruction.opcode = 0;
-    op_instruction.operand1 = 0;
-    op_instruction.operand2 = 0;
-
-    CPU cpu = gb->cpu;
-
-    // Sets the CPU.REG to the post_bios reg config.
-    cpu.reg = cpu_post_bios_state.reg;
-
-    //add_cpu_trace(&local_cpu);
-    cpu_trace_instrc(&cpu, 0);
-
-
-    printf("Done. Finished init for DMG 01\n");
-}
-
-uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
-    uint16_t cvrt_byte = (HIGH << 8) | LOW;
-    return cvrt_byte;
-}
-
-void external_write(GB *gb, uint16_t addr, uint8_t write_val) {
-    mmu_write(gb, addr, write_val);
-}
-
-uint8_t external_read(GB *gb, uint16_t addr_pc) {
-    uint8_t int8_val = 0;
-    int8_val = mmu_read(gb, addr_pc);
-
-    return int8_val;
-}
-
-
-/// DECODE:
-// Reads the OPP Code
-void extract_opcode(GB *gb, uint16_t addr_pc) {
-    uint8_t op_code = 0;
-    uint8_t operand1 = 0;
-    uint8_t operand2 = 0;
-
-    // Goes through the MMU to read the data.
-    op_code = mmu_read(gb, addr_pc);
-
-    //printf("OP_CODE (Read from Ram): %04X\n", op_code);
-    if (opcode_lengths[op_code] >= 2) {
-        // printf(":CPU: 8Bit Operand ");
-        operand1 = mmu_read(gb, addr_pc + 1);
-    }
-    if (opcode_lengths[op_code] == 3) {
-        // printf(":CPU: Second 8Bit Operand ");
-        operand2 = mmu_read(gb, addr_pc + 2);
-    }
-
-    /// NOTE: OPCODE Summary
-    // Calculate opcode type, and save for high level overview.
-    instr_type_T op_type = opcode_types[op_code];
-
-    if (op_code == 0x00) {
-        op_type = INSTR_NOP;
-    }
-    if (op_type >= INSTR_TYPE_COUNT) {
-        op_type = INSTR_UNKNOWN;
-    }
-    if (op_type == 0) {
-        // This is falling under UDEF (Undefined.. yet).. So what's the opcodes being called?
-        which_op[op_code] ++;
-    }
-
-    instr_count[op_type]++ ;
-
-
-
-
-    op_instruction.opcode = op_code;
-    op_instruction.operand1 = operand1;
-    op_instruction.operand2 = operand2;
-}
-
-
-/// TODO: probably just remove this, go thorugh a different route.
-// Might change later, but this mostly just Executes the CPU Instruction
-void step_cpu(GB *gb, int step_count) {
-    dbg_state.step_count = step_count;
-    dbg_state.PC = local_cpu.reg.PC;
-    dbg_state.opcode = op_instruction.opcode;
-
-    cpu_trace_instrc(&gb->cpu, 1);
-
-    // if (execute_instruction(&local_cpu, GB, op_instruction, step_count) != 0) {
-    //     printf(":CPU: Error Executing CPU instruction!\n");
-    // }
-}
-
-uint32_t cpu_step(GB *gb) {
-    return 0;
-}
-
-
-// *----
-/// START:
-/// MAX:
-/// STEPS:
-// *----
-
-// "RUN" the cpu, but limit it by [max_steps] parameter.
-void run_cpu(GB *gb, int max_steps) {
-    struct timespec start_time, current_time;
-    uint64_t elasped_ms = 0;
-
-    int step_count = 0;
-
-    printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
-
-    // Setup the start time, so it can calculate elasped.
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
-
-    for (int i = 0; i < max_steps; i++) {
-        // Get current time and compute elasped time
-        clock_gettime(CLOCK_MONOTONIC, &current_time);
-        elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
-                     (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
-
-        printf("\n[STEP: %03d]\n", step_count);
-        printf("[TIME: %lu ms]\n", elasped_ms);
-
-        extract_opcode(gb, gb->cpu.reg.PC);
-        step_cpu(gb, i);
-
-
-        if (gb->cpu.state.panic == 1) {
-            printf("::CPU:: PANIC HALT detected. Breaking CPU loop.\n");
-            break;
-        }
-    }
-    printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
-    print_instr_counts();
-}
-
-
-
-
-
-
 
 
 // *----
@@ -457,7 +488,7 @@ void run_cpu_bytime(GB *gb, uint64_t max_time_ms) {
         printf("[TIME: %lu ms]\n", elasped_ms);
 
         // CPU STEP:
-        extract_opcode(gb, gb->cpu.reg.PC);
+        load_opcode(gb, gb->cpu.reg.PC);
         step_cpu(gb, step_count);
 
 

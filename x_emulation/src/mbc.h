@@ -6,7 +6,7 @@
 #include "cart_types.h"
 #include "cart.h"
 
-// Expose these function signatures to cart.c, mbc.c, mmu, e_ctrl... etc
+// Expose these function signatures to cart.c, mbc.c, mmu.c, e_ctrl... etc
 
 typedef struct gb_s GB;
 
@@ -47,4 +47,3 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr);
 
 
 #endif
-

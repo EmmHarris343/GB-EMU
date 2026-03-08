@@ -17,16 +17,35 @@ typedef struct {
     uint8_t IF;
 } Interrupt_State;
 
+typedef struct {
+    uint8_t IE;
+    uint8_t IF;
+} GB_State; // Make this just a general GB state.
 
 typedef struct gb_s {
-    CPU cpu;
-    MMU *mmu;
-    Cartridge cart;
-    struct ppu_s *ppu;
-    struct timer_s *timer;
+    // Move for debug info:
+    instruction_T instruction;
+    uint64_t step_count;
 
+    // Hardware/ Sub-Functions for inter-connection:
+    CPU cpu;
+    MMU mmu;
+    Cartridge cart;
+    struct io_s *io;
+    struct ppu_s *ppu;
+    struct apu_s *apu;  // Would APU be under io?
+    struct oam_s *oam;
+
+    // GB states, interupts, pause,
+    GB_State state;
+
+    // Cycles, ticks, timer:
+    struct timer_s *timer;
     uint64_t total_cycles;
     uint32_t frame_cycles;
+
+    /// TODO: move to gb state?
+    uint8_t panic;      // Move this to 'machine' panic, not just cpu panic level.
 } GB;
 
 int gb_init(GB *gb);

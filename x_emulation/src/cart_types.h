@@ -57,7 +57,7 @@ typedef struct {
     MBC2_state mbc2;
     MBC3_state mbc3;
     MBC5_state mbc5;
-} State;
+} MBC_State;
 
 
 typedef struct {
@@ -114,7 +114,7 @@ typedef struct {
 struct Cartridge{
     Config config;
     CartridgeStorage cartstorage;
-    State state;
+    MBC_State state;
     Operations ops;
 };
 

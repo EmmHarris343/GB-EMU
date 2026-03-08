@@ -2278,21 +2278,50 @@ void debug_nop(GB *gb, CPU *cpu) {
     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
 }
 
-// void cpu_trace_instrc(CPU *cpu) {
-//     // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
-//     // Example looks like:
-//     // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
-//     // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
+void log_cpu_trace(GB *gb) {
+    // Some basic level of human readable. Quick output of CPU state.
+    CPU *cpu = &gb->cpu;    // I just like the arrows. Really that's it.
 
-//     logging_cpu_trace("%d 0x%04X | 0x%02X | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
-//     step_count_icpu, cpu->reg.PC, step_opcode, cpu->reg.A, cpu->reg.F,
-//     cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
-// }
+    logging_cpu_trace("[CPU] STEP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%02X IME=0x%02X IE=0x%04X IF=0x%04X\n",
+    gb->step_count, cpu->reg.PC, gb->instruction.opcode, cpu->reg.A, cpu->reg.F,
+    cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L,
+    cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+}
 
 
 void run_test_debug(CPU *cpu) {
     logging_log("AF=0x%04X BC=0x%04X DE=0x%04X HL=0x%04X PC=0x%04X SP=0x%04X\n", cpu->reg.AF, cpu->reg.BC, cpu->reg.DE, cpu->reg.HL, cpu->reg.PC, cpu->reg.SP);
 }
+
+int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
+    printf("\n%sExecute CPU Instruction..%s\n",KCYN, KNRM);
+    printf("[PC]:0x%04X\n[STEP]:%lu \n", gb->cpu.reg.PC, gb->step_count);
+    printf("Instruction: OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n\n", instruction.opcode, instruction.operand1, instruction.operand2);
+
+    opcodes[instruction.opcode](gb, cpu, instruction);
+
+    // Save to cpu_trace_log ==> Step/PC/OP/ Regs, etc
+    log_cpu_trace(gb);
+
+    // IME (Interupt delay logic)
+    if (cpu->state.IME_delay) {
+        cpu->state.IME_delay--;
+        if (cpu->state.IME_delay == 0) { // Dec from value of 2 (Assigned by EI). To make sure IME flips After the NEXT instruction has executed
+            cpu->state.IME = 1;
+        }
+    }
+
+
+    printf("\n[CYCLES]:%lu\n", gb->step_count);
+
+    printf("\n%sExecute Instruction Block Finished.%s\n", KYEL, KNRM);
+    return 0;
+}
+
+
+
+
+
 
 
 int execute_test(GB *gb, CPU *cpu, instruction_T instruction) {
@@ -2311,24 +2340,3 @@ int execute_test(GB *gb, CPU *cpu, instruction_T instruction) {
     }
     return 0;
 }
-
-// OLD: int execute_instruction(CPU *cpu, instruction_T instrc, int step_count) {
-int execute_instruction(CPU *cpu, struct gb_s *gb, instruction_T instruction, int step_count){
-    printf(" PC=%04X, OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n", cpu->reg.PC, instruction.opcode, instruction.operand1, instruction.operand2);
-
-    // step_count_icpu = step_count;
-    // step_opcode = instruction.opcode;    // globally available opcode (nothing else included)
-    opcodes[instruction.opcode](gb, cpu, instruction);
-
-    // IME (Interupt delay logic)
-    if (cpu->state.IME_delay) {
-        cpu->state.IME_delay--;
-        if (cpu->state.IME_delay == 0) { // Dec from value of 2 (Assigned by EI). To make sure IME flips After the NEXT instruction has executed
-            cpu->state.IME = 1;
-        }
-    }
-
-    printf("%sExecution Block Finished.%s\n", KYEL, KNRM);
-    return 0;
-}
-
