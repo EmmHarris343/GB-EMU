@@ -16,10 +16,10 @@ A series of Pointers, Configurations, and Rules to direct ANY traffic
 Directs data from: 0000 to FFFF
 
 
-MMU is/does NOT:
+MMU does NOT:
 Does not store any DATA,
 Does not store current ROM or RAM Banks
-Does NOT control RAM, HRAM, External Ram or Timer.
+Does NOT control RAM, HRAM, External Ram or RTC Timer.
 
 */
 

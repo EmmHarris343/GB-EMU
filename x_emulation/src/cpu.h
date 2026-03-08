@@ -2,21 +2,11 @@
 #define CPU_H
 
 #include <stdint.h>
-#include "logger.h"
 
 #define NANOSECONDS_IN_MS 1000000
 
-typedef struct {
-    uint8_t opcode;
-    uint8_t operand1;
-    uint8_t operand2;
-} instruction_T;
-
-typedef struct {
-    int step_count;
-    uint8_t opcode;
-    uint16_t PC;
-} debug_state;
+// Include the gb_s struct from gb.h, this avoids importing gb.h into this header.
+struct gb_s;
 
 typedef struct {
     union {
@@ -67,6 +57,67 @@ typedef struct {
     CPU_State state;    // CPU States
 } CPU;
 
+typedef struct {
+    uint8_t opcode;
+    uint8_t operand1;
+    uint8_t operand2;
+} instruction_T;
+
+
+// Special set state that comes from CPU -> MMU -> CPU.STATE.IE
+uint8_t ie_read(uint16_t addr);
+void ie_write(uint16_t addr, uint8_t val);
+
+
+// External to CPU Instruction Commands
+void set_flag(int cpu_flag);
+void clear_flag(int cpu_flag);
+uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
+uint8_t external_read(uint16_t addr_pc);
+void external_write(uint16_t addr, uint8_t write_val);
+
+
+
+/*
+    CPU: Init|Run|Reset
+*/
+
+
+// Initialize the CPU (Sets the Register values, Flags etc)
+void cpu_init();
+
+// Run CPU (By Step Limit):
+void run_cpu(int max_steps);
+// Run CPU Loop (By Time Limit):
+void run_cpu_bytime(uint64_t max_time_ms);
+// Run CPU (Test Mode):
+void run_cpu_test(uint8_t test_op_code);    // Note this using the test_cpu modules and files!
+
+// Step the CPU....... this is meant for tracking the cycles.
+// Sooooo... things might change for how this actually works.
+uint32_t cpu_step(struct gb_s *gb);
+
+
+// Completely Reset the CPU.
+void cpu_reset(CPU *cpu);
+
+
+
+
+
+// Makes setting flags easier to read in code
+#define FLAG_Z 0x80
+#define FLAG_N 0x40
+#define FLAG_H 0x20
+#define FLAG_C 0x10
+
+
+// For debug stuff:
+typedef struct {
+    int step_count;
+    uint8_t opcode;
+    uint16_t PC;
+} debug_state;
 
 typedef enum {
     INSTR_UNDF,
@@ -89,55 +140,5 @@ typedef enum {
     INSTR_UNKNOWN,
     INSTR_TYPE_COUNT
 } instr_type_T;
-
-// Special set state that comes from CPU -> MMU -> CPU.STATE.IE
-uint8_t ie_read(uint16_t addr);
-void ie_write(uint16_t addr, uint8_t val);
-
-
-// External to CPU Instruction Commands
-void set_flag(int cpu_flag);
-void clear_flag(int cpu_flag);
-uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
-uint8_t external_read(uint16_t addr_pc);
-void external_write(uint16_t addr, uint8_t write_val);
-
-
-
-// CPU Run section:
-
-void cpu_init();
-
-// Main cpu LOOP:
-void run_cpu(int max_steps);
-
-// CPU Loop (By time):
-void run_cpu_bytime(uint64_t max_time_ms);
-
-
-// TEST Section:
-void run_cpu_test(uint8_t test_op_code);
-
-
-
-
-
-// The AF, Specifically the F CPU Register. - This is each individual flag
-// NOTE, excluding flag N (Subtract flag) Yes/No 1/0.
-
-// The others Z, H, C, I believe can be set to specific values!!
-/// TODO: This needs to be redone. This is wrong :/
-
-#define FLAG_Z 0x80
-#define FLAG_N 0x40
-#define FLAG_H 0x20
-#define FLAG_C 0x10
-
-// Old method, bad. doesn't let me know what each flag is.
-// #define FLAG_Z  (1 << 7)
-// #define FLAG_N  (1 << 6)
-// #define FLAG_H  (1 << 5)
-// #define FLAG_C  (1 << 4)
-
 
 #endif

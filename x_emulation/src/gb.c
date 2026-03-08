@@ -1,0 +1,154 @@
+#include "gb.h"
+
+uint64_t machine_total_cycles;
+
+// BIG NOTE:
+// subsystem headers
+// should avoid including gb.h unless absolutely necessary
+
+// subsystem .c files
+// can include both their own header and gb.h when needed
+// This avoids circular include damage.
+
+
+// Local subsystem functions:
+// void cpu_reset(struct cpu_s *cpu);
+// void ppu_reset(struct ppu_s *ppu);
+// void timer_reset(struct timer_s *timer);
+
+
+// Subsystem functions that would need machine-wide access:
+// uint32_t cpu_step(struct gb_s *gb);
+// void ppu_tick(struct ppu_s *ppu, struct gb_s *gb, uint32_t cycles);
+// void timer_tick(struct timer_s *timer, struct gb_s *gb, uint32_t cycles);
+
+// Cross-cutting helper APIs
+// uint8_t gb_read_ie(struct gb_s *gb);
+// uint8_t gb_read_if(struct gb_s *gb);
+// void gb_request_interrupt(struct gb_s *gb, uint8_t mask);
+
+
+// Maybe do as well:
+// BAD: gb->cpu.if_reg |= 0x01;
+// GOOD: gb_request_interrupt(gb, INT_VBLANK);
+
+// BAD: gb->ppu.ly = 0;
+// GOOD: ppu_set_ly(&gb->ppu, gb, value);
+
+// BAD: gb->ppu.mode = 1;
+// GOOD: ppu_enter_mode(&gb->ppu, gb, PPU_MODE_VBLANK);
+
+// DO THIS: ------------------
+// cycles = cpu_step(gb);
+// gb_tick(gb, cycles);
+
+/*
+
+CURRENTLY doing (simple mode)
+void gb_tick(struct gb_s *gb, uint32_t cycles)
+{
+    timer_tick(&gb->timer, gb, cycles);
+    ppu_tick(&gb->ppu, gb, cycles);
+}
+
+LATER can do:
+void gb_tick(struct gb_s *gb, uint32_t cycles)
+{
+    while (cycles > 0) {
+        timer_tick(&gb->timer, gb, 1);
+        ppu_tick(&gb->ppu, gb, 1);
+        dma_tick(&gb->dma, gb, 1);
+        cycles--;
+    }
+}
+
+WAY more advanced:
+void gb_tick(struct gb_s *gb, uint32_t cycles)
+{
+    scheduler_advance(&gb->scheduler, gb, cycles);
+}
+*/
+
+/*
+
+===-- gb.c --===
+The Top-Level "Machine"s:
+    The Entry-Point.
+    The init for all 'key' sub-functions.
+    The Connection between systems.
+    The Handler of cylce tracking.
+
+
+
+*/
+
+/*
+Functions that should be here:
+
+gb_init
+gb_reset
+gb_step
+gb_run_steps
+gb_run_frame
+gb_run_until
+
+*/
+
+
+
+
+
+// Top-Level "Machine" Setup/ Initializer
+int gb_init(GB *gb) {
+    // cart_init(...)
+    // mmu_init(...)
+    // cpu_init(...)
+    // ppu_init(...)
+    // apu_init(...)
+
+    return 0;
+}
+
+// This would be the entry point for max time, or max steps:
+int gb_run_steps(GB *gb, int max_steps) { // Make this available to e_ctrl.c / e_core.c
+    int step_count;
+
+    for (step_count = 0; step_count < max_steps; step_count++) {
+        if (gb->cpu.state.panic) {
+            break;
+        }
+        gb_step(gb);
+    }
+
+    return step_count;
+}
+
+
+void gb_run_time(GB *gb, uint64_t max_time) { // Make this available to e_ctrl.c / e_core.c
+
+    // Run for a certain amount of time before closing.
+    gb_step(gb);
+}
+
+void gb_run_for_cycles(GB *gb, uint64_t cycle_budget) {
+
+}
+
+
+uint32_t gb_step(struct gb_s *gb) {
+    uint32_t cycles;
+
+    cycles = cpu_step(gb);
+    gb_tick(gb, cycles);
+
+    return cycles;
+}
+
+void gb_tick(struct gb_s *gb, uint32_t cycles)
+{
+    gb->total_cycles += cycles;
+    gb->frame_cycles += cycles;
+
+    // timer_tick(&gb->timer, gb, cycles);
+    // ppu_tick(&gb->ppu, gb, cycles);
+}

@@ -2,23 +2,19 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <time.h>
 #include <stdio.h>
-// #include <stdlib.h>
 #include <stdint.h>
 
-
-
+#include "gb.h"
 #include "cpu.h"
 #include "cpu_instructions.h"
 
 #include "mmu_interface.h"
-
-
-//uint8_t local_rom_entry[3];
+#include "logger.h"
 
 CPU local_cpu;
 
-instruction_T op_instruction;
 
+instruction_T op_instruction;
 debug_state dbg_state;
 
 uint8_t ie_read(uint16_t addr) {
@@ -36,7 +32,19 @@ const char* optype_names[] = {
     "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
 
-
+void check_registers() {
+    printf("\n:CPU: === Registers === \n");
+    (local_cpu.reg.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
+    (local_cpu.reg.F & FLAG_N) ? printf("  N Flag set | ") : printf("  N Flag NOT set | ");
+    (local_cpu.reg.F & FLAG_H) ? printf("  H Flag set | ") : printf("  H Flag NOT set | ");
+    (local_cpu.reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
+    printf("\n");
+    printf("  A: 0x%02X\n", local_cpu.reg.A);
+    printf("  B: 0x%02X, C: 0x%02X\n", local_cpu.reg.B, local_cpu.reg.C);
+    printf("  D: 0x%02X, E: 0x%02X\n", local_cpu.reg.D, local_cpu.reg.E);
+    printf("  H: 0x%02X, L: 0x%02X\n", local_cpu.reg.H, local_cpu.reg.L);
+    printf("\n");
+}
 
 
 const CPU cpu_post_bios_state = {
@@ -74,7 +82,20 @@ const CPU cpu_reg_simple_tstate = {
 };
 
 
+// So future-proof by thinking of the table as:
+// a default timing source BUT NOT! the complete truth for every case..
 
+// SO.. This can work:
+// uint32_t cycles = opcode_base_cycles[opcode];
+// cycles = cpu_execute_opcode(gb, opcode, cycles);
+// return cycles;
+
+// OR! Let each opcode handler return the actual cycles used.
+
+// ADD MORE!!! - This is the cycles for each OPCODE.
+static const uint8_t opcode_cycles[256] = {
+    /* 00 */ 4, 12, 8, 8,
+};
 
 static const uint8_t opcode_lengths[256] = {
     1,3,1,1, 1,1,2,1, 3,1,1,1, 1,1,2,1,     // 0x00 - 0x0F
@@ -230,20 +251,6 @@ void print_instr_counts() {
     for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
         printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
     }
-
-    // Couldn't get this to work correctly. Commenting out. to reduce spam..
-    // printf("----- Now which Opcode is pinged a lot inside UDEF? -----\n");
-    // int print_count = 0;
-    // for (int i = 0; i < 256; i++) {
-    //     if (which_op[i] > 0) {     // Only print if the count is above 0.
-    //         printf("::OP::[0x%02X]:[%lu] || ", i, which_op[i]);
-    //         if (print_count % 5 == 0 ) {
-    //             printf("\n");
-    //         }
-    //         print_count ++;
-    //     }
-    // }
-    // printf("\n ----- Finished Opcode Count... -----\n");
 }
 
 
@@ -296,7 +303,8 @@ void cpu_init() {         // Initialize this to the DMG   (Original)
     op_instruction.operand2 = 0;
 
 
-    local_cpu.reg = cpu_post_bios_state.reg;    // This one line instead of writing each one
+    // Sets the CPU.REG to the post_bios reg config.
+    local_cpu.reg = cpu_post_bios_state.reg;
 
     //add_cpu_trace(&local_cpu);
     cpu_trace_instrc(&local_cpu, 0);
@@ -304,23 +312,6 @@ void cpu_init() {         // Initialize this to the DMG   (Original)
 
     printf("Done. Finished init for DMG 01\n");
 }
-
-void check_registers() {
-    printf("\n:CPU: === Registers === \n");
-    (local_cpu.reg.F & FLAG_Z) ? printf("  Z Flag set | ") : printf("  Z Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_N) ? printf("  N Flag set | ") : printf("  N Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_H) ? printf("  H Flag set | ") : printf("  H Flag NOT set | ");
-    (local_cpu.reg.F & FLAG_C) ? printf("  C Flag set") : printf("  C Flag NOT set");
-    printf("\n");
-    printf("  A: 0x%02X\n", local_cpu.reg.A);
-    printf("  B: 0x%02X, C: 0x%02X\n", local_cpu.reg.B, local_cpu.reg.C);
-    printf("  D: 0x%02X, E: 0x%02X\n", local_cpu.reg.D, local_cpu.reg.E);
-    printf("  H: 0x%02X, L: 0x%02X\n", local_cpu.reg.H, local_cpu.reg.L);
-    printf("\n");
-}
-
-
-
 
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
     uint16_t cvrt_byte = (HIGH << 8) | LOW;
@@ -395,29 +386,45 @@ void step_cpu(int step_count) {
 
     cpu_trace_instrc(&local_cpu, 1);
 
-    if (execute_instruction(&local_cpu, op_instruction, step_count) != 0) {
-        printf(":CPU: Error Executing CPU instruction!\n");
-    }
-
+    // if (execute_instruction(&local_cpu, GB, op_instruction, step_count) != 0) {
+    //     printf(":CPU: Error Executing CPU instruction!\n");
+    // }
 }
 
+uint32_t cpu_step(GB *gb) {
+    return 0;
+}
+
+
+// *----
 /// START:
-// Startup and RUN CPU. (Note with a limit of Max Steps)
+/// MAX:
+/// STEPS:
+// *----
+
+// "RUN" the cpu, but limit it by [max_steps] parameter.
 void run_cpu(int max_steps) {
     struct timespec start_time, current_time;
     uint64_t elasped_ms = 0;
+
+    int step_count = 0;
+
+
     printf(":CPU: RUN_CPU (Limit Steps) Started. Running normal run: MAX STEPS: %0X\n", max_steps);
 
+    // Setup the start time, so it can calculate elasped.
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+
     for (int i = 0; i < max_steps; i++) {
+        // Get current time and compute elasped time
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elasped_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
                      (current_time.tv_nsec - start_time.tv_nsec) / NANOSECONDS_IN_MS;
 
-        printf("\n[STEP: %03d]\n", i);
+        printf("\n[STEP: %03d]\n", step_count);
         printf("[TIME: %lu ms]\n", elasped_ms);
 
         extract_opcode(local_cpu.reg.PC);
-
         step_cpu(i);
 
 
@@ -486,16 +493,14 @@ void run_cpu_bytime(uint64_t max_time_ms) {
 
 // *----
 /// TEST:
+/// ONLY:
+/// MODULES:
 // *----
-
-
-
 void tstate_set_registers() {
-    // Set the Registers initial state (After Bootrom Pass) -- I think this is what DMG01 looks like after bootup
+    // Set the Registers initial state (After Bootrom Pass)
     local_cpu.reg = cpu_reg_simple_tstate.reg;
 
 }
-
 void tstate_set_flag(){
     // Certain instructions will not run unless specific flags set.
     // IE: Subtraction (N)
@@ -508,7 +513,6 @@ void tstate_set_flag(){
     clear_flag(3);  // C
 
 }
-
 void tstate_set_ram() {
     // Write to a specific area of RAM,
     // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
@@ -523,7 +527,6 @@ int intiate_cpu_test(instruction_T *passed_instrc, CPU *cpu, CPU *expected_state
 
     return 0;
 }
-
 
 // This ensures everything is done, then finally calls the Execute Instruction
 void run_cpu_test(uint8_t test_op_code) {
@@ -542,9 +545,9 @@ void run_cpu_test(uint8_t test_op_code) {
     check_registers();
 
 
-    if (execute_test(&local_cpu, op_instruction) != 0) {
-        printf(":CPU: Error Executing CPU instruction!\n");
-    }
+    // if (execute_test(&local_cpu, , op_instruction) != 0) {
+    //     printf(":CPU: Error Executing CPU instruction!\n");
+    // }
 
     printf("Post Execution Registers... \n");
     check_registers();

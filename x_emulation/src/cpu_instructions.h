@@ -5,7 +5,8 @@
 // Include CPU Header Files
 #include "cpu.h"
 
-
+// Include the gb_s struct from gb.h, this avoids importing gb.h into this header.
+typedef struct gb_s GB;
 
 
 // Maybe later:
@@ -18,15 +19,8 @@ typedef struct {
     // maybe operand type metadata
 } instruction_meta_t;
 
-// Each instruction works on the CPU state
-
-// void instr_LD(CPU *cpu, uint8_t reg, uint8_t value);
-// void instr_ADD(CPU *cpu, uint8_t value);
-// void instr_SUB(CPU *cpu, uint8_t value);
-
-int execute_instruction(CPU *cpu, instruction_T instrc, int step_count);
-int execute_test(CPU *cpu, instruction_T instrc);
-
-// ... more instructions
+int execute_instruction(CPU *cpu, GB *gb, instruction_T instruction, int step_count);
+//int execute_instruction(CPU *cpu, instruction_T instrc, int step_count);
+int execute_test(GB *gb, CPU *cpu, instruction_T instruction);
 
 #endif

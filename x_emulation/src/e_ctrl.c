@@ -1,21 +1,19 @@
-#include "e_ctrl.h"
+#include <unistd.h>
 
+#include "e_ctrl.h"
 #include "cart.h"
 #include "cart_types.h"
 #include "loc_ram.h"
-
 #include "cpu.h"
 #include "ppu.h"
 #include "oam.h"
-//#include "apu.h"
 #include "io.h"
-// #include "mmu.h"
 #include "mmu_interface.h"
 
 #include "logger.h"
 
 
-#include <unistd.h>
+
 
 #ifdef ENABLE_TESTS
 // This is for The build flag.
@@ -58,7 +56,6 @@ void e_mmu_init(void) {
         {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
     };
     const size_t mmu_map_size = sizeof(mmu_map) / sizeof(mmu_map_entry);
-    //mmu_init(mmu_map, sizeof(mmu_map) / sizeof(mmu_map_entry));
     mmu_init(mmu_map, mmu_map_size);
 }
 
@@ -82,24 +79,20 @@ int startup_sequence() {
     const char *rom_file = "../../rom/pkmn_red.gb";
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
 
-    // 06-ld_r,r
     printf("NOTE: Using rom file: %s\n\n", rom_file);
     if (initialize_cartridge(rom_file) != 0) {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
-
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
     }
-
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
         fprintf(stderr, "Error Initializing DEBUG log File:\n");
         return -1;
     }
-
     const char *cpu_trc_logfile = "../log/cpu_trace_log.txt";
     if (cpu_trace_init(cpu_trc_logfile) != 0) {
         fprintf(stderr, "Error Initializing CPU Trace log File:\n");
@@ -119,26 +112,17 @@ int startup_sequence() {
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
 
 
-    sleep(2);
+    sleep(2);   // Sleep is just so the initial startup can be readable.
+
     // Setup the MMU memory Map.
     e_mmu_init();
 
     // Initialize CPU to default state
     cpu_init();
 
-    /// TODO: START CPU Emulation!
-    //int max_steps = 86;       // This will complete the random ROM test.
-
-    int max_steps = 45;
+    int max_steps = 300;
     run_cpu(max_steps);
 
-    //dump_hram_test();
-
-
-    //test_step_instruction();
-
-
-    // Noting left to do, Report success if reached here.
     return 0;
 }
 
@@ -153,18 +137,15 @@ int startup_seq_bytime() {
         fprintf(stderr, "Error Initializing Cartridge Settings:\n");
         return -1;
     }
-
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
     }
-
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
         fprintf(stderr, "Error Initializing DEBUG log File:\n");
         return -1;
     }
-
     const char *cpu_trc_logfile = "../log/cpu_trace_log.txt";
     if (cpu_trace_init(cpu_trc_logfile) != 0) {
         fprintf(stderr, "Error Initializing CPU Trace log File:\n");
@@ -214,13 +195,10 @@ int test_sequence() {
         fprintf(stderr, "Error Initializing Mock ROM Config (Cart.c)\n");
         return -1;
     }
-
-    // Initialize some settings:
     if (init_loc_ram() != 0) {
         fprintf(stderr, "Error Initializing LOC RAM:\n");
         return -1;
     }
-
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
         fprintf(stderr, "Error Initializing DEBUG File:\n");

@@ -91,22 +91,6 @@ static size_t ram_size_by_code(uint8_t ram_code) {
 }
 
 
-/*
-
-I need to be pass the Rom file.
-
-Load the Rom file into memory.
-Read the headers for the Rom file.
-Decode the headers.
-    Determine Which MBC version is being used. If any.
-Load the MBC versions specific configurations.
-
-
-
-*/
-
-
-
 /// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
 int init_cart_test_mode() {
     // Default to DMG 01 | MBC 1

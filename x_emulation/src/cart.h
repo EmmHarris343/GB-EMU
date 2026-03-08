@@ -1,18 +1,16 @@
 #ifndef CART_H
 #define CART_H
 
-#include "cart_types.h"
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "cart_types.h"
 
 // Rom Header:
 #define HEADER_OFFSET       0x0100          // Same as Start, just easier to understand
 #define HEADER_SIZE         0x50            // Header END point is: 0x014f (50 Bytes Total - 80 Decimal)
 #define BANK_SIZE           0x4000
-
 
 // Functions inside cart.c (Make it accessable elsewhere)
 int initialize_cartridge(const char *filename);
