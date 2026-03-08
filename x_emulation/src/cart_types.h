@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef struct gb_s GB;
+
+
 typedef enum {
     MBC_NONE = 0,
     MBC1,

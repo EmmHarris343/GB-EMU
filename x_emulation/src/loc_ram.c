@@ -3,7 +3,7 @@
 
 static uint8_t HRAM[HRAM_SIZE];
 static uint8_t WRAM[WRAM_SIZE];
-static uint8_t ERAM[ERAM_SIZE];
+static uint8_t ERAM[ECHRAM_SIZE];
 
 
 
@@ -13,7 +13,7 @@ int loc_ram_init(GB *gb) {
     // Set all the HRAM, WRAM, ERAM to completely blank values.
     memset(HRAM, 0x00, HRAM_SIZE);
     memset(WRAM, 0x00, WRAM_SIZE);
-    memset(ERAM, 0x00, ERAM_SIZE);
+    memset(ERAM, 0x00, ECHRAM_SIZE);
 
     // memset(HRAM, 0x76, HRAM_SIZE);  // Make all HRAM data HALT OPCODES <-- don't do that. causing major problems.
     // memset(WRAM, 0, WRAM_SIZE);

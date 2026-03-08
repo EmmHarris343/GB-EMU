@@ -6,8 +6,6 @@
 #include "gb.h"
 
 
-
-Cartridge cart;         // doing *cart means that I need to allocate the memory, maybe I will do that, but for now this works
 Headers headers;
 
 /// BEGIN: Moving things into it's own classes. IE: mbc.c, each MBC 0 - 5.
@@ -95,7 +93,7 @@ static size_t ram_size_by_code(uint8_t ram_code) {
 
 
 /// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
-int init_cart_test_mode() {
+int init_cart_test_mode(GB *gb) {
     // Default to DMG 01 | MBC 1
     uint8_t full_header[HEADER_SIZE];
     printf("Starting Mock Rom/ Cartridge Configuration.. \n");
@@ -108,46 +106,46 @@ int init_cart_test_mode() {
     headers.ram_size_code = 0x02;           // Ram (Memory size)
 
     // ROM Size / Bank count
-    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
+    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
 
     // RAM Size:
-    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
+    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
 
     // Some Other Config Settings.
-    cart.config.mbc_type = 1;
-    cart.config.has_rom_banking = 1;
-    cart.config.has_ram = 1;
-    cart.config.has_ram_banking = 1;
-    cart.config.has_battery = 1;
+    gb->cart.config.mbc_type = 1;
+    gb->cart.config.has_rom_banking = 1;
+    gb->cart.config.has_ram = 1;
+    gb->cart.config.has_ram_banking = 1;
+    gb->cart.config.has_battery = 1;
 
     // Some default Startup Settings for Rom.
-    if (cart.config.has_ram == 1) {
-        cart.state.mbc3.ram_rtc_enabled = 1;
+    if (gb->cart.config.has_ram == 1) {
+        gb->cart.state.mbc3.ram_rtc_enabled = 1;
     }
-    if (cart.config.has_ram_banking) {
-        cart.state.mbc3.current_ram_bank = 0x00;
+    if (gb->cart.config.has_ram_banking) {
+        gb->cart.state.mbc3.current_ram_bank = 0x00;
     }
-    if (cart.config.has_rom_banking == 1) {
-        cart.state.mbc3.current_rom_bank = 1;           // Defaulting to bank 1 (WARNING! this behaviour is not consistant in all MBC!)
-        //cart.state.mbc3.fixed_b_addr = 0x00;
-        //cart.state.mbc3.calcd_switch_addr = (cart.state.mbc3.current_rom_bank * 0x4000);     // Not confident I want to use this.
+    if (gb->cart.config.has_rom_banking == 1) {
+        gb->cart.state.mbc3.current_rom_bank = 1;           // Defaulting to bank 1 (WARNING! this behaviour is not consistant in all MBC!)
+        //gb->cart.state.mbc3.fixed_b_addr = 0x00;
+        //gb->cart.state.mbc3.calcd_switch_addr = (cart.state.mbc3.current_rom_bank * 0x4000);     // Not confident I want to use this.
     }
 
     printf("Create, and Malloc. A Mock ROM with test Data.\n");
     // Fills the rom with mock data.
-    uint32_t mock_rom_size = cart.config.rom_size;
-    uint8_t mock_banks = cart.config.rom_bank_count;
+    uint32_t mock_rom_size = gb->cart.config.rom_size;
+    uint8_t mock_banks = gb->cart.config.rom_bank_count;
 
-    cart.cartstorage.rom_data = malloc(mock_rom_size);
-    if (!cart.cartstorage.rom_data) {
+    gb->cart.cartstorage.rom_data = malloc(mock_rom_size);
+    if (!gb->cart.cartstorage.rom_data) {
         fprintf(stderr, "Mock ROM Malloc failed!\n");
         return -1;
     }
 
     for (uint32_t bank = 0; bank < mock_banks ; ++bank) {
         uint8_t fill = (uint8_t)(bank & 0xFF);              // Makes each bank have different bytes/ data
-        memset(cart.cartstorage.rom_data + bank * 0x4000, fill, 0x4000);
+        memset(gb->cart.cartstorage.rom_data + bank * 0x4000, fill, 0x4000);
     }
     printf("Done.\n");
     printf("Finished all Cartridge Configuration & Mock Rom setup.\n");
@@ -156,46 +154,46 @@ int init_cart_test_mode() {
 }
 
 // DO_NOT_USE Old method, sets static configurations.
-int decode_cart_features() {
+int decode_cart_features(GB *gb) {
     printf(":Cart: Decoding Cartridge Features... \n");
     // Set Cartridge type and features.
     switch (headers.cart_type_code) {
         case 0x00:
-            cart.config.mbc_type = 0;
+            gb->cart.config.mbc_type = 0;
             break;
         case 0x01 ... 0x03:
-            cart.config.mbc_type = 1;
-            cart.config.has_rom_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            cart.config.has_ram = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            cart.config.has_ram_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            cart.config.has_battery = (headers.cart_type_code == 0x03);
+            gb->cart.config.mbc_type = 1;
+            gb->cart.config.has_rom_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
+            gb->cart.config.has_ram = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
+            gb->cart.config.has_ram_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
+            gb->cart.config.has_battery = (headers.cart_type_code == 0x03);
             break;
         case 0x13:      // MBC3 + RAM + Battery
-            cart.config.mbc_type = 3;
-            cart.config.has_ram = 1;
-            cart.config.has_battery = 1;
+            gb->cart.config.mbc_type = 3;
+            gb->cart.config.has_ram = 1;
+            gb->cart.config.has_battery = 1;
             break;
     }
 
     // ROM Size / Bank count
-    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
+    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
 
     // RAM Size:
-    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
+    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
 
     printf("Done.\n");
 
     return 0;
 }
 // DO_NOT_USE Old way to setup cartrige
-int configure_cartrige_old() {
+int configure_cartrige_old(GB *gb) {
     // ROM Size / Bank count
-    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
+    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
 
     // RAM Size:
-    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
+    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
 
     return 0;
 }
@@ -229,7 +227,7 @@ int load_headers(const char *filename) {
     return 0;
 }
 
-int load_cartridge(const char *filename) {
+int load_cartridge(GB *gb, const char *filename) {
     size_t expt_rom_size = rom_size_by_code(headers.rom_size_code);
     //size_t expt_rom_size = cart.config.rom_size;
 
@@ -251,26 +249,26 @@ int load_cartridge(const char *filename) {
         return -2;
     }
 
-    cart.cartstorage.rom_data = malloc(expt_rom_size);
-    if (!cart.cartstorage.rom_data) {
+    gb->cart.cartstorage.rom_data = malloc(expt_rom_size);
+    if (!gb->cart.cartstorage.rom_data) {
         perror("ERROR -> Failed to allocate Memory for entire ROM file");
         fclose(rom_file);
         return -2;
     }
 
-    fread(cart.cartstorage.rom_data, 1, expt_rom_size, rom_file);
+    fread(gb->cart.cartstorage.rom_data, 1, expt_rom_size, rom_file);
     fclose(rom_file);
     printf("Done.\n");
     return 0;
 }
 
-int configure_cartrige() {
+int configure_cartrige(GB *gb) {
     // ROM Size / Bank count
-    cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
+    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
+    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
 
     // RAM Size:
-    cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
+    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
 
     return 0;
 }
@@ -282,15 +280,15 @@ int cartridge_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [LoadHeaders] Error Loading Headers:\n");
         return -1;
     }
-    if (load_cartridge(rom_file) != 0) {
+    if (load_cartridge(gb, rom_file) != 0) {
         fprintf(stderr, "Init Cartrige: [LoadCartridge] Error loading the cartridge data. (rom file)\n");
         return -1;
     }
-    if (mbc_setup(&cart, headers.cart_type_code) != 0) {
+    if (mbc_setup(gb, &gb->cart, headers.cart_type_code) != 0) {
         fprintf(stderr, "Init Cartrige: [SetupMBC] Error during mbc setup.\n");
         return -1;
     }
-    if (configure_cartrige() != 0) {
+    if (configure_cartrige(gb) != 0) {
         fprintf(stderr, "Init Cartrige: [ConfigCartridge] Error during Config Cartridge.\n");
         return -1;
     }
@@ -347,20 +345,20 @@ int cartridge_init(GB *gb, const char *rom_file) {
 
 // cart_rom_read from MMU
 uint8_t cart_rom_read(GB *gb, uint16_t addr) {
-    return cart.ops.read(&cart, addr);
+    return gb->cart.ops.read(&gb->cart, addr);
 }
 
 // cart_rom_write from MMU ... => to write intercept
 void cart_rom_write(GB *gb, uint16_t addr, uint8_t val) {
-    cart.ops.write(&cart, addr, val);
+    gb->cart.ops.write(&gb->cart, addr, val);
 }
 
 // cart_ram_read from MMU
 uint8_t cart_ram_read(GB *gb, uint16_t addr) {
-    return cart.ops.read_ext(&cart, addr);
+    return gb->cart.ops.read_ext(&gb->cart, addr);
 }
 
 // cart_ram_write from MMU ... => to write intercept
 void cart_ram_write(GB *gb, uint16_t addr, uint8_t val) {
-    cart.ops.write_ext(&cart, addr, val);
+    gb->cart.ops.write_ext(&gb->cart, addr, val);
 }

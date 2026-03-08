@@ -489,23 +489,23 @@ void tstate_set_registers(GB *gb) {
     gb->cpu.reg = cpu_reg_simple_tstate.reg;
 
 }
-void tstate_set_flag(){
-    // Certain instructions will not run unless specific flags set.
-    // IE: Subtraction (N)
-    // IE: CC (condition)... Such as: JP NZ (Will only jump if Z not set!)
+// void tstate_set_flag(){
+//     // Certain instructions will not run unless specific flags set.
+//     // IE: Subtraction (N)
+//     // IE: CC (condition)... Such as: JP NZ (Will only jump if Z not set!)
 
-    // Set Flag Registers   (This is actually Registers F)
-    set_flag(0);    // Z
-    clear_flag(1);  // N
-    clear_flag(2);  // H
-    clear_flag(3);  // C
+//     // Set Flag Registers   (This is actually Registers F)
+//     set_flag(0);    // Z
+//     clear_flag(1);  // N
+//     clear_flag(2);  // H
+//     clear_flag(3);  // C
 
-}
-void tstate_set_ram() {
-    // Write to a specific area of RAM,
-    // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
+// }
+// void tstate_set_ram() {
+//     // Write to a specific area of RAM,
+//     // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
 
-}
+// }
 
 int intiate_cpu_test(GB *gb, instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
     // Set OPCODE Instruction
@@ -524,8 +524,8 @@ void run_cpu_test(GB *gb, uint8_t test_op_code) {
     //tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
 
     tstate_set_registers(gb);
-    tstate_set_flag();              // How do I know which flag Needs to be set?
-    tstate_set_ram();
+    // tstate_set_flag();              // How do I know which flag Needs to be set?
+    // tstate_set_ram();
 
     printf(":CPU: Initial CPU state set. Ready for Execution of Test\n");
 

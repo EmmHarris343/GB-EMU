@@ -1,9 +1,13 @@
-#include "mbc.h"
-#include "cart_types.h"
-#include "logger.h"
 //#include <stdio.h>  // for print / debugging stuff
 
-int mbc_none_setup(Cartridge *cart) {
+#include "mbc.h"
+#include "cart_types.h"
+#include "gb.h"
+
+
+#include "logger.h"
+
+int mbc_none_setup(GB *gb, Cartridge *cart) {
 
     return 0;
 }
@@ -94,7 +98,7 @@ const Operations mbc1_ops = {
     .read_ext = mbc1_read_ext,
 };
 
-int mbc1_setup(Cartridge *cart, uint8_t type_code) {
+int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc1_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC1_DECODE] Error Decoding MBC\n");
         return -1;
@@ -180,7 +184,7 @@ const Operations mbc2_ops = {
     .read_ext = mbc2_read_ext,
 };
 
-int mbc2_setup(Cartridge *cart, uint8_t type_code) {
+int mbc2_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc2_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC2_DECODE] Error Decoding MBC\n");
         return -1;
@@ -416,7 +420,7 @@ const Operations mbc3_ops = {
     .read_ext = mbc3_read_ext,
 };
 
-int mbc3_setup(Cartridge *cart, uint8_t type_code) {
+int mbc3_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc3_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC3_DECODE] Error Decoding MBC\n");
         return -1;
@@ -520,7 +524,7 @@ const Operations mbc5_ops = {
     .read_ext = mbc5_read_ext,
 };
 
-int mbc5_setup(Cartridge *cart, uint8_t type_code) {
+int mbc5_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc5_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC5_DECODE] Error Decoding MBC\n");
         return -1;
@@ -556,23 +560,23 @@ void mbc_other(Cartridge *cart) {
 
 
 
-int mbc_setup(Cartridge *cart, uint8_t type_code) {
+int mbc_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     switch (type_code) {
         case 0x00:
             cart->config.mbc_type = MBC_NONE;
-            return mbc_none_setup(cart);
+            return mbc_none_setup(gb, cart);
         case 0x01 ... 0x03:
             cart->config.mbc_type = MBC1;
-            return mbc1_setup(cart, type_code);
+            return mbc1_setup(gb, cart, type_code);
         case 0x5 ... 0x6:
             cart->config.mbc_type = MBC2;
-            return mbc2_setup(cart, type_code);
+            return mbc2_setup(gb, cart, type_code);
         case 0x0F ... 0x15:
             cart->config.mbc_type = MBC3;
-            return mbc3_setup(cart, type_code);
+            return mbc3_setup(gb, cart, type_code);
         case 0x19 ... 0x1E:
             cart->config.mbc_type = MBC5;
-            return mbc5_setup(cart, type_code);
+            return mbc5_setup(gb, cart, type_code);
         default:
             return -1;
     }

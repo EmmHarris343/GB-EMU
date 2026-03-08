@@ -68,8 +68,8 @@ typedef struct {
 
 
 // External to CPU Instruction Commands
-void set_flag(int cpu_flag);
-void clear_flag(int cpu_flag);
+// void set_flag(int cpu_flag);
+// void clear_flag(int cpu_flag);
 uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH);
 
 

@@ -23,6 +23,7 @@
 //#include "../test_cpu/cpu_test.h"
 
 extern Headers headers;
+
 extern FILE *debug_dump_file;
 extern FILE *cpu_trace_file;
 extern FILE *trace_log_file;
@@ -73,7 +74,6 @@ int init_log_files() {
 
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
-
     GB gb;
 
     // Initialize the GB at the "machine" level.
@@ -86,29 +86,11 @@ int startup_sequence() {
         return -1;
     }
 
-
-    // if (initialize_cartridge(rom_file) != 0) {
-    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
-    //     return -1;
-    // }
-    // if (init_loc_ram(&gb) != 0) {
-    //     fprintf(stderr, "Error Initializing LOC RAM:\n");
-    //     return -1;
-    // }
-
-
-
-
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
     sleep(2);   // Sleep is just so the initial startup can be readable.
 
-
-
-    // Initialize CPU to default state
-    cpu_init(&gb);
-
     int max_steps = 300;
-    run_cpu(&gb, max_steps);
+    gb_run_steps(&gb, max_steps);
 
     return 0;
 }

@@ -8,6 +8,8 @@
 
 // Expose these function signatures to cart.c, mbc.c, mmu, e_ctrl... etc
 
+typedef struct gb_s GB;
+
 typedef struct Cartridge Cartridge;
 
 typedef void (*mbc_write_func)(Cartridge *cart, uint16_t addr, uint8_t val);
@@ -19,7 +21,7 @@ extern const Operations mbc3_ops;
 extern const Operations mbc5_ops;
 
 // The main configuration entry point for the MBC
-int mbc_setup(Cartridge *cart, uint8_t type_code);
+int mbc_setup(GB *gb, Cartridge *cart, uint8_t type_code);
 
 
 // MBC-1

@@ -21,9 +21,9 @@ typedef struct {
 typedef struct gb_s {
     CPU cpu;
     MMU *mmu;
+    Cartridge cart;
     struct ppu_s *ppu;
     struct timer_s *timer;
-    struct cart_s *cart;
 
     uint64_t total_cycles;
     uint32_t frame_cycles;

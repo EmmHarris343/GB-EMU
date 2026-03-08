@@ -31,7 +31,7 @@ struct timer_s {
 
 
 
-int init_ppu(GB *gb) {
+int ppu_init(GB *gb) {
     printf("Initialize VRAM\n");
     memset(VRAM, 0, VRAM_SIZE);
 

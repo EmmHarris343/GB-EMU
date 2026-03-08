@@ -12,7 +12,7 @@ typedef struct gb_s GB;
 
 #define HRAM_SIZE 0x80          // 127 bytes from 0xFF80 to 0xFFFE
 #define WRAM_SIZE 0x2000
-#define ERAM_SIZE 0x1E00
+#define ECHRAM_SIZE 0x1E00
 
 
 
