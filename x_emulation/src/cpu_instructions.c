@@ -457,7 +457,7 @@ static void LD_SP_HL(GB *gb, CPU *cpu, instruction_T instruction) {
 /// SECTION:
 // MACRO'D LD instructions. Covers LD, r8, r8. LD X, [HL]. LD [HL], B
 
-// This is LD from Register --> Register
+// LD r8, r8. - Register to register.
 #define LD_X_Y(X, Y) \
 static void LD_##X##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
@@ -466,7 +466,7 @@ static void LD_##X##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
     cpu->reg.PC += 1;\
 }
 
-// LD B, [HL]
+// LD r8, [HL]. - value pointed by [HL] to r8.
 #define LD_X_DHL(X) \
 static void LD_##X##_##DHL(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
@@ -475,7 +475,7 @@ static void LD_##X##_##DHL(GB *gb, CPU *cpu, instruction_T instrc) \
     cpu->reg.PC += 1;\
 }
 
-// LD [HL], B
+// LD [HL], r8. - r8 to value pointed by [HL]
 #define LD_DHL_Y(Y) \
 static void LD_##DHL##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 { \

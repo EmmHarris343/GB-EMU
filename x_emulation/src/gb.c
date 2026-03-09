@@ -136,7 +136,7 @@ int gb_init(GB *gb) {
     return 0;
 }
 
-// The
+// The gb step, advances emulation by one cpu step and adds cycles to gb 'tick'.
 uint32_t gb_step(GB *gb) {
     uint32_t cycles;
 
@@ -172,8 +172,16 @@ int gb_run_steps(GB *gb, int max_steps) {
         gb_step(gb);
     }
 
+    printf("Finished GB CPU run. - Limited by steps.\n");
+
+    // POST run report:
+    print_instruction_counts();
+
+    printf("GB run finished. Exiting..\n");
+
     return step_count;
 }
+
 
 // The run loop, limited by elasped time
 void gb_run_time(GB *gb, uint64_t max_time) {

@@ -89,7 +89,7 @@ int startup_sequence() {
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
     sleep(2);   // Sleep is just so the initial startup can be readable.
 
-    int max_steps = 300;
+    int max_steps = 1500;
     gb_run_steps(&gb, max_steps);
 
     return 0;

@@ -206,6 +206,13 @@ uint8_t external_read(GB *gb, uint16_t addr_pc) {
     return read_val;
 }
 
+void print_instruction_counts() {
+    for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
+        printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
+    }
+}
+
+
 
 void opcode_tosummary(GB *gb) {
     uint8_t op_code = op_instruction.opcode;
@@ -366,11 +373,7 @@ void cpu_trace_instrc(CPU *cpu, int type) {
     }
 }
 
-void print_instr_counts() {
-    for (int i = 0; i < INSTR_TYPE_COUNT; i++ ) {
-        printf("[%-8s]: %lu\n", optype_names[i], instr_count[i]);
-    }
-}
+
 
 
 
@@ -418,7 +421,6 @@ void run_cpu(GB *gb, int max_steps) {
         }
     }
     printf("::CPU:: Reached CPU Step Limit, STOPPING\n");
-    print_instr_counts();
 }
 
 
@@ -503,7 +505,6 @@ void run_cpu_bytime(GB *gb, uint64_t max_time_ms) {
         }
         step_count ++;
     }
-    print_instr_counts();
 }
 
 

@@ -94,17 +94,8 @@ uint32_t cpu_step(GB *gb);
 void cpu_reset(GB *gb, CPU *cpu);
 
 
-/// TODO: Get rid of most of these things.
-// Run CPU (By Step Limit):
-void run_cpu(GB *gb, int max_steps);
-// Run CPU Loop (By Time Limit):
-void run_cpu_bytime(GB *gb, uint64_t max_time_ms);
-// Run CPU (Test Mode):
-void run_cpu_test(GB *gb, uint8_t test_op_code);    // Note this using the test_cpu modules and files!
-
-
-
-
+// POST run report:
+void print_instruction_counts();
 
 
 
