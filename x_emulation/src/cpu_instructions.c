@@ -1,3 +1,4 @@
+#include "mmu.h"
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <sys/types.h>
 #include <stdio.h>
@@ -2342,6 +2343,67 @@ void log_cpu_trace(GB *gb) {
     gb->step_count, cpu->reg.PC, gb->instruction.opcode, cpu->reg.A, cpu->reg.F,
     cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L,
     cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+}
+
+static void cpu_service_interrupt(GB *gb, uint8_t bit, uint16_t vector){
+    CPU *cpu = &gb->cpu;
+
+    // Disable any further interrupts.
+    cpu->state.IME = 0;
+
+    // CPU exit halt if halted.
+    cpu->state.halt = 0;
+
+    // Clear Interrupt Flag (Request flag)
+    gb->interrupts.IF &= ~(1u << bit);
+
+    // Push Current PC into SP stack.
+    cpu->reg.SP -= 2;
+    mmu_write(gb, cpu->reg.SP, cpu->reg.PC);    // Not possitive it that will work.
+
+    // Jump to the Interrupt Handler location (or vector);
+    cpu->reg.PC = vector;
+}
+
+void cpu_interrupt_handling(GB *gb) {
+    CPU *cpu = &gb->cpu;
+    uint8_t pending_interupt = gb->interrupts.IE & gb->interrupts.IF;
+
+    if (pending_interupt == 0) {
+        return;
+    }
+
+    if (cpu->state.halt) {  // Clear halt if set.
+        cpu->state.halt = 0;
+    }
+    if (!cpu->state.IME) {  // Process CPU IME interrupt first.
+        return;
+    }
+
+    // Interrupts:
+    // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
+
+    // Pending interrupts need to be processed in order (lowest to highest)
+    if (pending_interupt & (1 << 0)) {
+        cpu_service_interrupt(gb, 0, 0x40);
+        return;
+    }
+    if (pending_interupt & (1 << 1)) {
+        cpu_service_interrupt(gb, 1, 0x48);
+        return;
+    }
+    if (pending_interupt & (1 << 2)) {
+        cpu_service_interrupt(gb, 2, 0x50);
+        return;
+    }
+    if (pending_interupt & (1 << 3)) {
+        cpu_service_interrupt(gb, 3, 0x58);
+        return;
+    }
+    if (pending_interupt & (1 << 4)) {
+        cpu_service_interrupt(gb, 4, 0x60);
+        return;
+    }
 }
 
 

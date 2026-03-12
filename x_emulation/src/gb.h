@@ -14,9 +14,9 @@
 #include "timer.h"
 
 typedef struct {
-    uint8_t Interrupt_IE;
-    uint8_t Interrupt_IF;
-} GB_State; // Make this just a general GB state.
+    uint8_t IE;
+    uint8_t IF;
+} Interrupts; // Make this just a general GB state.
 
 typedef struct gb_s {
     // Move for debug info:
@@ -33,8 +33,10 @@ typedef struct gb_s {
     struct apu_s *apu;  // Would APU be under io?
     struct oam_s *oam;
 
-    // GB states, interupts, pause,
-    GB_State state;
+    // GB states, pause, panics, etc
+
+    // Only the IE/ IF interupts:
+    Interrupts interrupts;
 
     // Cycles, ticks, timer:
     Timer timer;
@@ -56,9 +58,7 @@ enum {
 
 int gb_init(GB *gb);
 
-// Special set state that comes from CPU -> MMU -> CPU.STATE.IE
-uint8_t ie_read(GB *gb, uint16_t addr);
-void ie_write(GB *gb, uint16_t addr, uint8_t val);
+
 
 int gb_run_steps(GB *gb, int max_steps);
 void gb_run_time(GB *gb, uint64_t max_time);
@@ -67,7 +67,14 @@ uint32_t gb_step(GB *gb);
 void gb_tick(GB *gb, uint32_t cycles);
 void gb_reset(GB *gb);
 
+
+// Special Interupts. Request Interrupt, IF (Interrupt Flag), IE (Interrupt Enable)
 void gb_request_interrupt(GB *gb, uint8_t bit);
+
+uint8_t if_read(GB *gb, uint16_t addr);
+uint8_t ie_read(GB *gb, uint16_t addr);
+void if_write(GB *gb, uint16_t addr, uint8_t val);
+void ie_write(GB *gb, uint16_t addr, uint8_t val);
 
 
 #endif

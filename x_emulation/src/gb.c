@@ -224,14 +224,20 @@ void gb_request_interrupt(GB *gb, uint8_t bit) {
 
     // Set the IF interrupt based on the input bit:
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
-    gb->state.Interrupt_IF |= (1 << bit);
+    gb->interrupts.IF |= (1 << bit);
 }
 
-
-// Special interupt handling. TODO: Move this from CPU
+// Special interupt handling both IE (Interrupt Enable) and IF (Interrupt Flag):
 uint8_t ie_read(GB *gb, uint16_t addr) {
-    return gb->cpu.state.IE;
+    return gb->interrupts.IE;
 }
 void ie_write(GB *gb, uint16_t addr, uint8_t val) {
-    gb->cpu.state.IE = val;
+    gb->interrupts.IE = val;
 }
+uint8_t if_read(GB *gb, uint16_t addr) {
+    return gb->interrupts.IF;
+}
+void if_write(GB *gb, uint16_t addr, uint8_t val) {
+    gb->interrupts.IF = val;
+}
+

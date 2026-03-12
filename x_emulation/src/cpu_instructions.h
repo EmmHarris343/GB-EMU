@@ -19,8 +19,11 @@ typedef struct {
     // maybe operand type metadata
 } instruction_meta_t;
 
+// CPU interrupt handling function/ entry point:
+void cpu_interrupt_handling(GB *gb);
+
+// Main instruction entry points.
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction);
-//int execute_instruction(CPU *cpu, instruction_T instrc, int step_count);
 int execute_test(GB *gb, CPU *cpu, instruction_T instruction);
 
 #endif

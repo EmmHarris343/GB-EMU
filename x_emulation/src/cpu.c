@@ -286,6 +286,7 @@ int cpu_init(GB *gb) {
 }
 
 
+
 // Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
 uint32_t cpu_step(GB *gb) {
     gb->cpu.cycle = 0;  // Reset the cycle back to 0 on each Step.
@@ -295,6 +296,11 @@ uint32_t cpu_step(GB *gb) {
     opcode_tosummary(gb);
 
     gb->instruction = op_instruction;
+
+    // Handle/ run cpu interrupts:
+    // NOTE: the cpu_interrupt should have a cycle count (around 20 cycles).
+    cpu_interrupt_handling(gb);
+
 
     if (execute_instruction(gb, &gb->cpu, op_instruction) != 0) {
         gb->panic = 1;

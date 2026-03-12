@@ -23,31 +23,41 @@ On overflow. load tma into tima and request timer interrupt.
 
 
 uint8_t timer_div_read(GB *gb, uint16_t addr) { // 0xFF04
-    return 0;
+    if (addr == 0xFF04) { return gb->timer.div; }
+    return 0x00;
 }
 uint8_t timer_tima_read(GB *gb, uint16_t addr) { // 0xFF05
-    return 0;
+    if (addr == 0xFF05) { return gb->timer.tima; }
+    return 0x00;
 }
 uint8_t timer_tma_read(GB *gb, uint16_t addr) { // 0xFF06
-    return 0;
+    if (addr == 0xFF06) { return gb->timer.tma; }
+    return 0x00;
 }
 uint8_t timer_tac_read(GB *gb, uint16_t addr) { // 0xFF07
-    return 0;
+    // Will return the stored low bits plus upper bits set.
+    if (addr == 0xFF07) { return gb->timer.tac | 0xF8; }
+    return 0x00;
 }
 
 
 
-void timer_div_write(GB *gb, uint16_t addr, uint8_t val) { // 0xFF04
-
+void timer_div_write(GB *gb, uint16_t addr, uint8_t write_val) { // 0xFF04
+    // Anything being written to this location, completely resets div to 0.
+    if (addr == 0xFF04) {
+        gb->timer.div = 0;
+        gb->timer.div_cycles = 0;
+    }
 }
-void timer_tima_write(GB *gb, uint16_t addr, uint8_t val) { // 0xFF05
-
+void timer_tima_write(GB *gb, uint16_t addr, uint8_t write_val) { // 0xFF05
+    if (addr == 0xFF05) { gb->timer.tima = write_val; }
 }
-void timer_tma_write(GB *gb, uint16_t addr, uint8_t val) { // 0xFF06
-
+void timer_tma_write(GB *gb, uint16_t addr, uint8_t write_val) { // 0xFF06
+    if (addr == 0xFF06) { gb->timer.tma = write_val; }
 }
-void timer_tac_write(GB *gb, uint16_t addr, uint8_t val) { // 0xFF07
-
+void timer_tac_write(GB *gb, uint16_t addr, uint8_t write_val) { // 0xFF07
+    // Only uses bit 2 for enable/disable, bits 1-0 clock select
+    if (addr == 0xFF07) { gb->timer.tac = write_val & 0x07; }
 }
 
 

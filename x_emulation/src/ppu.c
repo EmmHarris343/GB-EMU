@@ -40,6 +40,23 @@ Allow OAM (sprits/ tiles) for new frames.
 
 
 
+/*
+
+The LCDC bit values:
+LCDC bits are:
+bit 7 = LCD enabl/disable
+bit 6 = window tile map
+bit 5 = window enable/disable
+bit 4 = BG/window tile data area
+bit 3 = BG tile map
+bit 2 = sprite size
+bit 1 = sprites enable/disable
+bit 0 = BG enable/disable
+
+*/
+
+
+
 
 // Set/ Reset the VRAM back to all 0s:
 void init_vram(GB *gb) {
@@ -295,13 +312,13 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
             printf("::PPU:: ly reached 153, RESET ly, allow OAM new frame.\n");
             ppu->ly = 0;
-            ppu_set_mode(gb, ppu, PPU_MODE_OAM);               // OAM New frame
+            ppu_set_mode(gb, ppu, PPU_MODE_OAM);
         }
     }
     if (ppu->ly < 144) {
         if (ppu->line_cycles < 80) {
-            printf("::PPU:: ly is under 80, NEW OAM FRAME\n");
-            ppu_set_mode(gb, ppu, PPU_MODE_OAM);               // OAM New frame.
+            printf("::PPU:: ly is under 80, OAM SCAN MODE\n");
+            ppu_set_mode(gb, ppu, PPU_MODE_OAM);
         } else if (ppu->line_cycles < (80 + 172)) {
             printf("::PPU:: ly is under 252, PPU MODE TRANSFER\n");
             ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
