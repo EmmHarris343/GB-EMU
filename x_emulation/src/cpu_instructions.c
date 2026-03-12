@@ -122,10 +122,13 @@ static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do noth
 
 // Carry Flag Instructions:
 static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Complement Carry Flag
-    printf("CCF. Called.                ; Invert Carry Flag 0=1, 1=0\n");
-
     // If it's set, clear it, otherwise set it.
     (cpu->reg.F & FLAG_C) ? clear_cpu_flag(cpu, FLAG_C) : set_cpu_flag(cpu, FLAG_C);    // Invert the C flag.
+    cpu->reg.PC ++;
+    cpu->cycle = 4;
+
+    // bytes = 1
+    // t-cycles = 4
 
     /*
         FLAGS:
@@ -136,8 +139,12 @@ static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Comp
     */
 }
 static void SCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Set Carry Flag
-    printf("SCF. Called.                ; Set Carry Flag (True)\n");
     set_cpu_flag(cpu, FLAG_C);
+    cpu->reg.PC ++;
+    cpu->cycle = 4;
+
+    // Bytes = 1
+    // t-cycles = 4
 
     /*
         FLAGS:
@@ -178,7 +185,6 @@ static void SCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Set 
 /// SECTION:
 // LD Functions
 static void LD_r8_n8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD r8, n8.                 ; EXP: r8 <- n8    ..    Reg.H <- n8 OR Reg.C <- n8\n");
     uint8_t op_index = (instruction.opcode >> 3) & 0x07;      // <-- This style needed for left, right. DOWN left right, DOWN etc
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C,
@@ -189,11 +195,13 @@ static void LD_r8_n8(GB *gb, CPU *cpu, instruction_T instruction) {
     *reg_table[op_index] = instruction.operand1;
 
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycles = 8
     // No flags affected.
 }
 static void LD_r16_n16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD r16 n16. Copy n16 value into r16 Register\n");
-    //printf("Values? OP1: %02X OP2: %02X\n", instruction.operand1, instruction.operand2);
     uint8_t op_index = (instruction.opcode >> 4) & 0x03; // <- This style needed for straight down op codes.
     uint16_t *reg_16table[4] = {
         &cpu->reg.BC,
@@ -204,16 +212,19 @@ static void LD_r16_n16(GB *gb, CPU *cpu, instruction_T instruction) {
     *reg_16table[op_index] = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
 
     cpu->reg.PC += 3;
+    cpu->cycle = 12;
 
     // Bytes: 3
+    // t-cycle = 12
     // Flags: None Affected
 }
 static void LD_p_HL_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // Copy data from n8, into where HL is being pointed to
-    printf("LD [HL] n8 Called.                  ; LD n8 Value into [HL]\n");
-
     external_write(gb, cpu->reg.HL, instruction.operand1);
     cpu->reg.PC += 2;
+    cpu->cycle = 12;
+
     // Bytes = 2
+    // t-cycles = 12
     // No flags Affected
 }
 
@@ -224,7 +235,6 @@ static void LD_p_HL_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // C
 // LD Acculator (A Register) instructions
 
 static void LD_p_r16_A(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD [r16] A.                     ; Copy Register A into value pointed by register [r16]\n");
     switch (instruction.opcode) {
         case 0x02:
             // LD [BC], A
@@ -236,9 +246,12 @@ static void LD_p_r16_A(GB *gb, CPU *cpu, instruction_T instruction) {
             break;
     }
     cpu->reg.PC++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void LD_A_p_r16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD A, [r16] Called.             ; Copy value in register [r16] into Register A\n");
     switch (instruction.opcode) {
         case 0x0A:
             // LD A, [BC]
@@ -248,118 +261,129 @@ static void LD_A_p_r16(GB *gb, CPU *cpu, instruction_T instruction) {
             // LD A, [DE]
             cpu->reg.A = external_read(gb, cpu->reg.DE);
             break;
-            printf("|DEBUG| : A Regiser: %02X || [DE] value: %02X | Addr: %04X\n", cpu->reg.A, external_read(gb, cpu->reg.DE), cpu->reg.DE);
-
     }
     cpu->reg.PC++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 // LD/ Load (A) with Increment and Decrement to HL after.
 static void LD_p_HLI_A(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Increment HL\n");
-
     uint8_t a_val = cpu->reg.A;
-    printf("|DEBUG| : A:%02X HL Addr: %04X\n", a_val, cpu->reg.HL);
     external_write(gb, cpu->reg.HL, a_val);
 
     // Increment HL & the PC By one.
     cpu->reg.HL ++;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void LD_p_HLD_A(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD [HLI] A, Copy value in A, into the value pointed by HL, then Decement HL\n");
-
     uint8_t a_val = cpu->reg.A;
     external_write(gb, cpu->reg.HL, a_val);
 
     cpu->reg.HL --;
     cpu->reg.PC --;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void LD_A_p_HLI(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD A, [HLI].               ; A <- [HL] (Then HL++)\n");
     // LD A, [HL+], Copy value pointed from HL, into A register, then Increment HL
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     cpu->reg.A = hl_val;
 
-    printf("--- Diag, what is value pointed by HL? 0x%02X\n", hl_val);
-
     cpu->reg.HL ++;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
     // Bytes = 1
+    // t-cycles = 8
     // Flags not affected
 }
 static void LD_A_p_HLD(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD A, [HLD] (LD A, [HL-]), Copy value pointed from HL, into A register, then Decrement HL\n");
-
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     cpu->reg.A = hl_val;
-    printf("  --- Diag, what is value pointed by HL? 0x%02X\n", hl_val);
 
     cpu->reg.HL --;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // t-cycles = 8
     // Flags not affected
 }
 // Load Register A & a16 instructions
 static void LD_p_a16_A(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD [a16] A, Called => Copy 8bit A Register into 8bit value located in [a16]\n");
-
     uint16_t a16 = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
-
-    printf(":LD: a16 Location val %04X\n", a16);
     external_write(gb, a16, cpu->reg.A);
 
     cpu->reg.PC +=3;
+    cpu->cycle = 16;
 
     // Bytes = 3
+    // t-cycles = 16
     // No flags affected
 }
 static void LD_A_p_a16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD A [a16], Copy 8bit value in [a16] into Register A\n");
     // Copy the value in RAM pointed to by a16. Into Register A
-
     uint16_t a16 = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
 
     cpu->reg.A = external_read(gb, a16);
 
     cpu->reg.PC += 3;
+    cpu->cycle = 16;
+
     // Bytes = 3
+    // t-cycles = 16
     // No flags affected
 }
 
 // LDH a8/ [c] instructions:
 static void LDH_p_C_A(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH => Load (High Range). 0xFF the high bit, is fixed.
-    printf("LDH A [C]. Called.                          ; LD value pointed by (High Range)[0xFF + C] into A Register\n");
-
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
     external_write(gb, combined_addr, cpu->reg.A);
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void LDH_A_p_C(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH => Load (High Range). 0xFF the high bit, is fixed.
-    printf("LDH [C], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + C]\n");
-
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
     cpu->reg.A = external_read(gb, combined_addr);
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void LDH_A_p_a8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LDH A [a8]. Called.                         ; LD value pointed by (High Range)[0xFF + a8] into A Register\n");
-
     uint8_t a8 = instruction.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
     cpu->reg.A = external_read(gb, combined_addr);
 
     cpu->reg.PC +=2;
+    cpu->cycle = 12;
+
+    // Bytes = 2
+    // t-cycle = 12
 }
 static void LDH_p_a8_A(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LDH [a8], A. Called.                         ; LD Register A into value pointed by (High Range)[0xFF + a8]\n");
-
     uint8_t a8 = instruction.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
     external_write(gb, combined_addr, cpu->reg.A);
 
     cpu->reg.PC +=2;
+    cpu->cycle = 12;
+
+    // Bytes = 2
+    // t-cycle = 12
 }
 
 
@@ -367,8 +391,6 @@ static void LDH_p_a8_A(GB *gb, CPU *cpu, instruction_T instruction) {
 // LD Stack manipulation Instructions:
 
 static void LD_p_a16_SP(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD [n16] SP, Write SP_Low & SP_High Bytes, into the [a16] and [a16+1] memory locations\n");
-
     uint16_t n16_addr = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
     uint8_t SP_LOW = cpu->reg.SP & 0xFF;
     uint8_t SP_HIGH = (cpu->reg.SP >> 8) & 0xFF;
@@ -377,11 +399,12 @@ static void LD_p_a16_SP(GB *gb, CPU *cpu, instruction_T instruction) {
     external_write(gb, n16_addr + 1, SP_HIGH);
 
     cpu->reg.PC ++;
+    cpu->cycle = 20;
 
+    // Bytes = 3
+    // t-cycles = 20
 }
 static void LD_HL_SP_Pe8(GB *gb, CPU *cpu, instruction_T instruction) {     // Load value in SP + (8bit (e) SIGNED int) into HL Register
-    printf("LD HL, (SP + e8). Overwrite the address (SP + e8) into the HL Register\n");
-
     // Add the signed value e8 to SP and copy the result in HL.
 
     // OVERWRITES the HL Register.
@@ -407,8 +430,10 @@ static void LD_HL_SP_Pe8(GB *gb, CPU *cpu, instruction_T instruction) {     // L
         clear_cpu_flag(cpu, FLAG_C);  // Clear C Flag
 
     cpu->reg.PC += 2;
+    cpu->cycle = 12;
 
     // Bytes = 2
+    // t-cycle = 12
     /*
     Flags:
     Z = 0
@@ -418,12 +443,15 @@ static void LD_HL_SP_Pe8(GB *gb, CPU *cpu, instruction_T instruction) {     // L
     */
 }
 static void LD_SP_HL(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("LD_SP_HL.                   ; Copy register HL into register SP\n");
+    /// TODO: double check if this functinality is right..
 
-    cpu->reg.SP = cpu->reg.HL;  //
+    cpu->reg.SP = cpu->reg.HL;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
+
 
     // Bytes = 1
+    // t-cycle = 8
     // No flags effected
 }
 
@@ -433,31 +461,33 @@ static void LD_SP_HL(GB *gb, CPU *cpu, instruction_T instruction) {
 // MACRO'D LD instructions. Covers LD, r8, r8. LD X, [HL]. LD [HL], B
 
 // LD r8, r8. - Register to register.
+// Bytes = 1, T-Cycles = 4
 #define LD_X_Y(X, Y) \
 static void LD_##X##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD r8 to r8\n");\
     cpu->reg.X = cpu->reg. Y;\
     cpu->reg.PC += 1;\
+    cpu->cycle = 4;\
 }
 
 // LD r8, [HL]. - value pointed by [HL] to r8.
+// Bytes = 1, T-Cycles = 8
 #define LD_X_DHL(X) \
 static void LD_##X##_##DHL(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD r8, [HL]\n");\
     cpu->reg.X = external_read(gb, cpu->reg.HL);\
     cpu->reg.PC += 1;\
+    cpu->cycle = 8;\
 }
 
 // LD [HL], r8. - r8 to value pointed by [HL]
+// Bytes = 1, T-Cycles = 8
 #define LD_DHL_Y(Y) \
 static void LD_##DHL##_##Y(GB *gb, CPU *cpu, instruction_T instrc) \
 { \
-    printf("LD [HL], r8\n");\
-    printf("Registes for OP-72 & OP-73 ---- Reg-Y: 0x%02X, Reg-D: 0x%02X, Reg-E: 0x%02X, Reg-HL: 0x%04X\n", cpu->reg.Y, cpu->reg.D, cpu->reg.E, cpu->reg.HL);\
     external_write(gb, cpu->reg.HL, cpu->reg.Y);\
     cpu->reg.PC += 1;\
+    cpu->cycle = 8;\
 }
 
 /* NOP */   LD_X_Y(B,C) LD_X_Y(B,D) LD_X_Y(B,E) LD_X_Y(B,H) LD_X_Y(B,L) LD_X_DHL(B) LD_X_Y(B,A) LD_X_Y(C,B) /* NOP */   LD_X_Y(C,D) LD_X_Y(C,E) LD_X_Y(C,H) LD_X_Y(C,L) LD_X_DHL(C) LD_X_Y(C,A)
@@ -472,11 +502,12 @@ LD_DHL_Y(B) LD_DHL_Y(C) LD_DHL_Y(D) LD_DHL_Y(E) LD_DHL_Y(H) LD_DHL_Y(L) /* NOP *
 
 // Jump instructions
 static void JP_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Copy Address in HL to PC
-    printf("JP HL.               ; Reg.PC = Reg.HL\n");
 
     cpu->reg.PC = cpu->reg.HL;
-    // Copy HL into PC.
+    cpu->cycle = 4;
+
     // Bytes: 1
+    // t-cycles = 4
     // No Flags changed.
 }
 
@@ -484,8 +515,11 @@ static void JP_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Copy Addr
 
 // Jump a16 instructions:
 static void JP_a16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("JP a16.               ; Reg.PC = a16 OR n16\n");
     cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
+    cpu->cycle = 16;
+
+    // Bytes = 3
+    // t-cycles = 16
 }
 static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
     int proceed = 0;
@@ -512,27 +546,28 @@ static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
     else { cpu->reg.PC += 3; }
 
     // Cycles: 4 taken / 3 untaken
+    // t-cycles = 16 taken / 12 untaken
     // 3 Bytes
     // No flags Changed
 }
 
 // Relative Jumps: e8
 static void JR_e8(GB *gb, CPU *cpu, instruction_T instruction) {
-    int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
+    int8_t e_signed_offset;             // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instruction.operand1;
-    uint16_t next_pc = cpu->reg.PC+2;  // Value of next PC + 2 Bytes
+    uint16_t next_pc = cpu->reg.PC+2;   // Value of next PC + 2 Bytes
 
     cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
+    cpu->cycle = 12;
 
     printf("Relative jump to: +- 0x%02X. To PC=> 0x%04X\n", e_signed_offset, (uint16_t)(next_pc + e_signed_offset));
 
-    // Cycles 3
+    // m-Cycles 3
+    // t-cycles 12
     // Bytes 2
     // Flags Changed, none
 }
 static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("JR cc e8, Relative Jump, Conditional\n");
-
     cpu->cycle += 8; // +8 default untaken cost. (+8 t-cycles. +2 m-cycles)
 
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
@@ -598,8 +633,6 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
 
 // ADD/ ADC Instructions:
 static void ADD_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Add value of r8 into A
-    printf("ADD A, r8. Called.          ; Add value in r8 into Register A\n");
-
     // Table calculates WHICH register is called, based on the OP code provided.
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -619,6 +652,11 @@ static void ADD_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Add 
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
+
+    // Bytes = 1
+    // t-cycle = 4
+
 
     /*
         FLAGS:
@@ -629,7 +667,6 @@ static void ADD_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Add 
     */
 }
 static void ADD_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Add value pointed by HL into A
-    printf("ADD A, [HL]. Called.            ; Add Value inside [HL] into Register A\n");
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint16_t add_result = (cpu->reg.A + hl_val);
     uint8_t final_8bit = (uint8_t)add_result;
@@ -641,11 +678,12 @@ static void ADD_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Add 
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++ ;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // t-cycles = 8
 }
 static void ADD_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("ADD A, n8. Called.              ; Add immediate value to Register A\n");
     uint8_t n8_val = instruction.operand1;
 
     uint16_t add_result = (cpu->reg.A + n8_val);
@@ -658,13 +696,13 @@ static void ADD_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
 
     // Bytes = 2
+    // t-cycles = 8
 }
 // ADC Add instructions:
 static void ADC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("ADC A, r8.                  ; Add the value in r8 PLUS the carry flag to Register A \n");
-
     // Yes, A + r8 + Carry Flag. -- If it rolls over. That's ok, track it with the Carry Flag.
 
     uint8_t *reg_table[8] = {
@@ -688,12 +726,12 @@ static void ADC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
     // Bytes = 1
+    // t-cycle = 4
 }
 static void ADC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("ADC A, [HL].                  ; Add the value stored in [hl] PLUS the carry flag to Register A\n");
-
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
@@ -708,10 +746,12 @@ static void ADC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void ADC_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("ADC A, n8.                  ; Add the value in n8 PLUS the carry flag to Register A\n");
-
     uint8_t n8_val = instruction.operand1;
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
@@ -726,12 +766,14 @@ static void ADC_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycles = 8
 }
 
 // SUB / SBC Instructions:
 static void SUB_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtract values in a, by 8byte register
-    printf("SUB A, r8. Called.              ; Sub Value in Register A, by r8 value\n");
-
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -751,6 +793,10 @@ static void SUB_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
+
+    // Bytes = 1
+    // t-cycles = 4
 
     /*
         FLAGS:
@@ -761,9 +807,6 @@ static void SUB_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
     */
 }
 static void SUB_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("SUB A, [HL].              ; Sub Value in Register A, by value in [HL]\n");
-
-
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t reg_a = cpu->reg.A;
 
@@ -778,11 +821,12 @@ static void SUB_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
+    // Bytes = 1
+    // t-cycles = 8
 }
 static void SUB_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("SUB A, n8. Called.                  ; Subtract Register A by value in n8\n");
-
     uint8_t n8 = instruction.operand1;
     uint8_t reg_a = cpu->reg.A;
 
@@ -797,11 +841,13 @@ static void SUB_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
+
+    // bytes = 2
+    // t-cycles = 8
 }
 // SBC (Sub with the cary flag):
 static void SBC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtract the value in r8 and the carry flag from A.
-    printf("SBC A, r8. Called.                  ; Subtract value in r8 (and the carry flag) from Register A\n");
-
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -827,7 +873,10 @@ static void SBC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
+    // bytes = 1
+    // t-cycle = 4
 
     /*
         FLAGS:
@@ -838,8 +887,6 @@ static void SBC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
     */
 }
 static void SBC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Subtract the byte pointed to by HL and the carry flag from A.
-    printf("SBC A, [HL].                  ; Subtract value in [HL] (and the carry flag) from Register A\n");
-
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
@@ -858,11 +905,13 @@ static void SBC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Subtr
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // bytes = 1
+    // t-cycles = 8
     // FLAGS: see sbc_a_r8
 }
 static void SBC_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtract the value n8 and the carry flag from A.
-    printf("SBC A, n8. Called.                  ; Subtract value in n8 (and the carry flag) from Register A\n");
-
     uint8_t n8 = instruction.operand1;
     uint8_t carry_val = (cpu->reg.F & FLAG_C) ? 1 : 0;
 
@@ -881,14 +930,14 @@ static void SBC_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
 
     cpu->reg.A = final_8bit;
     cpu->reg.PC += 2;
+    cpu->cycle = 4;
 
     // Bytes = 2
+    // t-cycles = 4
 }
 
 // Increment & Decrement Instructions:
 static void INC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Increment Register r8
-    printf("INC_r8. Called.                  ; Registry H ++\n");
-
     uint8_t op_index = (instruction.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -905,12 +954,13 @@ static void INC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Incremen
 
     *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
+
     // Bytes = 1
+    // t-cycles = 4;
 }
 // Decrement Instructions
 static void DEC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Decrement High bit Register  (-- => B, D, H)
-    printf("DEC_hr8.               ; Registery H --\n");
-
     uint8_t op_index = (instruction.opcode >> 3) & 0x07;
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -927,13 +977,13 @@ static void DEC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Decremen
 
     *reg_table[op_index] = r8_val;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
     // Bytes = 1
+    // t-cycles = 4
 }
 
 // Inc/ Dec, HL value inside pointer [ ]
 static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Increment 16 bit HL register, The Value In Pointer ++ HL
-    printf("INC [HL].               ; EXP: 8bit++ <- [HL]\n");
-
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     // HL First:
@@ -947,11 +997,12 @@ static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Incremen
     external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
     cpu->reg.PC ++;
+    cpu->cycle = 12;
 
     // Bytes = 1
+    // t-cycles = 12
 }
 static void DEC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Decrement the Byte insde the location pointed by [HL]
-    printf("DEC [HL].               ; EXP: 8bit-- <- [HL]\n");
     uint8_t hl_val = external_read(gb, cpu->reg.HL);    //Original HL Value
 
     ((hl_val & 0x0F) == 0x0) // H Flag before DEC
@@ -964,15 +1015,14 @@ static void DEC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Decr
     external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
     cpu->reg.PC ++;
+    cpu->cycle = 12;
 
     // Bytes = 1
+    // t-cycles = 12
 }
 
 // CP. ComPARE Instructions:
-static void CP_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
-    // Depending on the OP Code, it changes WHICH instruction is compared.
-    printf("CP A, r8.               ; EXP: ComPare (cpu->reg.A - r8_reg) --> Set Flags \n");
-
+static void CP_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {  // This does keep set the flags??
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -988,20 +1038,16 @@ static void CP_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
     ((cpu->reg.A & 0x0F) < (op_r8 & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);
     (cpu->reg.A < op_r8) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
 
-
-
     cpu->reg.PC++;
-
-    logging_cpu_trace("[CTRL] Compare, A r8. Result: 0x%02X. A=0x%02X, F=0x%02X, op_r8=0x%02X\n", result, cpu->reg.A, cpu->reg.F, op_r8);
+    cpu->cycle = 4;
 
     // Bytes = 1
+    // t-cycles = 4
 }
 static void CP_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // ComPare -> value in pointer HL to A
-    printf("CP A, [HL]. ComPare Called.         ; Subtracts pointered from [HL] from A (Sets flags, disregards results)\n");
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t result = (cpu->reg.A - hl_val);
 
-    //
     set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
     (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
@@ -1009,13 +1055,15 @@ static void CP_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // ComP
     (cpu->reg.A < hl_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // bytes = 2
+    // t-cycles = 8
 }
 static void CP_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // ComPare -> value in n8 to A
-    printf("CP A, n8. ComPare.                  ; Subtracts value in n8 from A (Sets flags, disregards results)\n");
     uint8_t n8_val = instruction.operand1;
     uint8_t result = (cpu->reg.A - instruction.operand1);
 
-    //
     set_cpu_flag(cpu, FLAG_N);    // N Flag - Always Set (Subtraction Flag)
 
     (result == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);                        // Z Flag
@@ -1023,9 +1071,9 @@ static void CP_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // ComP
     (cpu->reg.A < n8_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
 
     cpu->reg.PC += 2;
-
-    logging_cpu_trace("[CTRL] Compare, A n8. Result: 0x%02X. A=0x%02X, F=0x%02X, n8=0x%02X\n", result, cpu->reg.A, cpu->reg.F, n8_val);
+    cpu->cycle = 8;
     // Bytes = 2
+    // t-cylces = 8
 }
 
 
@@ -1036,8 +1084,6 @@ static void CP_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // ComP
 // ADD Stack manipulation Instructions:
 // Special SP / e8 ADD function.
 static void ADD_SP_e8(GB *gb, CPU *cpu, instruction_T instruction) {     // e8 = SIGNED int.
-    printf("ADD SP, e8. Called, not setup.\n");
-
     int8_t e_val = (int8_t)instruction.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +-
     uint8_t add_result = (cpu->reg.A + e_val);
 
@@ -1052,10 +1098,9 @@ static void ADD_SP_e8(GB *gb, CPU *cpu, instruction_T instruction) {     // e8 =
     cpu->reg.PC += 2;
 
     // Bytes = 2
+    // t-cycles = 16
 }
 static void ADD_HL_r16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("ADD HL, r16. Called.\n");
-
     uint16_t *reg16_table[4] = {
         &cpu->reg.BC, &cpu->reg.DE, &cpu->reg.HL, &cpu->reg.SP
     };
@@ -1075,15 +1120,14 @@ static void ADD_HL_r16(GB *gb, CPU *cpu, instruction_T instruction) {
 
     cpu->reg.HL = final_result;
     cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 1
+    // t-cycle = 8
 }
 
 // Full INC/DEC 16 bit Registers (BC, DE, HL):
 static void INC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("INC r16.               ; EXP: BC ++\n");
-
-    // If I use table use:
-    // uint8_t register_index = (instruction.opcode >> 4) & 0x03;
-
     switch (instruction.opcode) {
         case 0x03: cpu->reg.BC ++; break;
         case 0x13: cpu->reg.DE ++; break;
@@ -1092,13 +1136,13 @@ static void INC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
     }
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // t-cycles = 8
     // FLAGS: NONE AFFECTED
 }
 static void DEC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("DEC r16.               ; EXP: BC --\n");
-
     // If I use table use:
     // uint8_t register_index = (instruction.opcode >> 4) & 0x03;
     switch (instruction.opcode) {
@@ -1109,30 +1153,23 @@ static void DEC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
     }
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // t-cycles = 8
     // FLAGS: NONE AFFECTED
 }
 
-
-
-
-
 static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop register AF from the stack.
-    printf("POP AF Called.              ; Populate AF Register from SP.\n");
-
     uint8_t low_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
     uint8_t high_byte = external_read(gb, cpu->reg.SP);
     cpu->reg.SP ++;
 
-    // Believe how I have the flags setup. this should work.
-    //cpu->reg.AF = cnvrt_lil_endian(low_byte, high_byte);
-
     cpu->reg.AF = (high_byte << 8) | (low_byte & 0xF0);     // Being safe, as the 0-3 bits are 0, and the flag is only 4-7. Previous code might work, but might not also.
 
     cpu->reg.PC ++;
-    logging_cpu_trace("[CTRL] POP_AF Registers into SP. H:0x%02X L:0x%02X\n", cpu->reg.H, cpu->reg.L);
+    cpu->cycle = 12;
 
     /*
     This is roughly equivalent to the following imaginary instructions:
@@ -1141,7 +1178,10 @@ static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop 
         LD A, [SP]
         INC SP
     */
+
+
     // Bytes = 1
+    // t-cycles = 12
     /*
         FLAGS:
         Z = Set from bit 7 of the popped low Byte
@@ -1151,8 +1191,6 @@ static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop 
     */
 }
 static void POP_r16(GB *gb, CPU *cpu, instruction_T instruction) {       // Pop register r16 from the stack.
-    printf("POP r16 Called.                 ; Populate 16byte Register from SP\n");
-
     uint8_t op_index = (instruction.opcode >> 4) & 0x03;
     uint16_t *reg_table[3] = {
         &cpu->reg.BC, &cpu->reg.DE, &cpu->reg.HL
@@ -1167,7 +1205,7 @@ static void POP_r16(GB *gb, CPU *cpu, instruction_T instruction) {       // Pop 
     *reg_table[op_index] = cnvrt_lil_endian(low_byte, high_byte);
 
     cpu->reg.PC ++;
-    logging_cpu_trace("[CTRL] Pop r16 from SP. PC: 0x%04X. LowByte:0x%02X HighByte:0x%02X\n", cpu->reg.PC, low_byte, high_byte);
+    cpu->cycle = 12;
 
     /*
     This is roughly equivalent to the following imaginary instructions:
@@ -1178,11 +1216,10 @@ static void POP_r16(GB *gb, CPU *cpu, instruction_T instruction) {       // Pop 
     */
 
     // Bytes = 1
+    // t-cycles = 12
     // FLAGS: None affected
 }
 static void PUSH_AF(GB *gb, CPU *cpu, instruction_T instruction) {       // Push register AF into the stack.
-    printf("PUSH_AF, Writes the A value, and the Flags into SP (Stack Pointer) 0x%04X\n", cpu->reg.SP);
-
     // Decrement SP,
     // Copy A => into SP (stack pointer)        NOTE: Don't overwrite the SP's pointer itself, but save it in HRAM or something, Where ever SP is "pointing" to
     // Decrement SP
@@ -1195,9 +1232,10 @@ static void PUSH_AF(GB *gb, CPU *cpu, instruction_T instruction) {       // Push
     external_write(gb, cpu->reg.SP, cpu->reg.F);
 
     cpu->reg.PC ++;     // PUSH_AF is only 1 byte.
-    logging_cpu_trace("[CTRL] PUSH_AF Registers into SP. A:0x%02X F:0x%02X\n", cpu->reg.A, cpu->reg.F);
+    cpu->cycle = 16;
 
     // Bytes = 1
+    // t-cycles = 16
     // FLAGS: None affected
 }
 
@@ -1206,34 +1244,33 @@ static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
     // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
 
     /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
-
-    printf("Push r16 Called.                ; Push 16 Byte Regiser (BC, DE, HL) to the Stack Pointer SP\n");
     switch (instruction.opcode) {
         case 0xC5:    // BC to stack
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.B);
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.C);
-            logging_cpu_trace("[CTRL] PUSH Registers into SP. B:0x%02X C:0x%02X\n", cpu->reg.B, cpu->reg.C);
+            cpu->cycle = 16;
             break;
         case 0xD5:    // DE to stack
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.D);
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.E);
-            logging_cpu_trace("[CTRL] PUSH Registers into SP. D:0x%02X E:0x%02X\n", cpu->reg.D, cpu->reg.E);
+            cpu->cycle = 16;
             break;
         case 0xE5:    // HL to stack
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.H);
             cpu->reg.SP --;
             external_write(gb, cpu->reg.SP, cpu->reg.L);
-            logging_cpu_trace("[CTRL] PUSH Registers into SP. H:0x%02X L:0x%02X\n", cpu->reg.H, cpu->reg.L);
+            cpu->cycle = 16;
             break;
     }
 
     cpu->reg.PC ++;
     // Bytes = 1
+    // t-cyles = 16
     // FLAGS: None affected
 }
 
@@ -1243,16 +1280,12 @@ static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
 // CALL, RET, RETI, RST_vec
 
 static void CALL_a16(GB *gb, CPU *cpu, instruction_T instruction) {      // Pushes the address of the instruction after the CALL, on the stack. Such that RET can pop it later; Then it executes implicit JP n16
-    printf("CALL_n16 Called, 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
     // This pushes the address of the instruction after the CALL on the stack, such that RET can pop it later; then, it executes an implicit JP n16.
 
     // Call n16 is like "Go to subroutine at n16. And remember to come back here".
     // The [remember to come back here] is done by stack pointers / RET (RETurn)
 
     // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
-    uint16_t call_from = cpu->reg.PC;
-    uint16_t return_addr = cpu->reg.PC + 3;
-
     uint16_t pc_loc = (cpu->reg.PC + 3);
 
     uint8_t split_addr_LOW = pc_loc & 0xFF;
@@ -1267,22 +1300,9 @@ static void CALL_a16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
     cpu->reg.SP --;
     external_write(gb, cpu->reg.SP, split_addr_LOW);
 
-    printf("What is the Stack Pointer showing? %04X\n", cpu->reg.SP);
-
     // Next jump to Location:
     cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
-
-    uint16_t target_addr = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
-    logging_cpu_trace(
-    "[CTRL] CALL from=%04X target=%04X return=%04X SP=%04X op1=%02X op2=%02X\n",
-    call_from,
-    target_addr,
-    return_addr,
-    cpu->reg.SP,
-    instruction.operand1,
-    instruction.operand2
-    );
-    // PC has already been assigned a value. Do not change it.
+    cpu->cycle = 24;
 
     /*
     The TL;DR
@@ -1299,11 +1319,10 @@ static void CALL_a16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
                           |>>..>>>>>> lalalalallal executing.. RET ^^
     */
 
-
+    // Bytes: 3
+    // t-cycles = 24
 }
 static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call address n16 if condition cc is met.
-    printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
-
     int proceed = 0;
     cpu->cycle += 12; // +12 default untaken cost. (+12 t-cycles. +3 m-cycles)
 
@@ -1342,17 +1361,16 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
         cpu->cycle += 12; // +12 taken cost (12 t-cycle. 3 m-cycles)
     }
     else {
-        printf("CALL cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
     }
 
-    // Cycles: 6 taken / 3 untaken
+    // m-Cycles:  6 taken /  3 untaken
+    // t-cycles: 24 taken / 12 untaken
     // Bytes: 3
     // Flags: None affected.
 }
 
 static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETurn from subroutine.
-    printf("Ret Called, 'RETurn from subroutine..' ... ' Populate the PC stored in the SP\n");
     // This RETurns back to the PC saved in the Stack Pointer (SP) from the CALL function.
 
     // TL;DR : Populate the PC from the SP.
@@ -1362,19 +1380,17 @@ static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETu
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
+    cpu->cycle = 20;
 
-    logging_cpu_trace("[CTRL]=>RET: PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
-
-    // Cycles: 4
+    // m-Cycles = 4
+    // t-cycles = 20
     // Bytes: 1
     // FLAGS: None affected
 }
 static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETurn from subroutine if condition CC is met
     int proceed = 0;
-
     cpu->cycle += 8; // +8 default untaken cost (8 t-cycles. 2 m-cycles)
 
-    printf("RET CC Called.          ; Populate PC from SP, if CC Condition met\n");
     switch (instruction.opcode) {
         case 0xC0:
             // Z flag is NOT set.
@@ -1395,7 +1411,6 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
     }
 
     if (proceed) {
-        printf("RET CC Met. Populating PC from SP\n");
         // TL;DR : Populate the PC from the SP.
         uint8_t low_byte = external_read(gb, cpu->reg.SP);
         cpu->reg.SP ++;
@@ -1403,22 +1418,18 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
         cpu->reg.SP ++;
 
         cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
-        logging_cpu_trace("[CTRL]=>RET-CC: (CC MET, PROCEEDING) F:0x%02X, PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.F, cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
-
         cpu->cycle += 12; // +12 taken cost (+12 t-cycle. 3 m-cycles).
     }
     else {
-        printf("RET cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC ++;       // Skip over RET instruction (1 Byte)
     }
-    // Cycles: 5 taken / 2 untaken
+
+    // M-Cycles: 5 taken / 2 untaken
     // Bytes: 1
     // FLAGS: None affected
 }
 static void RETI(GB *gb, CPU *cpu, instruction_T instruction) {          // RETurn from subroutine and enable Interupts.
     // This is basically equivalent to executing EI then RET, meaning that IME is set right after this instruction.
-    printf("RETI. Called.           ; Immediately Set IME Flag (Interupt), Then RETurn / Pop PC from SP\n");
-
     // Enables interrupts and returns (almost the same as EI immediately followed by ret).
 
     // HOWEVER! This does not have a delayed IME set flag state that EI has
@@ -1436,16 +1447,13 @@ static void RETI(GB *gb, CPU *cpu, instruction_T instruction) {          // RETu
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
-    logging_cpu_trace("[CTRL] RETI SP into PC. LowByte:0x%02X HighByte:0x%02X. PC_SET Value: 0x%04X\n", low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
+    cpu->cycle = 16;
 
-
-    // Cycles: 4
+    // Cycles: 16
     // Bytes: 1
     // Flags: None affected.
 }
 static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs Basically CALL, then Jumps to a specific Vector address (basically a predetermined offset)
-    printf("RST_vec. Called.                ; Push PC to Stack Pointer (SP), then Jump to specific Vector location\n");
-
     uint8_t vec_table[8] = {
         0x00, 0x08, 0x10, 0x18,
         0x20, 0x28, 0x30, 0x38
@@ -1466,17 +1474,14 @@ static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs
     external_write(gb, cpu->reg.SP, split_addr_LOW);
 
     cpu->reg.PC = jump_addr;
-
-    logging_cpu_trace("[CTRL] PUSH PC into SP. AddrLow:0x%02X AddrHigh:0x%02X. PC_SET Value: 0x%04X, jumpAddr: 0x%04X\n", split_addr_LOW, split_addr_HIGH, jump_addr);
-
-
-
-
+    cpu->cycle = 16;
 
     // Main difference, is like the op_codes that are LD A, r8. It knows by the opcode, which register to load the data from.
     // RST Vector is a specific Vector
     // An RST vector (0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, and 0x38).
 
+    // Bytes = 1
+    // t-cycles = 16
     // FLAGS: None affected
 }
 
@@ -1489,11 +1494,7 @@ static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs
 // Bitwise, AND, OR XOR instructions.
 
 static void AND_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set A to the bitwise AND between the value in r8 and A
-    printf("AND A, r8. Called.          ; Result = Set bit to 1 or 0. For each indvidual bit. Bit 0 through Bit 7.\n");
     // This is a BITWISE AND. Which is to say. It returns an 8bit value. Where each individual val of 1 bits. Match in both 8bit variable.
-
-    /// TODO: This NULL is a little dangerous... It's understandable why it's there,
-    // but it can easily cause a crash if a lookup in this reg table was off, or there was a memory read problem.
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -1511,8 +1512,10 @@ static void AND_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared.
 
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
     // Bytes = 1
+    // t-cycle = 4
     /*
         FLAGS:
         Z = Set if result is 0
@@ -1522,8 +1525,6 @@ static void AND_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     */
 }
 static void AND_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set A to the bitwise AND between the byte pointed to by HL and A
-    printf("AND A, [HL]. Called.            ; Bitwise AND. 1&1 = 1, rest =0. From Value in [HL]\n");
-
     uint8_t AND_result = (cpu->reg.A & external_read(gb, cpu->reg.HL));
     cpu->reg.A = AND_result;
 
@@ -1535,12 +1536,12 @@ static void AND_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
     // Bytes = 1
+    // t-cycles = 8
     // FLAGS: see: AND A, r8
 }
 static void AND_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set A to the bitwise AND between the value n8 and A
-    printf("AND A, n8. Called.              ; Bitwise AND. 1&1 = 1, rest =0. From immediate value (n8)\n");
-
     uint8_t AND_result = (cpu->reg.A & instruction.operand1);
     cpu->reg.A = AND_result;
 
@@ -1552,13 +1553,14 @@ static void AND_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
 
     // Bytes = 2;
+    // t-cycles = 8
     // FLAGS: see: AND A, r8
 }
 // OR Instructions:
 static void OR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set A to the bitwise OR between the value in r8 and A
-    printf("AND A, r8. Called.          ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
     // If varbiale one bit(x) = 1, OR variable 2 bit(x) = 1. RESULT = One.
     // ONLY will give result bit(x) 0. if BOTH variable 1 & variable 2 = 0. IE 0&0
     uint8_t *reg_table[8] = {
@@ -1577,11 +1579,12 @@ static void OR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
     // Bytes = 1
+    // t-cycles = 4
 }
 static void OR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Set A to the bitwise OR between the byte pointed to by HL and A
-    printf("OR A, [HL]. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
     uint8_t OR_result = (cpu->reg.A | external_read(gb, cpu->reg.HL));
     cpu->reg.A = OR_result;
 
@@ -1593,12 +1596,13 @@ static void OR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // t-cycles = 8
     // FLAGS: see: OR_A_r8
 }
 static void OR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set A to the bitwise OR between the value n8 and A
-    printf("OR A, n8. Called.         ; Bitwise OR, 1|1 = 1. Only 0 if both bits are Zero, 0&0=0\n");
     uint8_t OR_result = (cpu->reg.A | instruction.operand1);
     cpu->reg.A = OR_result;
 
@@ -1610,14 +1614,14 @@ static void OR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
 
-    // Bytes = 1
+    // Bytes = 2
+    // t-cycles = 8
     // FLAGS: see: OR_A_r8
 }
 // XOR Instructions:
 static void XOR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set A to the bitwise XOR between the value in r8 and A
-    printf("XOR A, r8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
-
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
         &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1635,12 +1639,12 @@ static void XOR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
     // Bytes = 1
+    // t-cycles = 4
 }
 static void XOR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set A to the bitwise XOR between the byte pointed to by HL and A
-    printf("XOR A, [HL]. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
-
     uint8_t XOR_result = (cpu->reg.A ^ external_read(gb, cpu->reg.HL));
     cpu->reg.A = XOR_result;
 
@@ -1652,12 +1656,12 @@ static void XOR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set 
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
     cpu->reg.PC ++;
+    cpu->cycle = 8;
 
     // Bytes = 1
+    // cycle = 8
 }
 static void XOR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set A to the bitwise XOR between the value n8 and A
-    printf("XOR A, n8. Called.              ; Bitwise XOR 1^1=0, 1^0=1, 0^0=0. One or Other is 1. NOT BOTH!\n");
-
     uint8_t XOR_result = (cpu->reg.A ^ instruction.operand1);
     cpu->reg.A = XOR_result;
 
@@ -1669,20 +1673,23 @@ static void XOR_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     clear_cpu_flag(cpu, FLAG_C);  // C Always cleared
 
     cpu->reg.PC += 2;
+    cpu->cycle = 8;
 
     // Bytes = 2
+    // t-cycle = 8
 }
 
 // CPL Instruction. Like a bitwse NOT
 static void CPL(GB *gb, CPU *cpu, instruction_T instruction) {           // ComPLement accumulator (A = ~A); also called bitwise NOT a
-    printf("CPL. Called.                    ; ComPLement accumulator, \n");
     cpu->reg.A = ~cpu->reg.A;   // A = NOT A. Basically flip the bits around.
 
     set_cpu_flag(cpu, FLAG_N);    // N Flag Set (Subtraction Flag)
     set_cpu_flag(cpu, FLAG_H);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
 
     cpu->reg.PC ++;
+    cpu->cycle = 4;
     // Bytes = 1
+    // t-cycles = 4
     // Don't clear Z or C flags.
     // - N H -
 }
@@ -1696,8 +1703,6 @@ static void CPL(GB *gb, CPU *cpu, instruction_T instruction) {           // ComP
 
 // NON-PREFIXED
 static void RRA(GB *gb, CPU *cpu, instruction_T instruction) {           // Rotate register A -> Right. Through the carry flag. b8 ---> b0 <> [carry flag]
-    printf("RRA. Called.            ; Rotate Register A RIGHT --> through Flag C.\n");
-
     uint8_t a_reg = cpu->reg.A;
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = (cpu->reg.A & 0x1);
@@ -1710,12 +1715,12 @@ static void RRA(GB *gb, CPU *cpu, instruction_T instruction) {           // Rota
     clear_cpu_flag(cpu, FLAG_H);
 
     cpu->reg.PC++;
+    cpu->cycle = 4;
     // Bytes = 1
+    // t-cycles = 4
 }
 
 static void RRCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rotate Register A right. (WITHOUT CARRY)
-    printf("RRCA Called.                    ; Rotate Register A Right Without the carry flag input\n");
-
     uint8_t a_reg = cpu->reg.A;
     uint8_t carry_out = (a_reg & 0x1);
     uint8_t rotated_a = (a_reg >> 1) | (carry_out << 7);    // Rotate Right, Set bit 7
@@ -1727,12 +1732,12 @@ static void RRCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rota
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC++;
+    cpu->cycle = 4;
     // Bytes = 1
+    // t-cylces = 4
 }
 
 static void RLA(GB *gb, CPU *cpu, instruction_T instruction) {           // Rotate Register A Left. Through the carry flag <---
-    printf("RLA Called.                     ; Rotate Register A Left (through carry flag).\n");
-
     uint8_t a_reg = cpu->reg.A;
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
     uint8_t carry_out = ((a_reg >> 7) & 0x1);               // Isolate and extract bit 7
@@ -1749,8 +1754,6 @@ static void RLA(GB *gb, CPU *cpu, instruction_T instruction) {           // Rota
 }
 
 static void RLCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rotate Register A left. (without carry flag input)
-    printf("RLCA Called.                    ; Rotate Register A Left, wont use carry flag input\n");
-
     uint8_t a_reg = cpu->reg.A;
     uint8_t carry_out = ((a_reg >> 7) & 0x1);           // Isolate and extract bit 7
     uint8_t rotated_a = (a_reg << 1) | carry_out;       // Shift left, set bit 0
@@ -1762,7 +1765,10 @@ static void RLCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rota
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
     cpu->reg.PC++;
+    cpu->cycle = 4;
     // Bytes = 1
+    // m-Cylces = 1
+    // t-cycles = 4
 }
 
 
@@ -1787,7 +1793,7 @@ static void RLCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rota
 
 
 static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rotate Byte in Register r8 left, through the carry flag. <---
-    printf("RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
+    printf("PFX: RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1818,7 +1824,7 @@ static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     */
 }
 static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by HL left, through the carry flag. <---
-    printf("RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
+    printf("PFX: RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -1840,7 +1846,7 @@ static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
 }
 
 static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rotate Registers r8 Left. <--- (without Carry flag input)
-    printf("RLC r8. Called.                   ; Rotate r8 Left (without carry flag input).\n");
+    printf("PFX: RLC r8. Called.                   ; Rotate r8 Left (without carry flag input).\n");
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
@@ -1868,7 +1874,7 @@ static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     */
 }
 static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rotate the byte pointed to by [HL] left. <--- (without Carry flag input)
-    printf("RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
+    printf("PFX: RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
@@ -1887,9 +1893,12 @@ static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     // FLAGS: See RLC_r8
 }
 
+
+
+
 // PREFIXED Rotate Right Instructions:
 static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rotate Register r8 Right. Through the carry flag. -->
-    printf("RR r8. Called.                      ; Rotate r8 Right through carry flag\n");
+    printf("PFX: RR r8. Called.                      ; Rotate r8 Right through carry flag\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1920,7 +1929,7 @@ static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     */
 }
 static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by [HL] Right. Through the carry flag. -->
-    printf("rR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
+    printf("PFX: RR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -1940,7 +1949,7 @@ static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     // FLAGS: see RR_r8
 }
 static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rotate Register r8 Right. --> (Without carry flag input)
-    printf("RRC r8. Called.                     ; Rotate r8, without carry flag input\n");
+    printf("PFX: RRC r8. Called.                     ; Rotate r8, without carry flag input\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1969,7 +1978,7 @@ static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     */
 }
 static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rotate the value pointed to by [HL] Right. -->  (Without carry flag input)
-    printf("RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
+    printf("PFX: RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
 
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -1994,7 +2003,7 @@ static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
 
 // PREFIXED SHIFT left & right Arithmetically.
 static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithmetically Register r8.  <--
-    printf("SLA r8. Called, not setup.\n");
+    printf("PFX: SLA r8. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     /*
@@ -2006,13 +2015,13 @@ static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithm
     */
 }
 static void SLA_P_HL(GB *gb, CPU *cpu, instruction_T instruction) {      //  Shift Left Arithmetically the byte pointed to by [HL]. <--
-    printf("SLA [HL]. Called, not setup.\n");
+    printf("PFX: SLA [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     // Flags: SEE SLA r8
 }
 static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Arithmetically Register r8. -->
-    printf("SRA r8. Called, not setup.\n");
+    printf("PFX: SRA r8. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
 
@@ -2025,13 +2034,13 @@ static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
     */
 }
 static void SRA_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shift Right Arithmetically the byte pointed to by HL. -->
-    printf("SRA [HL]. Called, not setup.\n");
+    printf("PFX: SRA [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     // Flags: See SRA_r8
 }
 static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Logically Register r8. -->
-    printf("SRL r8. Called, not setup.\n");
+    printf("PFX: SRL r8. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     /*
@@ -2043,7 +2052,7 @@ static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
     */
 }
 static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shift Right Logically the byte pointed to by [HL]. -->
-    printf("SLR [HL]. Called, not setup.\n");
+    printf("PFX: SLR [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     // FLAGS: See SRL_r8
@@ -2052,7 +2061,7 @@ static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
 
 // PREFIXED Swap instructions
 static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
-    printf("SWAP r8. Called.                    ; Swap upper and lower bits in r8 Register X::Y -> Y::X\n");
+    printf("PFX: SWAP r8. Called.                    ; Swap upper and lower bits in r8 Register X::Y -> Y::X\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2081,7 +2090,7 @@ static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap
     */
 }
 static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
-    printf("SWAP [HL]. Called, not setup.\n");
+    printf("PFX: SWAP [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
     // FLAGS: See SWAP_r8
@@ -2090,7 +2099,7 @@ static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap
 
 // PREFIXED Bit Flag instructions
 static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test bit u3 in register r8 set the zero flag if bit not set
-    printf("BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
+    printf("PFX: BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2111,7 +2120,7 @@ static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test
     // Bytes = 2 (CB logic already advanced once)
 }
 static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
-    printf("BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
+    printf("PFX: BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);                  // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2129,7 +2138,7 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test
 
 // PREFIXED RES Instructions (Set a specific bit to 0?)
 static void RES_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
+    printf("PFX: RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
@@ -2144,7 +2153,7 @@ static void RES_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
     // FLAGS: None affected
 }
 static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
+    printf("PFX: RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2158,7 +2167,7 @@ static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
 }
 // PREFIXED SET instructions (Set bit to 1, at u3 Index?)
 static void SET_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
+    printf("PFX: SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2174,7 +2183,7 @@ static void SET_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
     // FLAGS: None affected
 }
 static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
+    printf("PFX: SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2231,7 +2240,6 @@ static opcode_t *cb_opcodes[256] = {
 /// PREFIX: This also needs Cycles, (Which should be added to an instruction)
 
 static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
-    printf("CB PREFIX Called.               ; Load next Byte, to call Prefixed OPCODE\n");
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
     // Advance the PC, and read it at the same time.

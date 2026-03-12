@@ -13,10 +13,22 @@
 #include "apu.h"
 #include "timer.h"
 
+
+#define GB_CPU_HZ 4194304
+#define GB_FPS 59.7275
+#define GB_CYCLES_PER_FRAME 70224
+
+
 typedef struct {
     uint8_t IE;
     uint8_t IF;
 } Interrupts; // Make this just a general GB state.
+
+typedef struct {
+    // CPUTraceBuffer cpu_trace;
+    // MemTraceBuffer mem_trace;
+    // DebugConfig config;
+} DebugState;
 
 typedef struct gb_s {
     // Move for debug info:

@@ -74,30 +74,18 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 
 ===-- gb.c --===
 The Top-Level "Machine"s:
-    The Entry-Point.
-    The init for all 'key' sub-functions.
-    The Connection between systems.
-    The Handler of cylce tracking.
-
-
 
 */
+
 
 /*
-Functions that should be here:
+GB Normal run time/ HZ.
 
-gb_init
-gb_reset
-gb_step
-gb_run_steps
-gb_run_frame
-gb_run_until
-
-+ a bunch of API calls, to handle interupts, and certain machine-level useful states.
+4,194,304 Hz
+about 69,905 cycles per frame
+about 59.73 frames per second
 
 */
-
-
 
 
 

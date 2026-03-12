@@ -121,8 +121,6 @@ int startup_seq_bytime() {
 int test_sequence() {
     printf(":E_CTRL: -- TEST MODE -- Startup Beginning\n");
 
-    GB gb;
-
     printf("Closing Emulator ... bye\n");
     return 0; // Pass all good.
 }
