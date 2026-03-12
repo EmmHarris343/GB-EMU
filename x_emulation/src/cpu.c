@@ -9,10 +9,7 @@
 #include "cpu_instructions.h"
 #include "mmu.h"
 
-#include "logger.h"
-
-instruction_T op_instruction;
-debug_state dbg_state;
+//#include "logger.h"
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
@@ -215,7 +212,7 @@ void print_instruction_counts() {
 
 
 void opcode_tosummary(GB *gb) {
-    uint8_t op_code = op_instruction.opcode;
+    uint8_t op_code = gb->instruction.opcode;
     //uint8_t op_code = gb->instruction.opcode; // TODO: Enable when removing instruction_T global.
 
     // Calculate opcode type, and save for high level overview.
@@ -249,11 +246,6 @@ void load_opcode(GB *gb, uint16_t addr_pc) {
         operand2 = mmu_read(gb, addr_pc + 2);
     }
 
-    // Set to both. Then maybe get ride of the global.
-    op_instruction.opcode = op_code;
-    op_instruction.operand1 = operand1;
-    op_instruction.operand2 = operand2;
-
     gb->instruction.opcode = op_code;
     gb->instruction.operand1 = operand1;
     gb->instruction.operand2 = operand2;
@@ -264,11 +256,6 @@ void load_opcode(GB *gb, uint16_t addr_pc) {
 // Initalize the CPU, set the defaults for DMG 01 (Original) - Registers, Interupts etc.
 int cpu_init(GB *gb) {
     printf(":CPU: Initialization, setting registers and settings. For VER: %s\n", "DMG 01");
-
-    // Set the operands to blank (0x00) state:
-    op_instruction.opcode = 0x00;
-    op_instruction.operand1 = 0x00;
-    op_instruction.operand2 = 0x00;
 
     gb->instruction.opcode = 0x00;
     gb->instruction.operand1 = 0x00;
@@ -285,27 +272,46 @@ int cpu_init(GB *gb) {
     return 0;
 }
 
+static void ime_delay(CPU *cpu)
+{
+    if (cpu->state.IME_delay > 0) {
+        cpu->state.IME_delay--;
 
+        if (cpu->state.IME_delay == 0) {
+            cpu->state.IME = 1;
+        }
+    }
+}
 
 // Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
 uint32_t cpu_step(GB *gb) {
+    printf("\n==== CPU Next Instruction ====\n");
     gb->cpu.cycle = 0;  // Reset the cycle back to 0 on each Step.
 
-    printf("\n==== CPU Next Instruction ====\n");
-    load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t
-    opcode_tosummary(gb);
+    // If it processed an interupt, use 20 cycles, then return.
+    if (cpu_interrupt_handling(gb)) {
+        gb->cpu.cycle = 20;
+        return gb->cpu.cycle;
+    }
+    // Halt was set, use 4 cycles then return.
+    if (gb->cpu.state.halt) {
+        gb->cpu.cycle = 4;
+        return gb->cpu.cycle;
+    }
 
-    gb->instruction = op_instruction;
+    // Only get/ process opcode after any interrupts.
+    load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t inside gb->instruction.
 
-    // Handle/ run cpu interrupts:
-    // NOTE: the cpu_interrupt should have a cycle count (around 20 cycles).
-    cpu_interrupt_handling(gb);
-
-
-    if (execute_instruction(gb, &gb->cpu, op_instruction) != 0) {
+    if (execute_instruction(gb, &gb->cpu, gb->instruction) != 0) {
         gb->panic = 1;
         return -1;
     }
+
+    // IME (Interupt delay logic)
+    ime_delay(&gb->cpu);
+
+    // Add the opcode that was executed (if any)
+    opcode_tosummary(gb);
 
     return gb->cpu.cycle;   // Should be set after each execution
 }
@@ -359,41 +365,41 @@ uint32_t cpu_step(GB *gb)
 // }
 
 
-void cpu_trace_instrc(CPU *cpu, int type) {
-    // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
-    // Example looks like:
-    // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
-    // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
+// void cpu_trace_instrc(CPU *cpu, int type) {
+//     // Not meant to be human readable.. Simply add CPU state, at a specific STEP.
+//     // Example looks like:
+//     // STEP PC OPC A F B C D E H L SP IME IE IF // First line... NOTES: OPC = Opcode byte at PC | IME = Interupt master enable | IE = Interupt Enabled | IF = Interupt Flags
+//     // 004512 0150 31 01 B0 00 13 00 D8 01 4D FF FE 0 00 E1
 
-    if (type == 0) {
-        // Init
-        logging_cpu_trace("INIT 0x%04X | | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
-        cpu->reg.PC,cpu->reg.A, cpu->reg.F,
-        cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
-        }
-    if (type == 1) {
-        // Normal
-        logging_cpu_trace("STP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%04X IME=0x%02X IE=0x%02X IF=0x%02X\n",
-        dbg_state.step_count, cpu->reg.PC, dbg_state.opcode, cpu->reg.A, cpu->reg.F,
-        cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
-    }
-}
-
-
+//     if (type == 0) {
+//         // Init
+//         logging_cpu_trace("INIT 0x%04X | | 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%04X 0x%04X\n",
+//         cpu->reg.PC,cpu->reg.A, cpu->reg.F,
+//         cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+//         }
+//     if (type == 1) {
+//         // Normal
+//         logging_cpu_trace("STP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%04X IME=0x%02X IE=0x%02X IF=0x%02X\n",
+//         dbg_state.step_count, cpu->reg.PC, dbg_state.opcode, cpu->reg.A, cpu->reg.F,
+//         cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L, cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
+//     }
+// }
 
 
 
-void step_cpu(GB *gb, int step_count) {
-    dbg_state.step_count = step_count;
-    //dbg_state.PC = local_cpu.reg.PC;
-    dbg_state.opcode = op_instruction.opcode;
 
-    cpu_trace_instrc(&gb->cpu, 1);
 
-    // if (execute_instruction(&local_cpu, gb, op_instruction, step_count) != 0) {
-    //     printf(":CPU: Error Executing CPU instruction!\n");
-    // }
-}
+// void step_cpu(GB *gb, int step_count) {
+//     dbg_state.step_count = step_count;
+//     //dbg_state.PC = local_cpu.reg.PC;
+//     dbg_state.opcode = op_instruction.opcode;
+
+//     cpu_trace_instrc(&gb->cpu, 1);
+
+//     // if (execute_instruction(&local_cpu, gb, op_instruction, step_count) != 0) {
+//     //     printf(":CPU: Error Executing CPU instruction!\n");
+//     // }
+// }
 
 
 // "RUN" the cpu, but limit it by [max_steps] parameter.
@@ -418,7 +424,7 @@ void run_cpu(GB *gb, int max_steps) {
         printf("[TIME: %lu ms]\n", elasped_ms);
 
         load_opcode(gb, gb->cpu.reg.PC);
-        step_cpu(gb, i);
+        // step_cpu(gb, i);
 
 
         if (gb->cpu.state.panic == 1) {
@@ -496,7 +502,7 @@ void run_cpu_bytime(GB *gb, uint64_t max_time_ms) {
 
         // CPU STEP:
         load_opcode(gb, gb->cpu.reg.PC);
-        step_cpu(gb, step_count);
+        // step_cpu(gb, step_count);
 
 
         // Handling CPU Panic state:
@@ -546,7 +552,7 @@ void tstate_set_registers(GB *gb) {
 
 int intiate_cpu_test(GB *gb, instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
     // Set OPCODE Instruction
-    op_instruction = *passed_instrc;
+    // op_instruction = *passed_instrc;
     gb->cpu = *cpu;
 
 

@@ -20,7 +20,7 @@ typedef struct {
 } instruction_meta_t;
 
 // CPU interrupt handling function/ entry point:
-void cpu_interrupt_handling(GB *gb);
+uint8_t cpu_interrupt_handling(GB *gb);
 
 // Main instruction entry points.
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction);

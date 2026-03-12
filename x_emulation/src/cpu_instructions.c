@@ -515,6 +515,9 @@ static void JP_a16(GB *gb, CPU *cpu, instruction_T instruction) {
 }
 static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
     int proceed = 0;
+    // JP cc,a16: add +4 T-cycles if taken
+
+    cpu->cycle += 12; // default 12 t-cycles (3 m-cycles)
 
     switch(instruction.opcode) {
         case 0xC2:
@@ -530,9 +533,13 @@ static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
             if ((cpu->reg.F & FLAG_C)) proceed = 1;
             break;
     }
-    if (proceed) { cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2); }
+    if (proceed) {
+        cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
+        cpu->cycle += 4;
+    }
     else { cpu->reg.PC += 3; }
 
+    // Cycles: 4 taken / 3 untaken
     // 3 Bytes
     // No flags Changed
 }
@@ -558,42 +565,55 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
     e_signed_offset = (int8_t)instruction.operand1;
     uint16_t next_pc = cpu->reg.PC+2;  // Value of PC + 2 Bytes. (PC Advanced by 2)
 
+    // Default +8 cpu t-cycles. (NOTE 4 t-cycles = 1 m-cycles)
+    cpu->cycle += 8;
+
     switch (instruction.opcode) {
-        case 0x20:                  // JR, NZ e8
-            // (cpu->reg.F & FLAG_Z) ? /* NOP */  : /* Jump */
+        case 0x20:
             if (!(cpu->reg.F & FLAG_Z)) {
                 printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, e_signed_offset, KNRM);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
+                cpu->cycle += 4;
+            } else {
+                cpu->reg.PC = next_pc;
             }
-            else cpu->reg.PC = next_pc;
             break;
         case 0x28:
             if (cpu->reg.F & FLAG_Z) {
                 printf("JR Z e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
+                cpu->cycle += 4;
+            } else {
+                cpu->reg.PC = next_pc;
             }
-            else cpu->reg.PC = next_pc;
             break;
         case 0x30:
             if (!(cpu->reg.F & FLAG_C)) {
                 printf("JR NC e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
+                cpu->cycle += 4;
+            } else {
+                cpu->reg.PC = next_pc;
             }
-            else cpu->reg.PC = next_pc;
             break;
         case 0x38:
             if (cpu->reg.F & FLAG_C) {
                 printf("JR C e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
+                cpu->cycle += 4;
+            } else {
+                cpu->reg.PC = next_pc;
             }
-            else cpu->reg.PC = next_pc;
             break;
         default:
             printf("ERROR, JR CC did not match ANY OPCODES.. should abort.\n");
             cpu->reg.PC = next_pc;
     }
 
-    // Cycles: 3 taken / 2 untaken
+    // 3 M-cycles = 12 T-cycles
+    // 2 M-cycles = 8 T-cycles
+
+    // Cycles: 3 taken / 2 untaken (Machine cycles) .....
     // Bytes: 2
     // Flags Changed, None
 }
@@ -1314,6 +1334,7 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
     printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
 
     int proceed = 0;
+    cpu->cycle += 12; // default 12 t-cycles (3 m-cycles)
 
     switch (instruction.opcode) {
         case 0xC4:
@@ -1346,11 +1367,16 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
         external_write(gb, cpu->reg.SP, split_addr_LOW);
 
         cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
+
+        cpu->cycle += 12; // Add +12 t-cycle if taken (3 m-cycles)
     }
     else {
         printf("CALL cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
     }
+
+
+    // CALL cc,a16: add +12 T-cycles if taken
     // Cycles: 6 taken / 3 untaken
     // Bytes: 3
     // Flags: None affected.
@@ -1377,6 +1403,9 @@ static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETu
 static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETurn from subroutine if condition CC is met
     int proceed = 0;
     // Takes the addresses in the
+
+    // Default 8 T-cycles (2 m-cycles)
+    cpu->cycle += 8;
 
     printf("RET CC Called.          ; Populate PC from SP, if CC Condition met\n");
     switch (instruction.opcode) {
@@ -1408,6 +1437,8 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
 
         cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
         logging_cpu_trace("[CTRL]=>RET-CC: (CC MET, PROCEEDING) F:0x%02X, PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.F, cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
+
+        cpu->cycle += 12; // Add 12 t-cycles (3 m-cycles). When condition taken.
     }
     else {
         printf("RET cc Conditions are NOT met. Skipping..\n");
@@ -2345,6 +2376,14 @@ void log_cpu_trace(GB *gb) {
     cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
 }
 
+static void interrupt_stack_push(GB *gb, CPU *cpu, uint8_t write_val) {
+    cpu->reg.SP --;
+    mmu_write(gb, cpu->reg.SP, (write_val >>8) & 0xFF);
+
+    cpu->reg.SP --;
+    mmu_write(gb, cpu->reg.SP, write_val & 0xFF);
+}
+
 static void cpu_service_interrupt(GB *gb, uint8_t bit, uint16_t vector){
     CPU *cpu = &gb->cpu;
 
@@ -2358,26 +2397,26 @@ static void cpu_service_interrupt(GB *gb, uint8_t bit, uint16_t vector){
     gb->interrupts.IF &= ~(1u << bit);
 
     // Push Current PC into SP stack.
-    cpu->reg.SP -= 2;
-    mmu_write(gb, cpu->reg.SP, cpu->reg.PC);    // Not possitive it that will work.
+    interrupt_stack_push(gb, cpu, cpu->reg.PC);
 
     // Jump to the Interrupt Handler location (or vector);
     cpu->reg.PC = vector;
 }
 
-void cpu_interrupt_handling(GB *gb) {
+uint8_t cpu_interrupt_handling(GB *gb) {
     CPU *cpu = &gb->cpu;
     uint8_t pending_interupt = gb->interrupts.IE & gb->interrupts.IF;
 
-    if (pending_interupt == 0) {
-        return;
+
+    if (pending_interupt == 0) { // If no intterupt to process, return.
+        return 0;
     }
 
     if (cpu->state.halt) {  // Clear halt if set.
         cpu->state.halt = 0;
     }
     if (!cpu->state.IME) {  // Process CPU IME interrupt first.
-        return;
+        return 0;
     }
 
     // Interrupts:
@@ -2386,24 +2425,25 @@ void cpu_interrupt_handling(GB *gb) {
     // Pending interrupts need to be processed in order (lowest to highest)
     if (pending_interupt & (1 << 0)) {
         cpu_service_interrupt(gb, 0, 0x40);
-        return;
+        return 1;
     }
     if (pending_interupt & (1 << 1)) {
         cpu_service_interrupt(gb, 1, 0x48);
-        return;
+        return 1;
     }
     if (pending_interupt & (1 << 2)) {
         cpu_service_interrupt(gb, 2, 0x50);
-        return;
+        return 1;
     }
     if (pending_interupt & (1 << 3)) {
         cpu_service_interrupt(gb, 3, 0x58);
-        return;
+        return 1;
     }
     if (pending_interupt & (1 << 4)) {
         cpu_service_interrupt(gb, 4, 0x60);
-        return;
+        return 1;
     }
+    return 0;
 }
 
 
@@ -2421,15 +2461,6 @@ int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
 
     // Save to cpu_trace_log ==> Step/PC/OP/ Regs, etc
     log_cpu_trace(gb);
-
-    // IME (Interupt delay logic)
-    if (cpu->state.IME_delay) {
-        cpu->state.IME_delay--;
-        if (cpu->state.IME_delay == 0) { // Dec from value of 2 (Assigned by EI). To make sure IME flips After the NEXT instruction has executed
-            cpu->state.IME = 1;
-        }
-    }
-
 
     printf("[CYCLES]:%u\n", gb->cpu.cycle);
 

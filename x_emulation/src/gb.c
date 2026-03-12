@@ -1,4 +1,5 @@
 #include "gb.h"
+#include <stdlib.h>
 
 uint64_t machine_total_cycles;
 
@@ -170,10 +171,12 @@ int gb_run_steps(GB *gb, int max_steps) {
     for (step_count = 0; step_count < max_steps; step_count++) {
         if (gb->panic) {    // Include both as it's migrated.
             printf("GB Panic, Cancelling run..\n");
+            exit(1);
             return -1;
         }
         if (gb->cpu.state.panic) {
             printf("CPU Panic, Cancelling run..\n");
+            exit(1);
             return -1;
         }
         gb_step(gb);
