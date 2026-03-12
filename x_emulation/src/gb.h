@@ -13,13 +13,8 @@
 #include "timer.h"
 
 typedef struct {
-    uint8_t IE;
-    uint8_t IF;
-} Interrupt_State;
-
-typedef struct {
-    uint8_t IE;
-    uint8_t IF;
+    uint8_t Interrupt_IE;
+    uint8_t Interrupt_IF;
 } GB_State; // Make this just a general GB state.
 
 typedef struct gb_s {
@@ -30,9 +25,9 @@ typedef struct gb_s {
     // Hardware/ Sub-Functions for inter-connection:
     CPU cpu;
     MMU mmu;
+    PPU ppu;
     Cartridge cart;
     struct io_s *io;
-    struct ppu_s *ppu;
     struct apu_s *apu;  // Would APU be under io?
     struct oam_s *oam;
 

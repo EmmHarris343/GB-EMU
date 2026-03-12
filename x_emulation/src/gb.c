@@ -104,6 +104,8 @@ gb_run_until
 int gb_init(GB *gb) {
     printf("Initializing GB...");
 
+    // Create the PPU 'object', this is passed as needed.
+
     gb->panic = 0;
     gb->cpu.state.panic = 0;
 

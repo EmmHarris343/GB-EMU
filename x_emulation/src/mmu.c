@@ -42,7 +42,7 @@ void unusable_write(GB *gb, uint16_t addr, uint8_t val) {
 static MMU_MapRoute mmu_map[] = {
     {0x0000, 0x7FFF, cart_rom_read, cart_rom_write, BUS_ROM },          // Read ROM Data, Intercept WRITE functions
     {0xA000, 0xBFFF, cart_ram_read, cart_ram_write, BUS_ECRAM},         // External Cart RAM (ECRAM) -> The cartriges internal ram (save files)
-    {0x8000, 0x9FFF, ppu_read, ppu_write, BUS_VRAM},
+    {0x8000, 0x9FFF, ppu_vram_read, ppu_vram_write, BUS_VRAM},
     {0xC000, 0xDFFF, loc_wram_read, loc_wram_write, BUS_WRAM },         // Working RAM (range not compatible with CGB)
     {0xE000, 0xFDFF, loc_echram_read, loc_echram_write, BUS_ECHO },     // Echo RAM (mirror of WRAM)
     {0xFE00, 0xFE9F, oam_read, oam_write, BUS_OAM },
@@ -51,7 +51,7 @@ static MMU_MapRoute mmu_map[] = {
     {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM },          // High RAM (Fast Ram)
     {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
 };
-const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
+static const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
 
 uint8_t mmu_read(GB *gb, uint16_t addr) {
     //printf(":MMU: Read 0x%04X\n", addr);

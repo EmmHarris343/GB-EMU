@@ -38,20 +38,4 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t val);
 void mmu_debugger(uint16_t addr);
 
 
-// extern uint8_t WRAM[WRAM_size];
-// extern uint8_t HRAM[HRAM_size];
-// extern uint8_t VRAM[VRAM_size];
-// extern uint8_t EXT_RAM;                     // Dynamic.
-// extern uint8_t ROM;                         // Dynamic.
-// extern uint8_t memory_map[M_MAP_size];
-// extern uint16_t PC;
-// extern uint16_t SP;
-
-
-
-
-
-//void test_bank_switch();
-
-
 #endif

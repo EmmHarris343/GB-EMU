@@ -1,35 +1,47 @@
 #include "io.h"
 #include "gb.h"
+#include "ppu.h"
+#include "timer.h"
+
+#include "logger.h"
+
+// IO Register Routing Map:
+static IO_RegMap io_map[] = {
+    {0xFF04, 0xFF04, timer_div_read, timer_div_write, IO_TIMER},
+    {0xFF05, 0xFF05, timer_tima_read, timer_tima_write, IO_TIMER},
+    {0xFF06, 0xFF06, timer_tma_read, timer_tma_write, IO_TIMER},
+    {0xFF07, 0xFF07, timer_tac_read, timer_tac_write, IO_TIMER},
+    {0xFF40, 0xFF4B, ppu_io_read, ppu_io_write, IO_PPU},
+};
+const size_t io_map_size = sizeof(io_map) / sizeof(IO_RegMap);
 
 uint8_t io_read(GB *gb, uint16_t addr) {
-    switch (addr) {
-        case 0xFF:
-            return 144;
-        default:
-            return 0xFF;
+    uint8_t read_8bit = 0xFF;
+    if (io_map_size <= 0) {
+        printf("ERROR: io_map is emtpy!\n");
+        exit(1);
+    }
+    for (int i = 0; i < io_map_size; i++) {
+        if (addr >= io_map[i].start && addr <= io_map[i].end) {
+            read_8bit = io_map[i].read(gb, addr);
+            trace_io_read(addr, read_8bit, i, (uint8_t)io_map[i].tag);
+            return read_8bit;
+        }
+    }
+    return read_8bit;
+}
+
+void io_write(GB *gb, uint16_t addr, uint8_t write_val)
+{
+    if (io_map_size <= 0) {
+        printf("ERROR: io_map is emtpy!\n");
+        exit(1);
+    }
+    for (int i = 0; i < io_map_size; i++) {
+        if (addr >= io_map[i].start && addr <= io_map[i].end) {       // Changed >= is this right?
+            io_map[i].write(gb, addr, write_val);
+            trace_io_write(addr, write_val, i, (uint8_t)io_map[i].tag);
+        }
     }
 }
 
-void io_write(GB *gb, uint16_t addr, uint8_t val)
-{
-    // set to nothing and move on.
-    (void)addr;
-    (void)val;
-}
-
-
-/*
-Some names for concepts:
-
-Master clock — the central timing reference
-T-cycle / clock cycle / dot — good base time unit for Game Boy
-Instruction-stepped emulation — advance hardware once per instruction
-Cycle-stepped emulation — advance hardware once per cycle
-Accumulator-based timing — add cycles to counters and process thresholds
-Finite state machine — how PPU modes progress over time
-Frame pacing / throttling — preventing the emulator from running too fast
-Memory-mapped IO — registers like FF44 for LY
-Device-backed register — IO register read reflects device state
-Central scheduler / coordinator — top-level function distributing elapsed time
-
-*/

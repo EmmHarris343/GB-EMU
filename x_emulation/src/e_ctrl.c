@@ -6,6 +6,7 @@
 #include "loc_ram.h"
 #include "cpu.h"
 #include "gb.h"
+#include "ppu.h"
 
 #include "logger.h"
 
@@ -31,19 +32,11 @@ extern FILE *cart_mbc_log_file;
 
 
 
+/// TODO: Remove e_ctrl and combine with e_core.
+/// WHY: this basically does the same task, it just exposes functions to e_core, to execute functions in other files..
+// Realistically. it's kind of redundant.
 
 
-
-// void dump_hram_test() {
-//     printf("Printing what's in WRAM..\n");
-//     uint8_t wram_val = 0x00;
-//     uint16_t wram_location = 0xC000;
-//     for (int w = 0; w < 16; w++) {
-//         wram_val = external_read(wram_location);
-//         printf("ADDR: 0x%04X | 0x%02X | W%d\n", wram_location, wram_val, w);
-//         wram_location ++;
-//     }
-// }
 
 int init_log_files() {
     const char *log_file = "../log/debug_log.txt";
@@ -71,7 +64,7 @@ int init_log_files() {
 
 
 
-
+// Bad name, this is is more of a "Init GB, and begin execution"
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
     GB gb;
@@ -95,49 +88,32 @@ int startup_sequence() {
     return 0;
 }
 
-
+// Bad name, this is is more of a "Init GB, and begin execution"
 int startup_seq_bytime() {
     printf(":E_CTRL: Exec Time Interval - Beginning\n");
 
+    // GB 'core', encapsulates everything from CPU, to APU, to Cycles/Time.
     GB gb;
 
     const char *rom_file = "../../rom/pkmn_red.gb";
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
-    // if (initialize_cartridge(rom_file) != 0) {
-    //     fprintf(stderr, "Error Initializing Cartridge Settings:\n");
-    //     return -1;
-    // }
-    // if (init_loc_ram(&gb) != 0) {
-    //     fprintf(stderr, "Error Initializing LOC RAM:\n");
-    //     return -1;
-    // }
-    if (init_log_files() != 0) {
-        printf("Failure Initializing log files");
+    // Initialize the GB 'core',
+    if (gb_init(&gb) != 0) {
+        fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }
-
-    // --------------------------------------------
-
-
-
+    if (init_log_files() != 0) {
+        printf("Unable to Initializing log files.");
+        return -1;
+    }
     printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
 
-
     sleep(2);
-    // Setup the MMU memory Map.
-    //e_mmu_init();
 
-    // Initialize CPU to default state
-    // cpu_init(&gb);
+    uint64_t max_time = 20000; // In MS. 8000 MS = 1 second.
+    gb_run_time(&gb, max_time);
 
-    /// TODO: START CPU (Timed limited) Emulation!
-    // uint64_t max_time = 20000; // In MS. 8000 MS = 1 second.
-    // run_cpu_bytime(&gb, max_time);
-
-
-
-    // Noting left to do, Report success if reached here.
     return 0;
 }
 
@@ -146,29 +122,6 @@ int test_sequence() {
     printf(":E_CTRL: -- TEST MODE -- Startup Beginning\n");
 
     GB gb;
-
-    // Set to cartridge settings to MBC 1, and Mock a ROM file.
-    // if (init_cart_test_mode() != 0) {
-    //     fprintf(stderr, "Error Initializing Mock ROM Config (Cart.c)\n");
-    //     return -1;
-    // }
-    // if (init_loc_ram(&gb) != 0) {
-    //     fprintf(stderr, "Error Initializing LOC RAM:\n");
-    //     return -1;
-    // }
-    // const char *log_file = "../log/debug_log.txt";
-    // if (logging_init(log_file) != 0) {
-    //     fprintf(stderr, "Error Initializing DEBUG File:\n");
-    //     return -1;
-    // }
-
-    // Setup the MMU memory Map.
-    //e_mmu_init();
-
-    //instruction_test();
-    //unit_test_instruction();
-    // entry_test_case();
-
 
     printf("Closing Emulator ... bye\n");
     return 0; // Pass all good.

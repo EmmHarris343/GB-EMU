@@ -6,15 +6,6 @@
 int emulation_mode = 0; // 0 = normal | 2 = by time |  3 = test.
 
 
-void begin_emulation() {
-
-}
-
-void stop_emulation() {
-
-}
-
-
 
 int main() {
 
@@ -50,14 +41,6 @@ int main() {
 
         }
     }
-
-    //startup_sequence();
-
-
-    // Actually begin "emulation" (Emulation in quotes cause still testing).
-    // Start Main CPU Loop.
-
-
 
     return 0;
 }

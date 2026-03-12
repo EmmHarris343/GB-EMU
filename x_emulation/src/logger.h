@@ -35,5 +35,8 @@ void logging_cart_mbc_log(const char *format, ...);
 void trace_mmu_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 void trace_mmu_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 
+void trace_io_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
+void trace_io_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
+
 
 #endif
