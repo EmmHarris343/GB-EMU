@@ -78,8 +78,6 @@ static size_t ram_size_by_code(uint8_t ram_code) {
 
 /// NOTICE: This is a FAKE cartridge. For use when ONLY testing!
 int init_cart_test_mode(GB *gb) {
-    // Default to DMG 01 | MBC 1
-    uint8_t full_header[HEADER_SIZE];
     printf("Starting Mock Rom/ Cartridge Configuration.. \n");
 
 

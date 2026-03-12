@@ -15,6 +15,8 @@ typedef enum {
     IO_TIMER,
     IO_INTERUPTS,
     IO_PPU,
+    IO_APU,
+    IO_APU_RAM,
     IO_DMA,
     IO_MAX
 } io_subsystem_tag;    // BUS tag names.

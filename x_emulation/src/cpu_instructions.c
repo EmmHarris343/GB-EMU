@@ -9,16 +9,10 @@
 #include "gb.h"
 #include "logger.h"
 
-
-
-
-int step_count_icpu = 0;
-uint8_t step_opcode = 0x00;
 extern FILE *debug_dump_file;
 
 // The reference for the pointers to functions, to select instruction based on OP_CODE
 typedef void opcode_t(GB *gb, CPU *cpu, instruction_T instruction);
-
 
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
@@ -29,28 +23,12 @@ typedef void opcode_t(GB *gb, CPU *cpu, instruction_T instruction);
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 
-/*
-    printf("%sred\n", KRED);
-    printf("%sgreen\n", KGRN);
-    printf("%syellow\n", KYEL);
-    printf("%sblue\n", KBLU);
-    printf("%smagenta\n", KMAG);
-    printf("%scyan\n", KCYN);
-    printf("%swhite\n", KWHT);
-    printf("%snormal\n", KNRM);
-
-    ("%scyan\n", KCYN);
-    ("%snormal\n", KNRM);
-*/
-
-
-
 void set_cpu_flag(CPU* cpu, uint8_t flag_hex) {
     cpu->reg.F |= flag_hex;
 }
 
 void clear_cpu_flag(CPU* cpu, uint8_t flag_hex) {
-    cpu->reg.F &= ~flag_hex;    // Extra to ensure flag is CLEARED
+    cpu->reg.F &= ~flag_hex;
 }
 
 void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
@@ -83,7 +61,7 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
 
 // INTERUPT Instructions:
 // HALT!
-static void HALT(GB *gb, CPU *cpu, instruction_T instruction) {      // Likely completely HALT / kill the system.
+static void HALT(GB *gb, CPU *cpu, instruction_T instruction) {     // Halt - Set cpu halt flag. (will not stop emulation)
     printf("HALT Called. Exit Now.. (Guessing)\n");
     cpu->state.halt = 1;
 }
@@ -125,8 +103,6 @@ static void NOP(GB *gb, CPU *cpu, instruction_T instruction) {                  
 static void STOP(GB *gb, CPU *cpu, instruction_T instruction) {      // Unsure, might be like Pause.
     printf("STOP Called, not setup PANIC HALT\n");
     cpu->state.panic = 1;
-
-
 }
 // DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
 static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
@@ -137,11 +113,11 @@ static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
     cpu->state.panic = 1;
 }
 // BLANK
-static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do nothing, basically NOP, but for clarity don't write it like that.
+static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do nothing, basically NOP, but any call to this should cause fault.
     // DO NOTHING - Not even any command.
     // This shouldn't Even be called.
     printf("%sBLANK Called, This should never be called. Panic Halt.%s\n", KRED, KNRM);
-    cpu->state.panic = 1;
+    gb->panic = 1;
 }
 
 // Carry Flag Instructions:
@@ -150,8 +126,6 @@ static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Comp
 
     // If it's set, clear it, otherwise set it.
     (cpu->reg.F & FLAG_C) ? clear_cpu_flag(cpu, FLAG_C) : set_cpu_flag(cpu, FLAG_C);    // Invert the C flag.
-
-
 
     /*
         FLAGS:
@@ -515,9 +489,7 @@ static void JP_a16(GB *gb, CPU *cpu, instruction_T instruction) {
 }
 static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
     int proceed = 0;
-    // JP cc,a16: add +4 T-cycles if taken
-
-    cpu->cycle += 12; // default 12 t-cycles (3 m-cycles)
+    cpu->cycle += 12; // +12 default untaken cost (+12 t-cycle. 3 m-cycles)
 
     switch(instruction.opcode) {
         case 0xC2:
@@ -535,7 +507,7 @@ static void JP_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {
     }
     if (proceed) {
         cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
-        cpu->cycle += 4;
+        cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycle)
     }
     else { cpu->reg.PC += 3; }
 
@@ -561,19 +533,18 @@ static void JR_e8(GB *gb, CPU *cpu, instruction_T instruction) {
 static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
     printf("JR cc e8, Relative Jump, Conditional\n");
 
+    cpu->cycle += 8; // +8 default untaken cost. (+8 t-cycles. +2 m-cycles)
+
     int8_t e_signed_offset;       // e = signed 8bit register. Because it's relative to the PC location +- a value.
     e_signed_offset = (int8_t)instruction.operand1;
     uint16_t next_pc = cpu->reg.PC+2;  // Value of PC + 2 Bytes. (PC Advanced by 2)
-
-    // Default +8 cpu t-cycles. (NOTE 4 t-cycles = 1 m-cycles)
-    cpu->cycle += 8;
 
     switch (instruction.opcode) {
         case 0x20:
             if (!(cpu->reg.F & FLAG_Z)) {
                 printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, e_signed_offset, KNRM);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
-                cpu->cycle += 4;
+                cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
                 cpu->reg.PC = next_pc;
             }
@@ -582,7 +553,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             if (cpu->reg.F & FLAG_Z) {
                 printf("JR Z e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
-                cpu->cycle += 4;
+                cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
                 cpu->reg.PC = next_pc;
             }
@@ -591,7 +562,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             if (!(cpu->reg.F & FLAG_C)) {
                 printf("JR NC e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
-                cpu->cycle += 4;
+                cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
                 cpu->reg.PC = next_pc;
             }
@@ -600,7 +571,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             if (cpu->reg.F & FLAG_C) {
                 printf("JR C e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
-                cpu->cycle += 4;
+                cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
                 cpu->reg.PC = next_pc;
             }
@@ -1334,7 +1305,7 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
     printf("CONDITIONAL CALL_cc_n16 Called, IF* condition is met 'Push PC into SP, so RET can POP later', then jump to n16 Address\n");
 
     int proceed = 0;
-    cpu->cycle += 12; // default 12 t-cycles (3 m-cycles)
+    cpu->cycle += 12; // +12 default untaken cost. (+12 t-cycles. +3 m-cycles)
 
     switch (instruction.opcode) {
         case 0xC4:
@@ -1368,15 +1339,13 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
 
         cpu->reg.PC = cnvrt_lil_endian(instruction.operand1, instruction.operand2);
 
-        cpu->cycle += 12; // Add +12 t-cycle if taken (3 m-cycles)
+        cpu->cycle += 12; // +12 taken cost (12 t-cycle. 3 m-cycles)
     }
     else {
         printf("CALL cc Conditions are NOT met. Skipping..\n");
         cpu->reg.PC += 3;       // Skip over the entire CALL instruction (Which is 3 bytes in Length)
     }
 
-
-    // CALL cc,a16: add +12 T-cycles if taken
     // Cycles: 6 taken / 3 untaken
     // Bytes: 3
     // Flags: None affected.
@@ -1402,10 +1371,8 @@ static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETu
 }
 static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETurn from subroutine if condition CC is met
     int proceed = 0;
-    // Takes the addresses in the
 
-    // Default 8 T-cycles (2 m-cycles)
-    cpu->cycle += 8;
+    cpu->cycle += 8; // +8 default untaken cost (8 t-cycles. 2 m-cycles)
 
     printf("RET CC Called.          ; Populate PC from SP, if CC Condition met\n");
     switch (instruction.opcode) {
@@ -1438,7 +1405,7 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
         cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
         logging_cpu_trace("[CTRL]=>RET-CC: (CC MET, PROCEEDING) F:0x%02X, PC:0x%04X, SP:0x%04X, LowByte:0x%02X, HighByte:0x%02X, lilendin:0x%04X\n", cpu->reg.F, cpu->reg.PC, cpu->reg.SP, low_byte, high_byte, cnvrt_lil_endian(low_byte, high_byte));
 
-        cpu->cycle += 12; // Add 12 t-cycles (3 m-cycles). When condition taken.
+        cpu->cycle += 12; // +12 taken cost (+12 t-cycle. 3 m-cycles).
     }
     else {
         printf("RET cc Conditions are NOT met. Skipping..\n");

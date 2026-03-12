@@ -8,7 +8,6 @@
 #include "logger.h"
 
 int mbc_none_setup(GB *gb, Cartridge *cart) {
-
     return 0;
 }
 
@@ -76,9 +75,7 @@ void mbc1_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc1_read(Cartridge *cart, uint16_t addr) {
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
@@ -86,9 +83,7 @@ void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 const Operations mbc1_ops = {
@@ -162,9 +157,7 @@ void mbc2_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc2_read(Cartridge *cart, uint16_t addr) {
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 void mbc2_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
@@ -172,9 +165,7 @@ void mbc2_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc2_read_ext(Cartridge *cart, uint16_t addr){
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 const Operations mbc2_ops = {
@@ -384,8 +375,6 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
     }}
 
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
-    uint8_t read_rom_data = 0x0;
-
     if (addr <= 0x3FFF) {
         // Fixed bank
         printf(":MBC3: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
@@ -502,9 +491,7 @@ void mbc5_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc5_read(Cartridge *cart, uint16_t addr) {
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 void mbc5_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
@@ -512,9 +499,7 @@ void mbc5_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc5_read_ext(Cartridge *cart, uint16_t addr){
-    uint8_t val;
-
-    return val;
+    return 0xFF;
 }
 
 const Operations mbc5_ops = {

@@ -24,12 +24,14 @@ static const char *bus_tag_name[BUS_MAX] = {
     "UNMAPPED"
 };
 
-static const char *io_tag_name[7] = {
+static const char *io_tag_name[9] = {
     "IO_INPUT",
     "IO_SERIAL",
     "IO_TIMER",
     "IO_INTERUPTS",
     "IO_PPU",
+    "IO_APU",
+    "IO_APU_RAM",
     "IO_DMA",
     "IO_MAX",
 };
