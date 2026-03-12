@@ -27,6 +27,10 @@ typedef struct {
     io_subsystem_tag tag;
 } IO_RegMap;
 
+typedef struct {
+    GB *gb;
+    IO_RegMap map;
+} IO;
 
 uint8_t io_read(GB *gb, uint16_t addr);
 void io_write(GB *gb, uint16_t addr, uint8_t val);

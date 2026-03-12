@@ -34,6 +34,9 @@ Allow OAM (sprits/ tiles) for new frames.
 */
 
 
+//// NOTE: PPU should own: LCD, LCD Registers, VRAM, OAM, framebuffer
+
+
 
 
 
@@ -44,17 +47,18 @@ void init_vram(GB *gb) {
 
 }
 
+/// TODO: Do I want a post-boot automatically boot mode.
 void ppu_init_timer(PPU *ppu) {
-    ppu->lcdc = 0;      // FF40
-    ppu->stat = 0;      // FF41
+    ppu->lcdc = 0x91;   // FF40
+    ppu->stat = 0x85;   // FF41
     ppu->scy = 0;       // FF42
     ppu->scx = 0;       // FF43
     ppu->ly = 0;        // FF44
     ppu->lyc = 0;       // FF45
 
-    ppu->bgp = 0;       // FF47
-    ppu->obp0 = 0;      // FF48
-    ppu->obp1 = 0;      // FF49
+    ppu->bgp = 0xFC;    // FF47
+    ppu->obp0 = 0xFF;   // FF48
+    ppu->obp1 = 0xFF;   // FF49
 
     ppu->wy = 0;        // FF4A
     ppu->wx = 0;        // FF4B
@@ -100,23 +104,22 @@ int ppu_init(GB *gb) {
 }
 
 
-void ppu_set_mode(PPU *ppu, int val) {
 
-}
 
 uint8_t ppu_stat_read(GB *gb) {
-    return 0;
+    return gb->ppu.stat;
 }
 
 void ppu_lcdc_write(GB *gb, uint8_t write_val) {
+    gb->ppu.lcdc = write_val;
 
 }
 void ppu_stat_write(GB *gb, uint8_t write_val) {
+    gb->ppu.lcdc = write_val;
 
 }
 void ppu_ly_write(GB *gb, uint8_t write_val) {
-    // LY technically should be directly written to. As it's a "calculated" value.
-
+    // LY technically shouldn't be directly written to. As it's a "calculated" value.
 }
 
 
@@ -184,18 +187,132 @@ void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
 }
 
 
-// PPU Timer/ tick:
-void ppu_tick(PPU *ppu, GB *gb, uint32_t cycles) {
-    if ((ppu->lcdc & 0x80) == 0) {
-        ppu->line_cycles = 0;
-        ppu->ly = 0;
-        ppu_set_mode(ppu, 0);
+/*
+
+    PPU timer/ tick
+    Handles HBLANK, VBLANK, etc..
+
+*/
+
+
+
+
+static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
+    if (ppu->ly == ppu->lyc) {
+        ppu->stat |= (1 << 2);  // Stat bit 2 becomes 1.
+
+        // If Stat bit 6 is enabled, request LCD STAT interrupt.
+        if (ppu->stat & (1 << 6)) {
+            gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+            printf("::PPU:: Stat bit 6 enabled. Request Interrupt.\n");
+        }
+    } else {
+        ppu->stat &= ~(1 << 2); // Stat bit 2 becomes 0.
+    }
+
+}
+
+
+
+// PPU Set mode, sets the STAT mode for HBLANK, VBLANK, OAM, TRANSFER.
+static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
+    uint8_t previous_mode = ppu->stat & 0x03;
+
+    if (previous_mode == mode) {
         return;
+    }
+
+    ppu->stat = (ppu->stat & 0xFC) | (mode & 0x03);
+
+    switch (mode) {
+        case PPU_MODE_HBLANK:
+            if (ppu->stat & (1 << 3)) {
+                gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+            }
+            break;
+        case PPU_MODE_VBLANK:
+            if (ppu->stat & (1 << 4)) {
+                gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+            }
+            break;
+        case PPU_MODE_OAM:
+            if (ppu->stat & (1 << 5)) {
+                gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+            }
+            break;
+        case PPU_MODE_TRANSFER:
+            break;
     }
 }
 
 
-// More advanced PPU tick:
+/*
+
+456 cycles matters because:
+Scanline is made of phases called PPU modes:
+Mode 2 = OAM scan
+Mode 3 = pixel transfer
+Mode 0 = HBlank
+Mode 1 = VBlank
+
+Basic timings (not supper accurate):
+Mode 2: ~80 Cycles
+Mode 3: ~172 Cycles
+Mode 0: ~204 Cycles
+
+80 + 172 + 204 = 456 cycles.
+
+So line_cycles is the per-scanline timing accumulator.
+
+*/
+
+// PPU Tick, advances through scanliens and modes based on elasped cycles.
+void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
+    printf("Executing PPU Tick. Cycles: %u\n", cycles);
+    if ((ppu->lcdc & 0x80) == 0) {
+        ppu->line_cycles = 0;
+        ppu->ly = 0;
+        ppu_set_mode(gb, ppu, PPU_MODE_HBLANK);
+        ppu_update_lyc_flag(gb, ppu);
+        return;
+    }
+
+    ppu->line_cycles += cycles;
+
+    printf("PPU LINE CYCLES COUNT: %u\n", ppu->line_cycles);
+
+    while (ppu->line_cycles >= 456) {   // Each scanline takes 456 Cycles.
+        ppu->line_cycles -= 456;
+        ppu->ly++;
+
+        // Visable Scanlines y = (0 - 143)
+        // VBlank  Scanlines y = (144 - 153)
+
+        if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
+            printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
+            ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
+            gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+        } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
+            printf("::PPU:: ly reached 153, RESET ly, allow OAM new frame.\n");
+            ppu->ly = 0;
+            ppu_set_mode(gb, ppu, PPU_MODE_OAM);               // OAM New frame
+        }
+    }
+    if (ppu->ly < 144) {
+        if (ppu->line_cycles < 80) {
+            printf("::PPU:: ly is under 80, NEW OAM FRAME\n");
+            ppu_set_mode(gb, ppu, PPU_MODE_OAM);               // OAM New frame.
+        } else if (ppu->line_cycles < (80 + 172)) {
+            printf("::PPU:: ly is under 252, PPU MODE TRANSFER\n");
+            ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
+        } else {
+            printf("::PPU:: ly is over 252, PPU HBLANK MODE, \n");
+            ppu_set_mode(gb, ppu,PPU_MODE_HBLANK);
+        }
+    }
+
+    ppu_update_lyc_flag(gb, ppu);
+}
 
 
 

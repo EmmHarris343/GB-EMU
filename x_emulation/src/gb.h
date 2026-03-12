@@ -5,6 +5,7 @@
 
 #include "cpu.h"
 #include "mmu.h"
+#include "io.h"
 #include "cart.h"
 #include "mbc.h"
 #include "loc_ram.h"
@@ -25,9 +26,10 @@ typedef struct gb_s {
     // Hardware/ Sub-Functions for inter-connection:
     CPU cpu;
     MMU mmu;
+    IO io;
     PPU ppu;
     Cartridge cart;
-    struct io_s *io;
+    //struct io_s *io;
     struct apu_s *apu;  // Would APU be under io?
     struct oam_s *oam;
 
@@ -35,13 +37,22 @@ typedef struct gb_s {
     GB_State state;
 
     // Cycles, ticks, timer:
-    struct timer_s *timer;
+    Timer timer;
     uint64_t total_cycles;
     uint32_t frame_cycles;
 
     /// TODO: move to gb state?
     uint8_t panic;      // Move this to 'machine' panic, not just cpu panic level.
 } GB;
+
+
+enum {
+    GB_INTERRUPT_VBLANK   = 0,
+    GB_INTERRUPT_LCD_STAT = 1,
+    GB_INTERRUPT_TIMER    = 2,
+    GB_INTERRUPT_SERIAL   = 3,
+    GB_INTERRUPT_JOYPAD   = 4
+};
 
 int gb_init(GB *gb);
 
@@ -55,6 +66,8 @@ void gb_run_time(GB *gb, uint64_t max_time);
 uint32_t gb_step(GB *gb);
 void gb_tick(GB *gb, uint32_t cycles);
 void gb_reset(GB *gb);
+
+void gb_request_interrupt(GB *gb, uint8_t bit);
 
 
 #endif

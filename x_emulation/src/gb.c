@@ -142,20 +142,25 @@ int gb_init(GB *gb) {
 uint32_t gb_step(GB *gb) {
     uint32_t cycles;
 
-    cycles = cpu_step(gb);
+    cycles = cpu_step(gb);  // T-cycles / clock cycle (Not machine cycles)
     gb_tick(gb, cycles);
     gb->step_count++;
 
     return cycles;
 }
 
-// Tick; update the total_cycles / frame_cycles
+/*
+
+GB Tick => Machine timing dispatcher.
+
+*/
+// Tick; update the total_cycles / frame_cycles,
 void gb_tick(GB *gb, uint32_t cycles){
     gb->total_cycles += cycles;
     gb->frame_cycles += cycles;
 
-    // timer_tick(&gb->timer, gb, cycles);
-    // ppu_tick(&gb->ppu, gb, cycles);
+    timer_tick(gb, &gb->timer, cycles);
+    ppu_tick(gb, &gb->ppu, cycles);
 }
 
 // The run loop, limited by steps.
@@ -213,6 +218,14 @@ uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
 }
 
 
+
+void gb_request_interrupt(GB *gb, uint8_t bit) {
+    //gb->state.Interrupt_IF = 1;
+
+    // Set the IF interrupt based on the input bit:
+    // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
+    gb->state.Interrupt_IF |= (1 << bit);
+}
 
 
 // Special interupt handling. TODO: Move this from CPU
