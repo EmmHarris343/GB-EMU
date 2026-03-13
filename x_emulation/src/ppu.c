@@ -64,6 +64,22 @@ void init_vram(GB *gb) {
 
 }
 
+const PPU ppu_post_startup = {
+    .lcdc = 0x91,   // FF40
+    .stat = 0x85,   // FF41
+    .scy = 0,       // FF42
+    .scx = 0,       // FF43
+    .ly = 0,        // FF44
+    .lyc = 0,       // FF45
+
+    .bgp = 0xFC,    // FF47
+    .obp0 = 0xFF,   // FF48
+    .obp1 = 0xFF,   // FF49
+    .wy = 0,        // FF4A
+    .wx = 0,        // FF4B
+};
+
+
 /// TODO: Do I want a post-boot automatically boot mode.
 void ppu_init_timer(PPU *ppu) {
     ppu->lcdc = 0x91;   // FF40
@@ -80,8 +96,7 @@ void ppu_init_timer(PPU *ppu) {
     ppu->wy = 0;        // FF4A
     ppu->wx = 0;        // FF4B
 
-
-    ppu->oam[0xA0] = 0;
+    // ppu->oam[0xA0] = 0;
     ppu->vram[0x2000] = 0;
 
     ppu->line_cycles = 0;
@@ -187,18 +202,14 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
 
 // PPU VRAM functions:
 uint8_t ppu_vram_read(GB *gb, uint16_t addr){
-    printf(":ppu: Hit VRAM Read!\n");
     if (addr < 0x8000 || addr > 0x9FFF) {
-        // Invalid
-        return 0xFF;
+        return 0xFF; // invalid space
     }
     return VRAM[addr - 0x8000];
 }
 void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
-    printf(":ppu: Hit VRAM WRITE!\n");
     if (addr < 0x8000 || addr > 0x9FFF) {
-        // Invalid
-        return;
+        return; // invalid space
     }
     VRAM[addr - 0x8000] = write_val;
 }
@@ -267,10 +278,11 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
 
 456 cycles matters because:
 Scanline is made of phases called PPU modes:
-Mode 2 = OAM scan
-Mode 3 = pixel transfer
 Mode 0 = HBlank
 Mode 1 = VBlank
+Mode 2 = OAM scan
+Mode 3 = pixel transfer
+
 
 Basic timings (not supper accurate):
 Mode 2: ~80 Cycles
@@ -285,7 +297,6 @@ So line_cycles is the per-scanline timing accumulator.
 
 // PPU Tick, advances through scanliens and modes based on elasped cycles.
 void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
-    printf("Executing PPU Tick. Cycles: %u\n", cycles);
     if ((ppu->lcdc & 0x80) == 0) {
         ppu->line_cycles = 0;
         ppu->ly = 0;
@@ -295,8 +306,6 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
     }
 
     ppu->line_cycles += cycles;
-
-    printf("PPU LINE CYCLES COUNT: %u\n", ppu->line_cycles);
 
     while (ppu->line_cycles >= 456) {   // Each scanline takes 456 Cycles.
         ppu->line_cycles -= 456;
@@ -310,20 +319,19 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
             ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
             gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
         } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
-            printf("::PPU:: ly reached 153, RESET ly, allow OAM new frame.\n");
             ppu->ly = 0;
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
         }
     }
     if (ppu->ly < 144) {
         if (ppu->line_cycles < 80) {
-            printf("::PPU:: ly is under 80, OAM SCAN MODE\n");
+            //printf("::PPU:: ly is under 80, OAM SCAN MODE\n");
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
         } else if (ppu->line_cycles < (80 + 172)) {
-            printf("::PPU:: ly is under 252, PPU MODE TRANSFER\n");
+            //printf("::PPU:: ly is under 252, PPU MODE TRANSFER\n");
             ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
         } else {
-            printf("::PPU:: ly is over 252, PPU HBLANK MODE, \n");
+            //printf("::PPU:: ly is over 252, PPU HBLANK MODE, \n");
             ppu_set_mode(gb, ppu,PPU_MODE_HBLANK);
         }
     }

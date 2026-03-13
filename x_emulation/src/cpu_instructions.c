@@ -96,7 +96,6 @@ static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Ena
 // NOP - No operation
 static void NOP(GB *gb, CPU *cpu, instruction_T instruction) {                    // Placeholder..
     // DO NOTHING
-    printf("NOP Called. Just Advance PC\n");
     cpu->reg.PC ++; // Do nothing, just advance the PC
 }
 // STOP
@@ -577,7 +576,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
     switch (instruction.opcode) {
         case 0x20:
             if (!(cpu->reg.F & FLAG_Z)) {
-                printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, e_signed_offset, KNRM);
+                //printf("%sJR NZ e8 Condition Met -> Relative jump %02X %s\n", KCYN, e_signed_offset, KNRM);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
                 cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
@@ -586,7 +585,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             break;
         case 0x28:
             if (cpu->reg.F & FLAG_Z) {
-                printf("JR Z e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                //printf("JR Z e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
                 cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
@@ -595,7 +594,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             break;
         case 0x30:
             if (!(cpu->reg.F & FLAG_C)) {
-                printf("JR NC e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                //printf("JR NC e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
                 cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
@@ -604,7 +603,7 @@ static void JR_cc_e8(GB *gb, CPU *cpu, instruction_T instruction) {
             break;
         case 0x38:
             if (cpu->reg.F & FLAG_C) {
-                printf("JR C e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
+                //printf("JR C e8 Condition Met -> Relative jump %02X\n", e_signed_offset);
                 cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
                 cpu->cycle += 4;    // +4 taken cost (4 t-cycles. 1 m-cycles)
             } else {
@@ -2423,23 +2422,26 @@ uint8_t cpu_interrupt_handling(GB *gb) {
 
 
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("\n%sExecute CPU Instruction..%s\n",KCYN, KNRM);
-    printf("[PC]:0x%04X\n[STEP]:%lu \n", gb->cpu.reg.PC, gb->step_count);
-    printf("Instruction: OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n\n", instruction.opcode, instruction.operand1, instruction.operand2);
+    // Remove all the comments...
+
+
+    // printf("\n%sExecute CPU Instruction..%s\n",KCYN, KNRM);
+    // printf("[PC]:0x%04X\n[STEP]:%lu \n", gb->cpu.reg.PC, gb->step_count);
+    // printf("Instruction: OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n\n", instruction.opcode, instruction.operand1, instruction.operand2);
 
     opcodes[instruction.opcode](gb, cpu, instruction);
 
-    printf("[Cycles]:%u - Set by instruction -\n", gb->cpu.cycle);
+    //printf("[Cycles]:%u - Set by instruction -\n", gb->cpu.cycle);
     if (gb->cpu.cycle == 0) {   // If the instruction didn't set the cycle. Default back to tablelist.
         gb->cpu.cycle = opcode_cycles[instruction.opcode];
     }
 
     // Save to cpu_trace_log ==> Step/PC/OP/ Regs, etc
-    log_cpu_trace(gb);
+    //log_cpu_trace(gb);
 
-    printf("[CYCLES]:%u\n", gb->cpu.cycle);
+    //printf("[CYCLES]:%u\n", gb->cpu.cycle);
 
-    printf("\n%sExecute Instruction Block Finished.%s\n", KYEL, KNRM);
+    //printf("\n%sExecute Instruction Block Finished.%s\n", KYEL, KNRM);
     return 0;
 }
 
@@ -2454,8 +2456,6 @@ int execute_test(GB *gb, CPU *cpu, instruction_T instruction) {
 
     //run_test_debug(cpu);
     opcodes[instruction.opcode](gb, cpu, instruction);
-
-    /// TODO: Figure out if I should add the IME delay to the test function. (This might only run 1 instruction.. So it may be pointless)
 
     if (cpu->state.panic == 1) { printf("ENCOUNTERED PANIC, Instruction not yet ready.\n"); return -1; }
     else {

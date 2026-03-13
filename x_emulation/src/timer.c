@@ -85,7 +85,6 @@ static uint32_t tac_frequency(uint8_t tac) {
 }
 
 void timer_tick(GB *gb, Timer *timer, uint32_t cycles) {
-    printf("Executing Timer Tick. Cycles: %u\n", cycles);
     // Div:
     timer->div_cycles += cycles;
 

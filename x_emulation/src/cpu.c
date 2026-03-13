@@ -284,7 +284,6 @@ static void ime_delay(CPU *cpu)
 
 // Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
 uint32_t cpu_step(GB *gb) {
-    printf("\n==== CPU Next Instruction ====\n");
     gb->cpu.cycle = 0;  // Reset the cycle back to 0 on each Step.
 
     // If it processed an interupt, use 20 cycles, then return.

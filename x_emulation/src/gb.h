@@ -13,11 +13,9 @@
 #include "apu.h"
 #include "timer.h"
 
-
 #define GB_CPU_HZ 4194304
 #define GB_FPS 59.7275
 #define GB_CYCLES_PER_FRAME 70224
-
 
 typedef struct {
     uint8_t IE;

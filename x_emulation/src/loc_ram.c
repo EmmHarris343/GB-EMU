@@ -30,36 +30,32 @@ int loc_ram_init(GB *gb) {
 // WRAM (Working Ram)
 uint8_t loc_wram_read(GB *gb, uint16_t addr) {
     //printf(":loc_ram: Hit WRAM Read!\n");
-    if (addr < 0xC000 || addr > 0xCFFF) {
+    if (addr < 0xC000 || addr > 0xDFFF) { // Invalid range:
         printf("loc_ram: WRAM invalid Read! -> Addr:0x%04X\n", addr);
-        // Invalid
         return 0xFF;
     }
-    return WRAM[addr - 0xC000];
+    uint16_t offset = addr - 0xC000;
+    return WRAM[offset];
 }
 void loc_wram_write(GB *gb, uint16_t addr, uint8_t val) {
-    printf(":loc_ram: Hit WRAM WRITE! -> Addr:0x%04X\n", addr);
-    if (addr < 0xC000 || addr > 0xDFFF) {
-        // Invalid
+    if (addr < 0xC000 || addr > 0xDFFF) { // Invalid range:
         printf("loc_ram: WRAM invalid Write!\n");
         return;
     }
-    WRAM[addr - 0xC000] = val;
+    uint16_t offset = addr - 0xC000;
+    WRAM[offset] = val;
 }
 
 // EchRAM (ECHO RAM) This is a mirror of the WRAM.
 uint8_t loc_echram_read(GB *gb, uint16_t addr) {
-    printf(":loc_ram: Hit EchRAM Read! -> Addr:0x%04X. CalcAddr: 0x%04X\n", addr, addr - 0x2000);
     return loc_wram_read(gb, addr - 0x2000);    // is a mirror of wram.
 }
 void loc_echram_write(GB *gb, uint16_t addr, uint8_t val) {
-    printf(":loc_ram: Hit EchRAM Write! -> Addr:0x%04X. CalcAddr: 0x%04X\n", addr, addr - 0x2000);
     loc_wram_write(gb, addr - 0x2000, val);     // is a mirror of wram.
 }
 
 // HRAM
 uint8_t loc_hram_read(GB *gb, uint16_t addr) {
-    printf(":loc_ram: Hit HRAM Read! -> Addr:0x%04X\n", addr);
     if (addr < 0xFF80 || addr > 0xFFFE) {
         // Invalid
         printf("loc_ram: HRAM invalid Read, Returning 0xFF!\n");
@@ -69,7 +65,6 @@ uint8_t loc_hram_read(GB *gb, uint16_t addr) {
 
 }
 void loc_hram_write(GB *gb, uint16_t addr, uint8_t val) {
-    printf(":loc_ram: Hit HRAM WRITE! -> Addr:0x%04X Val:0x%02X\n", addr, val);
     if (addr < 0xFF80 || addr > 0xFFFE) {
         // Invalid
         printf("loc_ram: HRAM invalid Write\n");

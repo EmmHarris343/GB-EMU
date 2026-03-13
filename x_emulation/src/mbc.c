@@ -307,7 +307,7 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
             logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
         }
 
-        printf("mbc: [MBC3-WriteIntercept] Enable RAM Switch\n");
+        //printf("mbc: [MBC3-WriteIntercept] Enable RAM Switch\n");
         return;
     }
     if (addr <= 0x3FFF) {
@@ -323,10 +323,7 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
             return;
         }
 
-        printf("rom_bank_count = %u\n", cart->config.rom_bank_count);
-
         // Clamp the bank to the total rom bank count.
-
         if (cart->state.mbc3.current_rom_bank != bank) {
             logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
             // Add the bank switch to the CPU trace log. So I know when it happens
@@ -334,7 +331,7 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         }
 
         cart->state.mbc3.current_rom_bank = bank;
-        printf("cart: [MBC3-WriteIntercept] ROM Bank Switch: %02X\n", bank);
+        //printf("cart: [MBC3-WriteIntercept] ROM Bank Switch: %02X\n", bank);
         return;
     }
 
@@ -350,7 +347,7 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
             cart->state.mbc3.ram_bank_mode = 1;
             logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
         }
-        printf("cart: [MBC3-WriteIntercept] RAM Bank / RTC Register Select: %02X\n", val);
+        //printf("cart: [MBC3-WriteIntercept] RAM Bank / RTC Register Select: %02X\n", val);
         return;
     }
 
@@ -358,15 +355,15 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         /* RTC latch */
         if (cart->state.mbc3.rtc_latch_armed == 0 && val == 0x00) {
             cart->state.mbc3.rtc_latch_armed = 1;
-            printf("cart: [MBC3-WriteIntercept] Set RTC - Latch armed=1\n");
+            // printf("cart: [MBC3-WriteIntercept] Set RTC - Latch armed=1\n");
             //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC_LATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
         } else if (cart->state.mbc3.rtc_latch_armed == 1 && val == 0x01) {
             /* latch rtc snapshot */
-            printf("cart: [MBC3-WriteIntercept] Set RTC snapshot - Latch armed=0\n");
+            // printf("cart: [MBC3-WriteIntercept] Set RTC snapshot - Latch armed=0\n");
             //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC UnLATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
             cart->state.mbc3.rtc_latch_armed = 0;
         } else {
-            printf("cart: [MBC3-WriteIntercept] Reset RTC - Latch armed=0\n");
+            // printf("cart: [MBC3-WriteIntercept] Reset RTC - Latch armed=0\n");
             //logging_cart_mbc_log("[MBC3] Addr= %02X Write=%02X RTC UnLATCHED=%02X\n", addr, val, cart->state.mbc3.rtc_latch_armed);
             cart->state.mbc3.rtc_latch_armed = 0;
         }
@@ -375,18 +372,15 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
     }}
 
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
-    if (addr <= 0x3FFF) {
-        // Fixed bank
-        printf(":MBC3: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
+    if (addr <= 0x3FFF) {   // Fixed-Bank
+        // printf(":MBC3: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
         return cart->cartstorage.rom_data[addr];
     }
-    if (addr <= 0x7FFF) {
+    if (addr <= 0x7FFF) {   // Switch-Bank
         uint8_t bank = cart->state.mbc3.current_rom_bank;
-
         uint32_t rom_offset =
         (bank * 0x4000) + (addr - 0x4000);
-
-        printf(":MBC3: Read Matches ROM Bank: 0x%02X -> Switch-Bank Val: 0x%02X\n", bank, cart->cartstorage.rom_data[rom_offset]);
+        // printf(":MBC3: Read Matches ROM Bank: 0x%02X -> Switch-Bank Val: 0x%02X\n", bank, cart->cartstorage.rom_data[rom_offset]);
 
         return cart->cartstorage.rom_data[rom_offset];
     }
