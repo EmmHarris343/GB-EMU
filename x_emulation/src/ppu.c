@@ -143,8 +143,15 @@ uint8_t ppu_stat_read(GB *gb) {
 }
 
 void ppu_lcdc_write(GB *gb, uint8_t write_val) {
+    PPU *ppu = &gb->ppu;
+    uint8_t old_value = ppu->lcdc;
+
     gb->ppu.lcdc = write_val;
 
+    if ((old_value ^ write_val) & 0x80) {
+        printf("[PPU] LCDC changed %02X -> %02X | LCD %s\n",
+               old_value, write_val, (write_val & 0x80) ? "ON" : "OFF");
+    }
 }
 void ppu_stat_write(GB *gb, uint8_t write_val) {
     gb->ppu.lcdc = write_val;
@@ -260,7 +267,7 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
             break;
         case PPU_MODE_VBLANK:
             if (ppu->stat & (1 << 4)) {
-                gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+                gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
             }
             break;
         case PPU_MODE_OAM:
@@ -316,11 +323,12 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
 
         if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
             printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
-            ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
-            gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+            ppu_set_mode(gb, ppu, PPU_MODE_VBLANK); // PPU also makes gb_request_interrupt..
+            //gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
         } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
             ppu->ly = 0;
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
+            gb->db_stats.ly_wraps +=1;
         }
     }
     if (ppu->ly < 144) {

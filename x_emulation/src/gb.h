@@ -17,6 +17,12 @@
 #define GB_FPS 59.7275
 #define GB_CYCLES_PER_FRAME 70224
 
+#define GB_CYCLES_PER_FRAME 70224 // ISH
+#define GB_FRAME_NS 16742706ULL   // 16.742706 ms ISH
+
+#define GB_UL_VAL 1000000000ULL
+
+
 typedef struct {
     uint8_t IE;
     uint8_t IF;
@@ -27,6 +33,16 @@ typedef struct {
     // MemTraceBuffer mem_trace;
     // DebugConfig config;
 } DebugState;
+
+typedef struct DebugStats {
+    uint64_t cpu_steps;
+    uint64_t cpu_cycles;
+    uint64_t frames;
+    uint64_t ppu_tick_calls;
+    uint64_t ppu_cycles_seen;
+    uint64_t ly_wraps;
+    uint64_t vblank_entries;
+} DebugStats;
 
 typedef struct gb_s {
     // Move for debug info:
@@ -53,8 +69,11 @@ typedef struct gb_s {
     uint64_t total_cycles;
     uint32_t frame_cycles;
 
+    DebugStats db_stats;
+
     /// TODO: move to gb state?
     uint8_t panic;      // Move this to 'machine' panic, not just cpu panic level.
+    uint8_t quit;
 } GB;
 
 
@@ -69,6 +88,8 @@ enum {
 int gb_init(GB *gb);
 
 
+// Run by frame..
+int gb_run(GB *gb);
 
 int gb_run_steps(GB *gb, int max_steps);
 void gb_run_time(GB *gb, uint64_t max_time);

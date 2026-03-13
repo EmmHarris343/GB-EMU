@@ -63,6 +63,28 @@ int init_log_files() {
 }
 
 
+int start_emulation() {
+    printf(":E_CTRL: Beginning Emulation\n");
+    GB gb;
+
+    // Initialize the GB at the "machine" level.
+    if (gb_init(&gb) != 0) {
+        fprintf(stderr, "unable to Initializing Cartridge Error:\n");
+        return -1;
+    }
+    if (init_log_files() != 0) {
+        printf("Unable to Initializing log files.");
+        return -1;
+    }
+
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
+    sleep(2);   // Sleep is just so the initial startup can be readable.
+
+    gb_run(&gb);
+
+    return 0;
+}
+
 
 // Bad name, this is is more of a "Init GB, and begin execution"
 int startup_sequence() {

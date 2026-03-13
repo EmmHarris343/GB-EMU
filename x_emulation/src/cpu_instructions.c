@@ -559,8 +559,6 @@ static void JR_e8(GB *gb, CPU *cpu, instruction_T instruction) {
     cpu->reg.PC = (uint16_t)(next_pc + e_signed_offset);   // It's supposed to jump the offsetup. + whatever the PC would be advanced by.
     cpu->cycle = 12;
 
-    printf("Relative jump to: +- 0x%02X. To PC=> 0x%04X\n", e_signed_offset, (uint16_t)(next_pc + e_signed_offset));
-
     // m-Cycles 3
     // t-cycles 12
     // Bytes 2
@@ -1811,8 +1809,12 @@ static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
 
     /*
         FLAGS:
@@ -1837,10 +1839,12 @@ static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 16;
 
-
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: See RL_r8
 }
 
@@ -1861,9 +1865,12 @@ static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 8;
 
+    // Bytes = 2
+    // t-cycle = 8
     /*
         FLAGS:
         Z = 0
@@ -1886,9 +1893,12 @@ static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 16;
 
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: See RLC_r8
 }
 
@@ -1916,9 +1926,12 @@ static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 8;
 
+    // Bytes = 2
+    // t-cycle = 8
     /*
         FLAGS:
         Z = 0
@@ -1942,9 +1955,12 @@ static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 16;
 
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: see RR_r8
 }
 static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rotate Register r8 Right. --> (Without carry flag input)
@@ -1965,8 +1981,12 @@ static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
 
     /*
         FLAGS:
@@ -1991,9 +2011,12 @@ static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // PREFIXED => Yes, 2 Bytes (TOTAL), already advanced once.
+    cpu->cycle = 16;
 
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: See RRC r8
 }
 
@@ -2005,6 +2028,14 @@ static void SLA_r8(CPU *cpu, instruction_T instrc){         // Shift Left Arithm
     printf("PFX: SLA r8. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
+
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
+
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2017,6 +2048,13 @@ static void SLA_P_HL(GB *gb, CPU *cpu, instruction_T instruction) {      //  Shi
     printf("PFX: SLA [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
+
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
     // Flags: SEE SLA r8
 }
 static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Arithmetically Register r8. -->
@@ -2024,6 +2062,12 @@ static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2036,12 +2080,26 @@ static void SRA_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
     printf("PFX: SRA [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
+
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
     // Flags: See SRA_r8
 }
 static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Logically Register r8. -->
     printf("PFX: SRL r8. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
+
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2054,6 +2112,13 @@ static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
     printf("PFX: SLR [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
     cpu->state.panic = 1;
+
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: See SRL_r8
 }
 
@@ -2077,9 +2142,12 @@ static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap
     set_cpu_flag(cpu, FLAG_H);    // H Cleared
     set_cpu_flag(cpu, FLAG_C);    // C Cleared
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 8;
 
+    // Bytes = 2
+    // t-cycle = 8
     /*
         FLAGS:
         Z = Set if result is 0
@@ -2091,14 +2159,21 @@ static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap
 static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
     printf("PFX: SWAP [HL]. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
-    cpu->state.panic = 1;
-    // FLAGS: See SWAP_r8
 
+    cpu->state.panic = 1;
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
+    cpu->reg.PC ++;
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
+
+    // FLAGS: See SWAP_r8
 }
 
 // PREFIXED Bit Flag instructions
 static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test bit u3 in register r8 set the zero flag if bit not set
-    printf("PFX: BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
+    //printf("PFX: BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2115,11 +2190,16 @@ static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test
     set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.   (Just GB CPU logic)
     // C flag unaffected.
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
+
 }
 static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
-    printf("PFX: BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
+    //printf("PFX: BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);                  // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2131,13 +2211,17 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test
     set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.
     // C flag unaffected.
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 12;
+
+    // Bytes = 2
+    // t-cycle = 12
 }
 
 // PREFIXED RES Instructions (Set a specific bit to 0?)
 static void RES_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("PFX: RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
+    //printf("PFX: RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
@@ -2147,12 +2231,16 @@ static void RES_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
 
     *reg_table[reg_index] &= ~(1 << u3_num);     // Set bit at u3 index to 0.
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
     // FLAGS: None affected
 }
 static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("PFX: RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
+    //printf("PFX: RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2160,13 +2248,17 @@ static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
     hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
     external_write(gb, cpu->reg.HL, hl_val);
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: None affected
 }
 // PREFIXED SET instructions (Set bit to 1, at u3 Index?)
 static void SET_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("PFX: SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
+    //printf("PFX: SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2177,12 +2269,16 @@ static void SET_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
 
     *reg_table[reg_index] |= (1 << u3_num);     // Sets a single bit to 1, in the Index of r8 Register.
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 8;
+
+    // Bytes = 2
+    // t-cycle = 8
     // FLAGS: None affected
 }
 static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
-    printf("PFX: SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
+    //printf("PFX: SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
 
     uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2190,8 +2286,12 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
 
     external_write(gb, cpu->reg.HL, hl_val);
 
+    // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
     cpu->reg.PC ++;
-    // Bytes = 2 (CB logic already advanced once)
+    cpu->cycle = 16;
+
+    // Bytes = 2
+    // t-cycle = 16
     // FLAGS: None affected
 }
 
@@ -2208,19 +2308,19 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
 // BIT 0, B. or BIT 4, H.
 // RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
 
     ((instruction.opcode & 0x07) == 0x06) ? BIT_u3_p_HL(gb, cpu, instruction) : BIT_u3_r8(gb, cpu, instruction);
 }
 
 static void CB_RES_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
 
     ((instruction.opcode & 0x07) == 0x06) ? RES_u3_p_HL(gb, cpu, instruction) : RES_u3_r8(gb, cpu, instruction);
 }
 
 static void CB_SET_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
 
     ((instruction.opcode & 0x07) == 0x06) ? SET_u3_p_HL(gb, cpu, instruction) : SET_u3_r8(gb, cpu, instruction);
 }
@@ -2243,10 +2343,10 @@ static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
 
     // Advance the PC, and read it at the same time.
     uint8_t prefixed_opcode = external_read(gb, cpu->reg.PC++);       // Read CB Opcoad at PC++ location.
-    printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
+    //printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
 
     cb_opcodes[prefixed_opcode](gb, cpu, instruction);
-    printf("%sCB Block Finished.%s\n", KBLU, KNRM);
+    //printf("%sCB Block Finished.%s\n", KBLU, KNRM);
 }
 
 

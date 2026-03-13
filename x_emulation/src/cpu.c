@@ -208,7 +208,83 @@ void print_instruction_counts() {
     }
 }
 
+static void cpu_trace_log_step(GB *gb, uint8_t opcode, uint32_t cycles_taken) {
+    CPU *cpu = &gb->cpu;
 
+    CPUTraceEntry entry = {
+        .step = gb->step_count,
+        .pc = cpu->reg.PC,
+        .opcode = opcode,
+        .cycles = cycles_taken,
+        .sp = cpu->reg.SP,
+        .a = cpu->reg.A,
+        .f = cpu->reg.F,
+        .b = cpu->reg.B,
+        .c = cpu->reg.C,
+        .d = cpu->reg.D,
+        .e = cpu->reg.E,
+        .h = cpu->reg.H,
+        .l = cpu->reg.L,
+        .ime = cpu->state.IME,
+        .ie = gb->interrupts.IE,
+        .iflag = gb->interrupts.IF
+    };
+
+
+
+    //cpu_trace_buffer_push(&gb->debug.cpu_trace, entry);
+}
+
+static void cpu_trace_buffer_dump(FILE *file, const CPUTraceBuffer *buffer) {
+    uint32_t start;
+    uint32_t i;
+
+    if (buffer->count == 0) {
+        fprintf(file, "CPU trace buffer empty.\n");
+        return;
+    }
+
+    start = (buffer->head + CPU_TRACE_CAPACITY - buffer->count) % CPU_TRACE_CAPACITY;
+
+    for (i = 0; i < buffer->count; i++) {
+        uint32_t index = (start + i) % CPU_TRACE_CAPACITY;
+        const CPUTraceEntry *entry = &buffer->entries[index];
+
+        fprintf(file,
+                "STP=%llu PC=%04X OP=%02X CYC=%u SP=%04X "
+                "A=%02X F=%02X B=%02X C=%02X D=%02X E=%02X H=%02X L=%02X "
+                "IME=%u IE=%02X IF=%02X\n",
+                (unsigned long long) entry->step,
+                entry->pc,
+                entry->opcode,
+                entry->cycles,
+                entry->sp,
+                entry->a,
+                entry->f,
+                entry->b,
+                entry->c,
+                entry->d,
+                entry->e,
+                entry->h,
+                entry->l,
+                entry->ime,
+                entry->ie,
+                entry->iflag);
+    }
+}
+
+static void cpu_trace_buffer_init(CPUTraceBuffer *buffer) {
+    memset(buffer, 0, sizeof(*buffer));
+}
+
+static void cpu_trace_buffer_push(CPUTraceBuffer *buffer, CPUTraceEntry entry) {
+    buffer->entries[buffer->head] = entry;
+    buffer->head = (buffer->head + 1) % CPU_TRACE_CAPACITY;
+
+    if (buffer->count < CPU_TRACE_CAPACITY) {
+        buffer->count++;
+    }
+}
 
 void opcode_tosummary(GB *gb) {
     uint8_t op_code = gb->instruction.opcode;

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "logger.h"
+//#include "logger.h"
 
 #include "mmu.h"
 #include "cart.h"
@@ -65,7 +65,7 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             read_8bit_val = mmu_map[i].read(gb, addr);
             //printf("What is MMU_map[i] value? %d", mmu_map[i]);
-            trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
+            //trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
     }
@@ -78,7 +78,7 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {       // Changed >= is this right?
             mmu_map[i].write(gb, addr, write_val);
-            trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
+            //trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }
 }

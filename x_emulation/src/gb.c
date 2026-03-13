@@ -1,5 +1,11 @@
-#include "gb.h"
+#define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
+
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#include "gb.h"
 
 uint64_t machine_total_cycles;
 
@@ -95,8 +101,12 @@ int gb_init(GB *gb) {
 
     // Create the PPU 'object', this is passed as needed.
 
+    gb->quit = 0;
+
     gb->panic = 0;
     gb->cpu.state.panic = 0;
+
+    memset(&gb->db_stats, 0, sizeof(gb->db_stats));
 
     const char *rom_file = "../../rom/pkmn_red.gb"; // Not ideal,  I should pass it.. or load it from something.
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
@@ -135,7 +145,58 @@ uint32_t gb_step(GB *gb) {
     gb_tick(gb, cycles);
     gb->step_count++;
 
+    gb->db_stats.cpu_steps++;
+    gb->db_stats.cpu_cycles += cycles;
+
     return cycles;
+}
+
+// Linux specific time functions:
+static uint64_t time_now_ns(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ((uint64_t) ts.tv_sec * GB_UL_VAL) + (uint64_t) ts.tv_nsec;
+}
+static void sleep_until_ns(uint64_t target_ns) {
+    struct timespec ts;
+    uint64_t now_ns;
+    uint64_t remaining_ns;
+
+    for (;;) {  // Creates infinit loop
+        now_ns = time_now_ns();
+        if (now_ns >= target_ns) {
+            break;
+        }
+
+        remaining_ns = target_ns - now_ns;
+
+        ts.tv_sec = (time_t)(remaining_ns / GB_UL_VAL);
+        ts.tv_nsec = (long) (remaining_ns % GB_UL_VAL);
+
+        clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+    }
+}
+
+
+
+// PRINT REPORT:
+static void debug_print_stats(GB *gb) {
+    printf(
+        "[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
+        "ppu_tick_calls=%llu ppu_cycles_seen=%llu "
+        "ly_wraps=%llu vblank_entries=%llu LY=%u mode=%u\n",
+        (unsigned long long) gb->db_stats.frames,
+        (unsigned long long) gb->db_stats.cpu_steps,
+        (unsigned long long) gb->db_stats.cpu_cycles,
+        (unsigned long long) gb->db_stats.ppu_tick_calls,
+        (unsigned long long) gb->db_stats.ppu_cycles_seen,
+        (unsigned long long) gb->db_stats.ly_wraps,
+        (unsigned long long) gb->db_stats.vblank_entries,
+        gb->ppu.ly,
+        gb->ppu.stat & 0x03
+    );
 }
 
 /*
@@ -148,22 +209,63 @@ void gb_tick(GB *gb, uint32_t cycles){
     gb->total_cycles += cycles;
     gb->frame_cycles += cycles;
 
+    gb->db_stats.ppu_tick_calls++;
+    gb->db_stats.ppu_cycles_seen += cycles;
+
     timer_tick(gb, &gb->timer, cycles);
     ppu_tick(gb, &gb->ppu, cycles);
 }
 
+int gb_run(GB *gb) {
+    // This works by a emulating on a per frame setup.
+
+    // WOULD BE BETTER: setup some kind of accumulator.
+    // Technically called: time accumulator loop.
+
+    uint64_t next_frame_time_ns = time_now_ns();
+
+    while (!gb->quit) {
+        uint32_t frame_cycles = 0;
+
+        while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
+            uint32_t cycles = gb_step(gb);
+            frame_cycles += cycles;
+        }
+
+        gb->db_stats.frames++;
+
+        if ((gb->db_stats.frames % 60) == 0) {
+            debug_print_stats(gb);
+        }
+
+        if (gb->panic) {    // Include both as it's migrated.
+            printf("GB Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
+            exit(1);
+            break;
+        }
+
+        next_frame_time_ns += GB_FRAME_NS;
+        sleep_until_ns(next_frame_time_ns);
+    }
+    return 0;
+}
+
+
 // The run loop, limited by steps.
 int gb_run_steps(GB *gb, int max_steps) {
-    printf("GB RUN => limit by steps\n");
+    printf("GB RUN. Starting Emulation => limit by steps\n");
     int step_count;
     for (step_count = 0; step_count < max_steps; step_count++) {
         if (gb->panic) {    // Include both as it's migrated.
             printf("GB Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
             exit(1);
             return -1;
         }
         if (gb->cpu.state.panic) {
             printf("CPU Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
             exit(1);
             return -1;
         }

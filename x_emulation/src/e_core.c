@@ -9,8 +9,18 @@ int emulation_mode = 0; // 0 = normal | 2 = by time |  3 = test.
 
 int main() {
 
-    // Normal CPU Run.
+    // Normal CPU Run. (Full run)
     if (emulation_mode == 0) {
+        printf(":E_CORE: Starting up Emulator\n");
+        if (start_emulation() !=0)         // e_ctrl -> Configs, Setup MBC Config, Load ROM, Setup RAM, Initialize CPU,
+        {
+            fprintf(stderr, "Error during startup Sequence. ABORT:\n");
+            //return -2;
+
+        }
+    }
+    // Normal CPU Run, Step Limit.
+    if (emulation_mode == 1) {
         printf(":E_CORE: Starting up Emulator\n");
         if (startup_sequence() !=0)         // e_ctrl -> Configs, Setup MBC Config, Load ROM, Setup RAM, Initialize CPU,
         {

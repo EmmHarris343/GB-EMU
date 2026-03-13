@@ -32,6 +32,30 @@ typedef struct {
 } MMU;
 
 
+
+#define MEM_TRACE_CAPACITY 100
+
+typedef enum {
+    MEM_TRACE_READ,
+    MEM_TRACE_WRITE
+} MemTraceType;
+
+typedef struct {
+    uint64_t step;
+    uint16_t pc;
+    uint16_t address;
+    uint8_t value;
+    uint8_t type;
+    uint8_t bus;
+} MemTraceEntry;
+
+typedef struct {
+    MemTraceEntry entries[MEM_TRACE_CAPACITY];
+    uint32_t head;
+    uint32_t count;
+} MemTraceBuffer;
+
+
 void mmu_init();
 uint8_t mmu_read(GB *gb, uint16_t addr);
 void mmu_write(GB *gb, uint16_t addr, uint8_t val);
