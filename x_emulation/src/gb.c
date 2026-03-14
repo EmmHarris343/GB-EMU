@@ -344,8 +344,8 @@ uint8_t ie_read(GB *gb, uint16_t addr) {
 }
 void ie_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    printf("IE-Debug:: A-Reg=%02X, ", gb->cpu.reg.A);
-    printf("IE Write hit. PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+    printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+        gb->cpu.reg.A,
         gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
     gb->interrupts.IE = interrupt_hex & 0x1F;
     // printf("IE Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
