@@ -154,8 +154,8 @@ void ppu_lcdc_write(GB *gb, uint8_t write_val) {
     }
 }
 void ppu_stat_write(GB *gb, uint8_t write_val) {
-    gb->ppu.lcdc = write_val;
-
+    printf("PPU: ppu.stat write hit! WriteVal: 0x%02X\n", write_val);
+    gb->ppu.stat = write_val;
 }
 void ppu_ly_write(GB *gb, uint8_t write_val) {
     // LY technically shouldn't be directly written to. As it's a "calculated" value.
