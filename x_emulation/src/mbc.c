@@ -392,6 +392,36 @@ void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
+    // RAM bank size: 0x2000
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (cart->state.mbc3.ram_rtc_enabled) {
+            if (cart->state.mbc3.ram_bank_mode == 0) {  // Read RAM
+                uint8_t bank = cart->state.mbc3.current_ram_bank;
+                size_t b_offset = (bank * 0x2000)+(addr - 0x2000);
+
+                uint8_t val = cart->storage.ram_data[b_offset];
+
+                logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
+                return cart->storage.ram_data[b_offset];
+            }
+            if (cart->state.mbc3.ram_bank_mode == 1) {  // Read RTC Registers
+                /*
+                    $08	RTC S	Seconds	0-59 ($00-$3B)
+                    $09	RTC M	Minutes	0-59 ($00-$3B)
+                    $0A	RTC H	Hours	0-23 ($00-$17)
+                    $0B	RTC DL	Lower 8 bits of Day Counter	($00-$FF)
+                    $0C	RTC DH	Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
+                    Bit 0: Most significant bit (Bit 8) of Day Counter
+                    Bit 6: Halt (0=Active, 1=Stop Timer)
+                    Bit 7: Day Counter Carry Bit (1=Counter Overflow)
+                */
+                //rtc_reg_select
+                return 0xFF;
+
+            }
+        }
+    }
+
     return 0xFF; // Returns dummy response of 0xFF
 }
 
@@ -403,6 +433,15 @@ const Operations mbc3_ops = {
     .read_ext = mbc3_read_ext,
 };
 
+// Setup the ram data
+void mbc3_init_ram(Cartridge *cart) {
+    size_t ram_size = cart->config.ram_size;    // MBC3 RAM size should be: 32kb total. (8kb * 4 banks);
+
+    // Initialize Cartridge RAM data, setting all values to 0.
+    uint8_t *ram_data = calloc(ram_size, sizeof(uint8_t));
+    cart->storage.ram_data = ram_data;
+}
+
 int mbc3_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc3_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC3_DECODE] Error Decoding MBC\n");
@@ -410,6 +449,7 @@ int mbc3_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     }
 
     mbc3_state_init(cart);
+    mbc3_init_ram(cart);
     // Bind mbc3 config:
     cart->ops = mbc3_ops;
 
