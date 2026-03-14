@@ -14,7 +14,10 @@ typedef struct gb_s GB;
 #define WRAM_SIZE 0x2000
 #define ECHRAM_SIZE 0x1E00
 
-
+typedef struct {
+    uint8_t hram[0x80];
+    uint8_t wram[0x2000];
+} Memory;
 
 
 

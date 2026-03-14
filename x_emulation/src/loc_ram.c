@@ -20,7 +20,6 @@ int loc_ram_init(GB *gb) {
     // memset(ERAM, 0, ERAM_SIZE); // This is mostly a route area. Technically NOTHIGN should be written here. If it is, I believe the gameboy would freeze up normally
 
     printf("Done.\n");
-
     return 0;
 }
 
