@@ -1806,7 +1806,7 @@ static void RLCA(GB *gb, CPU *cpu, instruction_T instruction) {          // Rota
 
 
 static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rotate Byte in Register r8 left, through the carry flag. <---
-    printf("PFX: RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
+    // printf("PFX: RL r8. Called.                  ; Rotate r8 Left through carry flag.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1825,7 +1825,7 @@ static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -1840,7 +1840,7 @@ static void RL_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     */
 }
 static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by HL left, through the carry flag. <---
-    printf("PFX: RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
+    // printf("PFX: RL [HL]. Called.                  ; Rotate value pointed by [HL] Left through carry flag.\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -1854,7 +1854,7 @@ static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -1863,7 +1863,7 @@ static void RL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
 }
 
 static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rotate Registers r8 Left. <--- (without Carry flag input)
-    printf("PFX: RLC r8. Called.                   ; Rotate r8 Left (without carry flag input).\n");
+    // printf("PFX: RLC r8. Called.                   ; Rotate r8 Left (without carry flag input).\n");
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
@@ -1879,7 +1879,7 @@ static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -1893,7 +1893,7 @@ static void RLC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     */
 }
 static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rotate the byte pointed to by [HL] left. <--- (without Carry flag input)
-    printf("PFX: RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
+    // printf("PFX: RLC [HL]. Called.                   ; Rotate valued pointed by [HL] Left (without carry flag input).\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = ((hl_val >> 7) & 0x1);              // Isolate and extract bit 7
@@ -1906,7 +1906,7 @@ static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -1919,7 +1919,7 @@ static void RLC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
 
 // PREFIXED Rotate Right Instructions:
 static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rotate Register r8 Right. Through the carry flag. -->
-    printf("PFX: RR r8. Called.                      ; Rotate r8 Right through carry flag\n");
+    // printf("PFX: RR r8. Called.                      ; Rotate r8 Right through carry flag\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -1938,7 +1938,7 @@ static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -1952,7 +1952,7 @@ static void RR_r8(GB *gb, CPU *cpu, instruction_T instruction) {         // Rota
     */
 }
 static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rotate the byte pointed to by [HL] Right. Through the carry flag. -->
-    printf("PFX: RR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
+    // printf("PFX: RR [HL]. Called         ; Rotate value pointed by [HL] Right through carry flag.\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_in = (cpu->reg.F & FLAG_C) ? 1 : 0;
@@ -1966,7 +1966,7 @@ static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -1974,7 +1974,7 @@ static void RR_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {       // Rota
     // FLAGS: see RR_r8
 }
 static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rotate Register r8 Right. --> (Without carry flag input)
-    printf("PFX: RRC r8. Called.                     ; Rotate r8, without carry flag input\n");
+    // printf("PFX: RRC r8. Called.                     ; Rotate r8, without carry flag input\n");
     (void)instruction;
 
     uint8_t *reg_table[8] = {
@@ -1992,7 +1992,7 @@ static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2007,7 +2007,7 @@ static void RRC_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Rota
     */
 }
 static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rotate the value pointed to by [HL] Right. -->  (Without carry flag input)
-    printf("PFX: RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
+    // printf("PFX: RRC [HL]. Called.                   ; Rotate value pointed by [HL] Right, without carry flag input");
     (void)instruction;
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
@@ -2021,7 +2021,7 @@ static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
     clear_cpu_flag(cpu, FLAG_N);  // N (Subtraction) Flag
     clear_cpu_flag(cpu, FLAG_H);  // H (Half Carry) Flag
 
-    cpu->reg.PC +=1;
+    cpu->reg.PC +=2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2034,7 +2034,7 @@ static void RRC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Rota
 
 // PREFIXED SHIFT left & right Arithmetically.
 static void SLA_r8(GB *gb, CPU *cpu, instruction_T instruction){         // Shift Left Arithmetically Register r8.  <--
-    printf("PFX: SLA r8. Called.                     ; Shift r8 left arithmetically, LSB becomes 0\n");
+    // printf("PFX: SLA r8. Called.                     ; Shift r8 left arithmetically, LSB becomes 0\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -2054,7 +2054,7 @@ static void SLA_r8(GB *gb, CPU *cpu, instruction_T instruction){         // Shif
     clear_cpu_flag(cpu, FLAG_H);
 
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2070,7 +2070,7 @@ static void SLA_r8(GB *gb, CPU *cpu, instruction_T instruction){         // Shif
 }
 static void SLA_P_HL(GB *gb, CPU *cpu, instruction_T instruction) {      //  Shift Left Arithmetically the byte pointed to by [HL]. <--
     (void)instruction;
-    printf("PFX: SLA [HL]. Called.                   ; Shift value pointed by [HL] left arithmetically, LSB becomes 0\n");
+    // printf("PFX: SLA [HL]. Called.                   ; Shift value pointed by [HL] left arithmetically, LSB becomes 0\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = (hl_val >> 7) & 0x01;
@@ -2084,7 +2084,7 @@ static void SLA_P_HL(GB *gb, CPU *cpu, instruction_T instruction) {      //  Shi
     clear_cpu_flag(cpu, FLAG_H);
 
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2092,7 +2092,7 @@ static void SLA_P_HL(GB *gb, CPU *cpu, instruction_T instruction) {      //  Shi
     // Flags: SEE SLA r8
 }
 static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Arithmetically Register r8. -->
-    printf("PFX: SRA r8. Called.                     ; Shift r8 right arithmetically, preserve sign bit\n");
+    // printf("PFX: SRA r8. Called.                     ; Shift r8 right arithmetically, preserve sign bit\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -2113,7 +2113,7 @@ static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
     clear_cpu_flag(cpu, FLAG_H);
 
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2128,7 +2128,7 @@ static void SRA_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
 }
 static void SRA_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shift Right Arithmetically the byte pointed to by HL. -->
     (void)instruction;
-    printf("PFX: SRA [HL]. Called.                   ; Shift value pointed by [HL] right arithmetically, preserve sign bit\n");
+    // printf("PFX: SRA [HL]. Called.                   ; Shift value pointed by [HL] right arithmetically, preserve sign bit\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = hl_val & 0x01;
@@ -2143,7 +2143,7 @@ static void SRA_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
     clear_cpu_flag(cpu, FLAG_H);
 
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2151,7 +2151,7 @@ static void SRA_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
     // Flags: See SRA_r8
 }
 static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shift Right Logically Register r8. -->
-    printf("PFX: SRL r8. Called.                     ; Shift r8 right logically, MSB becomes 0\n");
+    // printf("PFX: SRL r8. Called.                     ; Shift r8 right logically, MSB becomes 0\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E,
@@ -2170,7 +2170,7 @@ static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
     clear_cpu_flag(cpu, FLAG_N);
     clear_cpu_flag(cpu, FLAG_H);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2185,7 +2185,7 @@ static void SRL_r8(GB *gb, CPU *cpu, instruction_T instruction) {        // Shif
 }
 static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shift Right Logically the byte pointed to by [HL]. -->
     (void)instruction;
-    printf("PFX: SRL [HL]. Called.                   ; Shift value pointed by [HL] right logically, MSB becomes 0\n");
+    // printf("PFX: SRL [HL]. Called.                   ; Shift value pointed by [HL] right logically, MSB becomes 0\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t carry_out = hl_val & 0x01;
@@ -2198,7 +2198,7 @@ static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
     clear_cpu_flag(cpu, FLAG_N);
     clear_cpu_flag(cpu, FLAG_H);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2209,7 +2209,7 @@ static void SRL_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Shif
 
 // PREFIXED Swap instructions
 static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap the upper 4 bits in register r8 and the lower 4 ones. X::Y == Y::X
-    printf("PFX: SWAP r8. Called.                    ; Swap upper and lower bits in r8 Register X::Y -> Y::X\n");
+    // printf("PFX: SWAP r8. Called.                    ; Swap upper and lower bits in r8 Register X::Y -> Y::X\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
@@ -2225,7 +2225,7 @@ static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap
     clear_cpu_flag(cpu, FLAG_H);
     clear_cpu_flag(cpu, FLAG_C);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2240,7 +2240,7 @@ static void SWAP_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Swap
 }
 static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap the upper 4 bits in the byte pointed by HL and the lower 4 ones.
     (void)instruction;
-    printf("PFX: SWAP [HL]. Called.                  ; Swap upper and lower nibbles in value pointed by [HL]\n");
+    // printf("PFX: SWAP [HL]. Called.                  ; Swap upper and lower nibbles in value pointed by [HL]\n");
 
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     uint8_t swapped = (uint8_t)((hl_val << 4) | (hl_val >> 4));
@@ -2252,7 +2252,7 @@ static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap
     clear_cpu_flag(cpu, FLAG_H);
     clear_cpu_flag(cpu, FLAG_C);
 
-    cpu->reg.PC += 1;   // CB sub-opcode byte
+    cpu->reg.PC += 2;   // CB sub-opcode byte
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2280,9 +2280,9 @@ static void BIT_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode) {     // Test bit u3 
     set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.   (Just GB CPU logic)
     // C flag unaffected.
 
-    printf("Finished BIT u3 r8. Value: %02X\n", *reg_table[reg_index]);
+    // printf("Finished BIT u3 r8. Value: %02X\n", *reg_table[reg_index]);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
     // Bytes = 2
@@ -2302,7 +2302,9 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Test bit u3 
     set_cpu_flag(cpu, FLAG_H);    // Always SET h Flag.
     // C flag unaffected.
 
-    cpu->reg.PC += 1;
+    //printf("Finished BIT u3 [HL]. Value: %02X\n", get_state);
+
+    cpu->reg.PC += 2;
     cpu->cycle = 12;
 
     // Bytes = 2
@@ -2321,9 +2323,9 @@ static void RES_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode) {     // Set bit u3 i
 
     *reg_table[reg_index] &= ~(1 << u3_num);     // Set bit at u3 index to 0.
 
-    printf("Finished RES u3 r8. Value: %02X\n", *reg_table[reg_index]);
+    //printf("Finished RES u3 r8. Value: %02X\n", *reg_table[reg_index]);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
 
@@ -2340,7 +2342,7 @@ static void RES_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Set bit u3 i
     hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
     external_write(gb, cpu->reg.HL, hl_val);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2360,9 +2362,9 @@ static void SET_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode)  {     // Set bit u3 
 
     *reg_table[reg_index] |= (uint8_t)(1 << u3_num);     // Sets a single bit to 1, in the Index of r8 Register.
 
-    printf("Finished SET u3 r8. Value: %02X\n", *reg_table[reg_index]);
+    //printf("Finished SET u3 r8. Value: %02X\n", *reg_table[reg_index]);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 8;
 
 
@@ -2380,7 +2382,7 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Set bit u3 i
 
     external_write(gb, cpu->reg.HL, hl_val);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2401,21 +2403,21 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Set bit u3 i
 // BIT 0, B. or BIT 4, H.
 // RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
     uint8_t cb_opcode = instruction.operand1;
     ((cb_opcode & 0x07) == 0x06) ? BIT_u3_p_HL(gb, cpu, cb_opcode)
                                  : BIT_u3_r8(gb, cpu, cb_opcode);
 }
 
 static void CB_RES_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
     uint8_t cb_opcode = instruction.operand1;
     ((cb_opcode & 0x07) == 0x06) ? RES_u3_p_HL(gb, cpu, cb_opcode)
                                  : RES_u3_r8(gb, cpu, cb_opcode);
 }
 
 static void CB_SET_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
+    //printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
     uint8_t cb_opcode = instruction.operand1;
     ((cb_opcode & 0x07) == 0x06) ? SET_u3_p_HL(gb, cpu, cb_opcode)
                                  : SET_u3_r8(gb, cpu, cb_opcode);
@@ -2431,19 +2433,16 @@ static opcode_t *cb_opcodes[256] = {
     [0xC0 ... 0xFF] = CB_SET_Handler,
 };
 
-/// TODO:
-/// PREFIX: This also needs Cycles, (Which should be added to an instruction)
-
 static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
     uint8_t cb_opcode = external_read(gb, cpu->reg.PC +1);  // Advanced PC by 1!
     instruction.operand1 = cb_opcode;
 
-    printf("CB PREFIX at PC=%04X SUBOP=[0x%02X]\n",
-           cpu->reg.PC, cb_opcode);
+    // printf("CB PREFIX at PC=%04X SUBOP=[0x%02X]\n",
+    //        cpu->reg.PC, cb_opcode);
     cb_opcodes[cb_opcode](gb, cpu, instruction);
 
-    printf("%sCB Block Finished.%s\n", KBLU, KNRM);
+    // printf("%sCB Block Finished.%s\n", KBLU, KNRM);
 }
 
 

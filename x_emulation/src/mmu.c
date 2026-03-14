@@ -87,6 +87,9 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
             // if (addr == 0xFFFF) {
             //     printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
             // }
+            // if (write_val == 0xFF) {
+            //     printf("SPECIAL MMU PRINT: Write to of FF to space. ADDR:0x%04X Value:0x%02X \n", addr, write_val);
+            // }
             trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }

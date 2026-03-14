@@ -141,123 +141,26 @@ int ppu_init(GB *gb) {
 
     return 0;
 }
-
-// PPU VRAM functions:
-uint8_t ppu_vram_read(GB *gb, uint16_t addr){
-    //if (addr < 0x8000 || addr > 0x9FFF) {
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
-        return gb->ppu.vram[addr - 0x8000];
-    }
-    printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
-    return 0xFF;
-}
-void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
-        gb->ppu.vram[addr - 0x8000] = write_val;
-        return;
-    }
-    printf("PPU: VRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
-    return;
-}
-
-
-// IO section:
-
-uint8_t ppu_stat_read(GB *gb) {
-    return gb->ppu.stat;
-}
-
-void ppu_lcdc_write(GB *gb, uint8_t write_val) {
-    PPU *ppu = &gb->ppu;
-    uint8_t old_value = ppu->lcdc;
-
-    gb->ppu.lcdc = write_val;
-
-    if ((old_value ^ write_val) & 0x80) {
-        printf("[PPU] LCDC changed %02X -> %02X | LCD %s\n",
-               old_value, write_val, (write_val & 0x80) ? "ON" : "OFF");
-    }
-}
-void ppu_stat_write(GB *gb, uint8_t write_val) {
-    printf("PPU: ppu.stat write hit! WriteVal: 0x%02X\n", write_val);
-    gb->ppu.stat = write_val;
-}
-void ppu_ly_write(GB *gb, uint8_t write_val) {
-    // LY technically shouldn't be directly written to. As it's a "calculated" value.
-    printf("PPU: ppu.ly write hit! .. THIS NEVER SHOULD HAPPEN. (I THINK) WriteVal: 0x%02X\n", write_val);
-}
-
-
-uint8_t ppu_io_read(GB *gb, uint16_t addr) {
-    switch (addr) {
-        case 0xFF41:
-            return ppu_stat_read(gb);
-        default: {
-            uint8_t index = (uint8_t)(addr & 0x00FF);
-            uint8_t *reg_ptr = ppu_regs[index];
-
-            if (reg_ptr != NULL) {
-                //printf("PPU: Default. IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X\n", addr, *reg_ptr);
-                return *reg_ptr;
-            }
-
-            return 0xFF;
-        }
-    }
-    return 0xFF;
-}
-void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
-    switch (addr) {
-        case 0xFF40:
-            ppu_lcdc_write(gb, write_val);
-            return;
-        case 0xFF41:
-            ppu_stat_write(gb, write_val);
-            return;
-        case 0xFF44:    // Note, ly is technically read only on GB
-            ppu_ly_write(gb, write_val);
-            return;
-        default: {
-            uint8_t index = (uint8_t)(addr & 0x00FF);
-            uint8_t *reg_ptr = ppu_regs[index];
-
-            if (reg_ptr != NULL) {
-                //printf("PPU: Default. IO_WRITE HIT! Addr=0x%04X, RegPtr Val= 0x%02X, WriteVal=0x%02X\n", addr, *reg_ptr, write_val);
-                *reg_ptr = write_val;
-            }
-            return;
-        }
-    }
-    return;
-}
-/*
-
-    PPU timer/ tick
-    Handles HBLANK, VBLANK, etc..
-
-*/
-
-
-
-
 static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
-    if (ppu->ly == ppu->lyc) {
-        ppu->stat |= (1 << 2);  // Stat bit 2 becomes 1.
+    uint8_t old_match = (ppu->stat >> 2) & 0x01;
+    uint8_t new_match = (ppu->ly == ppu->lyc) ? 1u : 0u;
 
-        // If Stat bit 6 is enabled, request LCD STAT interrupt.
-        if (ppu->stat & (1 << 6)) {
-            gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
-            printf("::PPU:: Stat bit 6 enabled. Request Interrupt.\n");
-        }
+    if (new_match) {
+        ppu->stat |= (1u << 2);
     } else {
-        ppu->stat &= ~(1 << 2); // Stat bit 2 becomes 0.
+        ppu->stat &= ~(1u << 2);
+    }
+
+    if (!old_match && new_match) {
+        if (ppu->stat & (1u << 6)) {
+            gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
+        }
     }
 }
-
-
 
 // PPU Set mode, sets the STAT mode for HBLANK, VBLANK, OAM, TRANSFER.
 static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
+
     uint8_t previous_mode = ppu->stat & 0x03;
 
     if (previous_mode == mode) {
@@ -294,6 +197,125 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
     }
 }
 
+// PPU VRAM functions:
+uint8_t ppu_vram_read(GB *gb, uint16_t addr){
+    //if (addr < 0x8000 || addr > 0x9FFF) {
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        return gb->ppu.vram[addr - 0x8000];
+    }
+    printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
+}
+void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        gb->ppu.vram[addr - 0x8000] = write_val;
+        return;
+    }
+    printf("PPU: VRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
+}
+
+
+// IO section:
+
+uint8_t ppu_stat_read(GB *gb) {
+    return gb->ppu.stat | 0x80;
+}
+
+void ppu_lcdc_write(GB *gb, uint8_t write_val) {
+    PPU *ppu = &gb->ppu;
+    uint8_t old_value = ppu->lcdc;
+
+    gb->ppu.lcdc = write_val;
+
+    if ((old_value ^ write_val) & 0x80) {
+        printf("[PPU] LCDC changed %02X -> %02X | LCD %s\n",
+               old_value, write_val, (write_val & 0x80) ? "ON" : "OFF");
+    }
+}
+void ppu_stat_write(GB *gb, uint8_t write_val) {
+    printf("PPU: ppu.stat write hit! WriteVal: 0x%02X\n", write_val);
+    uint8_t stat = gb->ppu.stat;
+
+    /* keep bits 0-2 from the current STAT */
+    stat = (stat & 0x07) | (write_val & 0x78);
+
+    gb->ppu.stat = stat;
+}
+void ppu_ly_write(GB *gb, uint8_t write_val) {
+    // LY technically shouldn't be directly written to. As it's a "calculated" value.
+    printf("PPU: ppu.ly write hit! .. THIS NEVER SHOULD HAPPEN. (I THINK) WriteVal: 0x%02X\n", write_val);
+    (void)write_val;
+    gb->ppu.ly = 0;
+    ppu_update_lyc_flag(gb, &gb->ppu);
+}
+void ppu_lyc_write(GB *gb, uint8_t write_val){
+    gb->ppu.lyc = write_val;
+    ppu_update_lyc_flag(gb, &gb->ppu);
+}
+
+
+uint8_t ppu_io_read(GB *gb, uint16_t addr) {
+    switch (addr) {
+        case 0xFF41:
+            return ppu_stat_read(gb);
+        default: {
+            uint8_t index = (uint8_t)(addr & 0x00FF);
+            uint8_t *reg_ptr = ppu_regs[index];
+
+            if (reg_ptr != NULL) {
+                //printf("PPU: Default. IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X\n", addr, *reg_ptr);
+                return *reg_ptr;
+            }
+
+            return 0xFF;
+        }
+    }
+    return 0xFF;
+}
+void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    switch (addr) {
+        case 0xFF40:
+            ppu_lcdc_write(gb, write_val);
+            return;
+        case 0xFF41:
+            ppu_stat_write(gb, write_val);
+            return;
+        case 0xFF44:    // Note, ly is technically read only on GB
+            ppu_ly_write(gb, write_val);
+            return;
+        case 0xFF45:
+            ppu_lyc_write(gb, write_val);
+            return;
+        default: {
+            uint8_t index = (uint8_t)(addr & 0x00FF);
+            uint8_t *reg_ptr = ppu_regs[index];
+
+            if (reg_ptr != NULL) {
+                //printf("PPU: Default. IO_WRITE HIT! Addr=0x%04X, RegPtr Val= 0x%02X, WriteVal=0x%02X\n", addr, *reg_ptr, write_val);
+                *reg_ptr = write_val;
+            }
+            return;
+        }
+    }
+    return;
+}
+/*
+
+    PPU timer/ tick
+    Handles HBLANK, VBLANK, etc..
+
+*/
+
+
+
+
+
+
+
+
+
+
 
 /*
 
@@ -318,6 +340,12 @@ So line_cycles is the per-scanline timing accumulator.
 
 // PPU Tick, advances through scanliens and modes based on elasped cycles.
 void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
+    // if (ppu->ly == ppu->lyc)
+    // {
+    //     printf("COINCIDENCE: LY=%d LYC=%d STAT=%02X\n",
+    //         ppu->ly, ppu->lyc, ppu->stat);
+    // }
+
     if ((ppu->lcdc & 0x80) == 0) {
         ppu->line_cycles = 0;
         ppu->ly = 0;
@@ -332,18 +360,20 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         ppu->line_cycles -= 456;
         ppu->ly++;
 
+        ppu_update_lyc_flag(gb, ppu);
+
         // Visable Scanlines y = (0 - 143)
         // VBlank  Scanlines y = (144 - 153)
 
-        // The IO cycles read FF44, that 0x8F (143) that ly reached 144.
-
         if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
             //printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
+            gb->db_stats.vblank_entries += 1;
             ppu_set_mode(gb, ppu, PPU_MODE_VBLANK); // PPU also makes gb_request_interrupt..
             //gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
         } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
             ppu->ly = 0;
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
+            ppu_update_lyc_flag(gb, ppu);
             gb->db_stats.ly_wraps +=1;
         }
     }
