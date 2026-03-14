@@ -39,7 +39,7 @@ typedef struct {
     uint8_t current_rom_bank;   // mbc3 will only need 7bits => fits in uint8_t
     uint8_t current_ram_bank;
     uint8_t rtc_reg_select;
-    uint8_t ram_bank_mode;   /* 0 = RAM bank selected, 1 = RTC register selected */
+    uint8_t ram_bank_mode;      /* 0 = RAM bank selected, 1 = RTC register selected */
     uint8_t rtc_latch_armed;
 } MBC3_state;
 
@@ -90,12 +90,24 @@ typedef struct {
 } Config;
 
 typedef struct {
+    uint8_t seconds;
+    uint8_t minutes;
+    uint8_t hours;
+    uint8_t day_low;
+    uint8_t day_high;
+    uint8_t latched_seconds;
+    uint8_t latched_minutes;
+    uint8_t latched_hours;
+    uint8_t latched_day_low;
+    uint8_t latched_day_high;
+} RTC;
+
+typedef struct {
     uint8_t *rom_data;              // Actual Full ROM data
     uint8_t *ram_data;
 
-    uint32_t rom_size_bytes;
-    uint32_t ram_size_bytes;
-} CartridgeStorage;
+    RTC rtc;
+} Storage;
 
 // Declare cartridge so it can be included, before it is fully declared later.
 typedef struct Cartridge Cartridge;
@@ -113,7 +125,7 @@ typedef struct {
 // Now declare what is inside the Cartridge typedef/struct ..
 struct Cartridge{
     Config config;
-    CartridgeStorage cartstorage;
+    Storage storage;
     MBC_State state;
     Operations ops;
 };

@@ -45,27 +45,29 @@ typedef struct DebugStats {
 } DebugStats;
 
 typedef struct gb_s {
-    // Move for debug info:
+    // This is the instruction OPCODE + OP1 + OP2.
     instruction_T instruction;
-    uint64_t step_count;
 
     // Hardware/ Sub-Functions for inter-connection:
     CPU cpu;
+    PPU ppu;
+    //APU apu;
+    Memory memory;
+    Cartridge cart;
+
+    // Routing:
     MMU mmu;
     IO io;
-    PPU ppu;
-    Cartridge cart;
-    //struct io_s *io;
-    struct apu_s *apu;  // Would APU be under io?
+
     struct oam_s *oam;
 
-    // GB states, pause, panics, etc
 
     // Only the IE/ IF interupts:
     Interrupts interrupts;
 
     // Cycles, ticks, timer:
     Timer timer;
+    uint64_t step_count;
     uint64_t total_cycles;
     uint32_t frame_cycles;
 

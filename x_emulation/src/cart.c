@@ -119,15 +119,15 @@ int init_cart_test_mode(GB *gb) {
     uint32_t mock_rom_size = gb->cart.config.rom_size;
     uint8_t mock_banks = gb->cart.config.rom_bank_count;
 
-    gb->cart.cartstorage.rom_data = malloc(mock_rom_size);
-    if (!gb->cart.cartstorage.rom_data) {
+    gb->cart.storage.rom_data = malloc(mock_rom_size);
+    if (!gb->cart.storage.rom_data) {
         fprintf(stderr, "Mock ROM Malloc failed!\n");
         return -1;
     }
 
     for (uint32_t bank = 0; bank < mock_banks ; ++bank) {
         uint8_t fill = (uint8_t)(bank & 0xFF);              // Makes each bank have different bytes/ data
-        memset(gb->cart.cartstorage.rom_data + bank * 0x4000, fill, 0x4000);
+        memset(gb->cart.storage.rom_data + bank * 0x4000, fill, 0x4000);
     }
     printf("Done.\n");
     printf("Finished all Cartridge Configuration & Mock Rom setup.\n");
@@ -231,14 +231,14 @@ int load_cartridge(GB *gb, const char *filename) {
         return -2;
     }
 
-    gb->cart.cartstorage.rom_data = malloc(expt_rom_size);
-    if (!gb->cart.cartstorage.rom_data) {
+    gb->cart.storage.rom_data = malloc(expt_rom_size);
+    if (!gb->cart.storage.rom_data) {
         perror("ERROR -> Failed to allocate Memory for entire ROM file");
         fclose(rom_file);
         return -2;
     }
 
-    fread(gb->cart.cartstorage.rom_data, 1, expt_rom_size, rom_file);
+    fread(gb->cart.storage.rom_data, 1, expt_rom_size, rom_file);
     fclose(rom_file);
     printf("Done.\n");
     return 0;

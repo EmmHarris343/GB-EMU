@@ -290,24 +290,19 @@ static int mbc3_decode(Cartridge *cart, uint8_t type_code) {
     return 0;
 }
 
-//     if (cart.config.rom_bank_count <= bank_num) {
-//         fprintf(stderr, "FATAL ERROR! \n      ----> Invalid Bank switch Location. ROM Bank Count: 0x%04X | Desired ROM Bank: 0x%04X\n", cart.config.rom_bank_count, bank_num);
-//         exit(1);  // catch bad rom Bank switching!
-//     }
-//     else {
-//         cart.cartstorage.current_rom_bank = bank_num;
-//         printf("Switched ROM Bank to: 0x%02X, %d\n", bank_num, bank_num);
-//     }
-
 void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
     if (addr <= 0x1FFF) {
-        /* RAM / RTC enable */
-        cart->state.mbc3.ram_rtc_enabled = ((val & 0x0F) == 0x0A) ? 1 : 0;
-        if ((val & 0x0F) == 0x0A) {
-            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
+        if (cart->config.has_ram || cart->config.has_rtc) {
+            /* RAM / RTC enable/disable */
+            cart->state.mbc3.ram_rtc_enabled = ((val & 0x0F) == 0x0A) ? 1 : 0;
+            if ((val & 0x0F) == 0x0A) {
+                logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
+            }
+            if ((val & 0x0F) == 0x00) {
+                logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Disabled.\n", addr, val);
+            }
+            return;
         }
-
-        //printf("mbc: [MBC3-WriteIntercept] Enable RAM Switch\n");
         return;
     }
     if (addr <= 0x3FFF) {
@@ -337,14 +332,14 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 
     if (addr <= 0x5FFF) {
         /* RAM bank select or RTC register select */
-        if (val <= 0x03) {
+        if (val >= 0x00 && val <= 0x03) {  // Despite this space allowing 0x00 to 0x07. MBC3 only supports 4 banks (0x03)
             cart->state.mbc3.current_ram_bank = val;
             cart->state.mbc3.ram_bank_mode = 0;
             logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
 
         } else if (val >= 0x08 && val <= 0x0C) {
             cart->state.mbc3.rtc_reg_select = val;
-            cart->state.mbc3.ram_bank_mode = 1;
+            cart->state.mbc3.ram_bank_mode = 1; // mode 1 = RTC read mode.
             logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
         }
         //printf("cart: [MBC3-WriteIntercept] RAM Bank / RTC Register Select: %02X\n", val);
@@ -374,7 +369,7 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
     if (addr <= 0x3FFF) {   // Fixed-Bank
         // printf(":MBC3: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
-        return cart->cartstorage.rom_data[addr];
+        return cart->storage.rom_data[addr];
     }
     if (addr <= 0x7FFF) {   // Switch-Bank
         uint8_t bank = cart->state.mbc3.current_rom_bank;
@@ -382,7 +377,7 @@ uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
         (bank * 0x4000) + (addr - 0x4000);
         // printf(":MBC3: Read Matches ROM Bank: 0x%02X -> Switch-Bank Val: 0x%02X\n", bank, cart->cartstorage.rom_data[rom_offset]);
 
-        return cart->cartstorage.rom_data[rom_offset];
+        return cart->storage.rom_data[rom_offset];
     }
     return 0xFF;
 }
@@ -436,15 +431,13 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
                 */
                 //rtc_reg_select
                 return 0xFF;
-
             }
         }
     }
-
-    return 0xFF; // Returns dummy response of 0xFF
+    return 0xFF;
 }
 
-
+// The operation function routing for the MBC3:
 const Operations mbc3_ops = {
     .write = mbc3_write,
     .read = mbc3_read,
