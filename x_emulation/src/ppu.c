@@ -3,7 +3,6 @@
 #include <string.h>
 
 
-static uint8_t VRAM[VRAM_SIZE]; // Make only available directly from PPU.
 static uint8_t *ppu_regs[0x100];
 
 //PPUIO_RegMap *ppu_regs[0x100];
@@ -60,8 +59,13 @@ bit 0 = BG enable/disable
 
 // Set/ Reset the VRAM back to all 0s:
 void init_vram(GB *gb) {
-    memset(VRAM, 0, VRAM_SIZE);
+    memset(gb->ppu.vram, 0, sizeof(gb->ppu.vram));
+    return;
+}
 
+void init_oam_ram(GB *gb) {
+    memset(gb->ppu.oam, 0, sizeof(gb->ppu.oam));
+    return;
 }
 
 const PPU ppu_post_startup = {
@@ -104,7 +108,7 @@ void ppu_init_timer(PPU *ppu) {
 }
 
 void ppu_init_reg_map(PPU *ppu) {
-    for (size_t i = 0; i < 0x100; i++) {
+    for (size_t i = 0; i < 0x100; i++) {    // Not super efficient. But this is only called during init!
         ppu_regs[i] = NULL;
     }
     // Normally Registers at location: 0xFF40 - 0xFF4B:
@@ -123,8 +127,11 @@ void ppu_init_reg_map(PPU *ppu) {
 
 int ppu_init(GB *gb) {
     printf("Initializing PPU; Registers and VRAM.\n");
+
     // VRAM:
     init_vram(gb);
+    // OAM:
+    init_oam_ram(gb);   // Not really ram. but ehhh don't care.
 
     // Timer, set all values to 0.
     ppu_init_timer(&gb->ppu);
@@ -159,6 +166,7 @@ void ppu_stat_write(GB *gb, uint8_t write_val) {
 }
 void ppu_ly_write(GB *gb, uint8_t write_val) {
     // LY technically shouldn't be directly written to. As it's a "calculated" value.
+    printf("PPU: ppu.ly write hit! .. THIS NEVER SHOULD HAPPEN. (I THINK) WriteVal: 0x%02X\n", write_val);
 }
 
 
@@ -175,6 +183,7 @@ uint8_t ppu_io_read(GB *gb, uint16_t addr) {
             uint8_t *reg_ptr = ppu_regs[index];
 
             if (reg_ptr != NULL) {
+                printf("PPU: IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X\n", addr, *reg_ptr);
                 return *reg_ptr;
             }
 
@@ -199,6 +208,7 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
             uint8_t *reg_ptr = ppu_regs[index];
 
             if (reg_ptr != NULL) {
+                printf("PPU: IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X, WriteVal=0x%02X\n", addr, *reg_ptr, write_val);
                 *reg_ptr = write_val;
             }
             return;
@@ -209,16 +219,20 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
 
 // PPU VRAM functions:
 uint8_t ppu_vram_read(GB *gb, uint16_t addr){
-    if (addr < 0x8000 || addr > 0x9FFF) {
-        return 0xFF; // invalid space
+    //if (addr < 0x8000 || addr > 0x9FFF) {
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        return gb->ppu.vram[addr - 0x8000];
     }
-    return VRAM[addr - 0x8000];
+    printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
 }
 void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
-    if (addr < 0x8000 || addr > 0x9FFF) {
-        return; // invalid space
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        gb->ppu.vram[addr - 0x8000] = write_val;
+        return;
     }
-    VRAM[addr - 0x8000] = write_val;
+    printf("PPU: VRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
 }
 
 

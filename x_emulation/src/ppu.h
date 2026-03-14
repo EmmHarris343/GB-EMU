@@ -7,9 +7,6 @@
 
 typedef struct gb_s GB;
 
-// HRAM
-#define VRAM_SIZE 0x2000          // 8KB total size, (8192 Byte in Decimal, 2000 in Hex)
-
 typedef struct ppu_s {
     uint8_t lcdc;   // LCD control
     uint8_t stat;   // LCD status; Will be set when ly=lyc
@@ -35,7 +32,6 @@ typedef struct ppu_s {
     // Data storage:
     uint8_t oam[0xA0];      // Object Attribute Memory, can reference sprite / tiles.
     uint8_t vram[0x2000];   // Vram total size.
-
 } PPU;
 
 typedef enum {
