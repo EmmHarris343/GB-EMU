@@ -24,8 +24,6 @@ const CPU cpu_post_bios_state = {
     .reg.PC = 0x0100,
     .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
-    // .state.IE = 0x00,     // IE at location 0xFFFF = 0x00
-    // .state.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -41,8 +39,6 @@ const CPU cpu_reg_simple_tstate = {
     .reg.PC = 0x0779,
     .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
-    // .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
-    // .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -349,9 +345,8 @@ static void ime_delay(GB *gb)
 
         // Only set IME to 1. If IME_delay was set, then transitioned down to 0.
         if (gb->cpu.state.IME_delay == 0) {
-            printf("IME delay reached 0. Set IME SET! (1)\n");
+            printf("IME delay reached 0. IME SET! (1)\n");
             gb->cpu.state.IME = 1;
-            printf("IE: 0x%02X IF 0x%02X, IME: %02x\n", gb->interrupts.IE, gb->interrupts.IF, gb->cpu.state.IME);
         }
     }
 }
@@ -361,12 +356,14 @@ uint32_t cpu_step(GB *gb) {
     gb->cpu.cycle = 0;  // Reset the t-cycle back to 0 on each Step.
 
     if (cpu_interrupt_handling(gb)) { // Processed interrupt. Return 20 t-cycles
+        printf("Processed interrupt.. Continuing.\n");
         gb->cpu.cycle = 20;
         return gb->cpu.cycle;
     }
     else if (gb->cpu.state.halt) {    // No interrupt processed, BUT Halt set. Continue in 'low-power' mode.
         gb->cpu.cycle = 4;
 
+        printf("Burn Halt cycles...\n");
         // This will continue to burn cycles. Until the interrupt has been processed.
         // No instructions will be loaded or executed in this state!
 

@@ -71,7 +71,7 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
             // if (addr == 0xFFFF) {
             //     printf("SPECIAL MMU PRINT: IE READ: 0x%02X\n", read_8bit_val);
             // }
-            trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
+            trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
     }
@@ -84,10 +84,10 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             mmu_map[i].write(gb, addr, write_val);
-            if (addr == 0xFFFF) {
-                printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
-            }
-            trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
+            // if (addr == 0xFFFF) {
+            //     printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
+            // }
+            trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }
 }

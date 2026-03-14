@@ -27,8 +27,8 @@ int timer_init(GB *gb) {
     gb->timer.tma = 0x00;
     gb->timer.tac = 0x00;
 
-    gb->timer.div_cycles = 0x0000;
-    gb->timer.tima_cycles = 0x0000;
+    gb->timer.div_cycles = 0x00;
+    gb->timer.tima_cycles = 0x00;
 
     return 0;
 }
@@ -120,7 +120,7 @@ void timer_tick(GB *gb, Timer *timer, uint32_t cycles) {
         // When tima overflows 0xFF -> 0x00, reload tima from tma, then request interupt.
         if (timer->tima == 0xFF){
             timer->tima = timer->tma;
-            gb_request_interrupt(gb, 2);    // Timer interrupt bit.
+            gb_request_interrupt(gb, GB_INTERRUPT_TIMER);    // Timer interrupt bit.
         } else {
             timer->tima ++;
         }

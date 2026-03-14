@@ -375,6 +375,10 @@ static void LDH_A_p_a8(GB *gb, CPU *cpu, instruction_T instruction) {
     uint16_t combined_addr = 0xFF00 + a8;
     cpu->reg.A = external_read(gb, combined_addr);
 
+    // Debug only:
+    // printf("[F0] PC=%04X combined_addr=%04X, operand=%02X A=%02X\n",
+    //    gb->cpu.reg.PC, combined_addr, gb->instruction.operand1, cpu->reg.A);
+
     cpu->reg.PC +=2;
     cpu->cycle = 12;
 
@@ -385,6 +389,9 @@ static void LDH_p_a8_A(GB *gb, CPU *cpu, instruction_T instruction) {
     uint8_t a8 = instruction.operand1;
     uint16_t combined_addr = 0xFF00 + a8;
     external_write(gb, combined_addr, cpu->reg.A);
+
+    // printf("[E0] PC=%04X combined_addr=%04X, operand=%02X A=%02X\n",
+    //    gb->cpu.reg.PC, combined_addr, gb->instruction.operand1, cpu->reg.A);
 
     cpu->reg.PC +=2;
     cpu->cycle = 12;
@@ -2180,15 +2187,15 @@ static void SWAP_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Swap
 }
 
 // PREFIXED Bit Flag instructions
-static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test bit u3 in register r8 set the zero flag if bit not set
+static void BIT_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode) {     // Test bit u3 in register r8 set the zero flag if bit not set
     //printf("PFX: BIT u3, r8. Called.                     ; Check r8 bit at index u3. Set/ Clear Z flag accordingly.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
-    uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
-    uint8_t reg_index = (instruction.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t u3_num = (cb_opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (cb_opcode & 0x07);  // Provides 0-7 Index to Match Register
     uint8_t r8_reg = *reg_table[reg_index];
 
     uint8_t get_state = ((r8_reg >> u3_num) & 1);
@@ -2199,17 +2206,17 @@ static void BIT_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Test
     // C flag unaffected.
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
     // t-cycle = 8
 
 }
-static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
+static void BIT_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Test bit u3 in the byte pointed by HL, set the flag if bit not set
     //printf("PFX: BIT u3, [HL]. Called.                      ; Check [HL] bit at index u3. Set/ Clear Z flag accordingly.\n");
 
-    uint8_t u3_num = (instruction.opcode >> 3);                  // Acts as a divide by 8
+    uint8_t u3_num = (cb_opcode >> 3);                  // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     uint8_t get_state = ((hl_val >> u3_num) & 1);
@@ -2220,7 +2227,7 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test
     // C flag unaffected.
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC +=2;
     cpu->cycle = 12;
 
     // Bytes = 2
@@ -2228,36 +2235,36 @@ static void BIT_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Test
 }
 
 // PREFIXED RES Instructions (Set a specific bit to 0?)
-static void RES_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
+static void RES_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode) {     // Set bit u3 in register r8 to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
     //printf("PFX: RES u3, r8. Called.                         ; Set bit to 0, at index u3 in r8 Register.\n");
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
-    uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
-    uint8_t reg_index = (instruction.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t u3_num = (cb_opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (cb_opcode & 0x07);  // Provides 0-7 Index to Match Register
 
     *reg_table[reg_index] &= ~(1 << u3_num);     // Set bit at u3 index to 0.
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC +=2; // due to bug, it just keeps advancing it by 2. but not setting it by ++ ++ or +=2.
     cpu->cycle = 8;
 
     // Bytes = 2
     // t-cycle = 8
     // FLAGS: None affected
 }
-static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
+static void RES_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Set bit u3 in the byte pointed by HL to 0. Bit 0 is the rightmost one, bit 7 the leftmost one
     //printf("PFX: RES u3, [HL]. Called.                      ; Set bit to 0, at index u3, in value [HL].\n");
 
-    uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
+    uint8_t u3_num = (cb_opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
 
     hl_val &= ~(1 << u3_num);                   // Set bit at u3 index to 0.
     external_write(gb, cpu->reg.HL, hl_val);
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC += 2;
     cpu->cycle = 16;
 
     // Bytes = 2
@@ -2265,38 +2272,39 @@ static void RES_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
     // FLAGS: None affected
 }
 // PREFIXED SET instructions (Set bit to 1, at u3 Index?)
-static void SET_u3_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+static void SET_u3_r8(GB *gb, CPU *cpu, uint8_t cb_opcode)  {     // Set bit u3 in register r8 to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
     //printf("PFX: SET u3, r8. Called.                         ; Set bit to 1, at index u3 in r8 Register.\n");
 
     uint8_t *reg_table[8] = {
         &cpu->reg.B, &cpu->reg.C, &cpu->reg.D, &cpu->reg.E, &cpu->reg.H, &cpu->reg.L, NULL, &cpu->reg.A
     };
 
-    uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
-    uint8_t reg_index = (instruction.opcode & 0x07);  // Provides 0-7 Index to Match Register
+    uint8_t u3_num = (cb_opcode >> 3);       // Acts as a divide by 8
+    uint8_t reg_index = (cb_opcode & 0x07);  // Provides 0-7 Index to Match Register
 
     *reg_table[reg_index] |= (1 << u3_num);     // Sets a single bit to 1, in the Index of r8 Register.
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC +=2;
     cpu->cycle = 8;
 
     // Bytes = 2
     // t-cycle = 8
     // FLAGS: None affected
 }
-static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
+static void SET_u3_p_HL(GB *gb, CPU *cpu, uint8_t cb_opcode) {   // Set bit u3 in the byte pointed by HL to 1. Bit 0 is the rightmost one, bit 7 the leftmost one
     //printf("PFX: SET u3, [HL]. Called.                      ; Set bit to 1, at index u3, in value [HL]..\n");
 
-    uint8_t u3_num = (instruction.opcode >> 3);       // Acts as a divide by 8
+    uint8_t u3_num = (cb_opcode >> 3);       // Acts as a divide by 8
     uint8_t hl_val = external_read(gb, cpu->reg.HL);
     hl_val |= (1 << u3_num);
 
     external_write(gb, cpu->reg.HL, hl_val);
 
     // PREFIXED => Yes, 2 Bytes (TOTAL), but already advanced once. So just advance once more.
-    cpu->reg.PC ++;
+    cpu->reg.PC +=2;
     cpu->cycle = 16;
+
 
     // Bytes = 2
     // t-cycle = 16
@@ -2317,20 +2325,21 @@ static void SET_u3_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Set 
 // RES 4, C. or Set 7 C.
 static void CB_BIT_Handler(GB *gb, CPU *cpu, instruction_T instruction){
     //printf("CB BIT handler called.                      ; Calling Sub-Instruction\n");
-
-    ((instruction.opcode & 0x07) == 0x06) ? BIT_u3_p_HL(gb, cpu, instruction) : BIT_u3_r8(gb, cpu, instruction);
+    uint8_t cb_opcode = instruction.operand1;
+    ((cb_opcode & 0x07) == 0x06) ? BIT_u3_p_HL(gb, cpu, cb_opcode) : BIT_u3_r8(gb, cpu, cb_opcode);
 }
 
 static void CB_RES_Handler(GB *gb, CPU *cpu, instruction_T instruction){
     //printf("CB RES handler called.                      ; Calling Sub-Instruction\n");
-
-    ((instruction.opcode & 0x07) == 0x06) ? RES_u3_p_HL(gb, cpu, instruction) : RES_u3_r8(gb, cpu, instruction);
+    uint8_t cb_opcode = instruction.operand1;
+    ((cb_opcode & 0x07) == 0x06) ? RES_u3_p_HL(gb, cpu, cb_opcode) : RES_u3_r8(gb, cpu, cb_opcode);
 }
 
 static void CB_SET_Handler(GB *gb, CPU *cpu, instruction_T instruction){
-    //printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
+    printf("CB SET handler called.                      ; Calling Sub-Instruction\n");
 
-    ((instruction.opcode & 0x07) == 0x06) ? SET_u3_p_HL(gb, cpu, instruction) : SET_u3_r8(gb, cpu, instruction);
+    uint8_t cb_opcode = instruction.operand1;
+    ((cb_opcode & 0x07) == 0x06) ? SET_u3_p_HL(gb, cpu, cb_opcode) : SET_u3_r8(gb, cpu, cb_opcode);
 }
 
 static opcode_t *cb_opcodes[256] = {
@@ -2350,8 +2359,10 @@ static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
     // RLC, RL, RRC, RR, SRA, SRL, SWAP, BIT, RES, SET
 
     // Advance the PC, and read it at the same time.
-    uint8_t prefixed_opcode = external_read(gb, cpu->reg.PC++);       // Read CB Opcoad at PC++ location.
-    //printf("%sCB OPCODE:=[0x%02X]%s\n", KBLU, prefixed_opcode, KNRM);
+    uint8_t prefixed_opcode = external_read(gb, cpu->reg.PC++);       // Read CB Opcode at PC++ location.
+    uint8_t prefixed_operand = external_read(gb, cpu->reg.PC+2);
+    instruction.operand1 = prefixed_operand;
+    printf("%sCB OPCODE:=[0x%02X]|OPERAND:=[0x%02X]%s\n", KBLU, prefixed_opcode, prefixed_operand, KNRM);
 
     cb_opcodes[prefixed_opcode](gb, cpu, instruction);
     //printf("%sCB Block Finished.%s\n", KBLU, KNRM);

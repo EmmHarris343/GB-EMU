@@ -142,15 +142,32 @@ int ppu_init(GB *gb) {
     return 0;
 }
 
+// PPU VRAM functions:
+uint8_t ppu_vram_read(GB *gb, uint16_t addr){
+    //if (addr < 0x8000 || addr > 0x9FFF) {
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        return gb->ppu.vram[addr - 0x8000];
+    }
+    printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
+}
+void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
+    if (addr >= 0x8000 || addr <= 0x9FFF) {
+        gb->ppu.vram[addr - 0x8000] = write_val;
+        return;
+    }
+    printf("PPU: VRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
+}
 
 
+// IO section:
 
 uint8_t ppu_stat_read(GB *gb) {
     return gb->ppu.stat;
 }
 
 void ppu_lcdc_write(GB *gb, uint8_t write_val) {
-    printf("PPU: ppu.LCDC write hit! WriteVal: 0x%02X\n", write_val);
     PPU *ppu = &gb->ppu;
     uint8_t old_value = ppu->lcdc;
 
@@ -169,10 +186,6 @@ void ppu_ly_write(GB *gb, uint8_t write_val) {
     // LY technically shouldn't be directly written to. As it's a "calculated" value.
     printf("PPU: ppu.ly write hit! .. THIS NEVER SHOULD HAPPEN. (I THINK) WriteVal: 0x%02X\n", write_val);
 }
-
-
-
-
 
 
 uint8_t ppu_io_read(GB *gb, uint16_t addr) {
@@ -217,26 +230,6 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
     }
     return;
 }
-
-// PPU VRAM functions:
-uint8_t ppu_vram_read(GB *gb, uint16_t addr){
-    //if (addr < 0x8000 || addr > 0x9FFF) {
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
-        return gb->ppu.vram[addr - 0x8000];
-    }
-    printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
-    return 0xFF;
-}
-void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
-        gb->ppu.vram[addr - 0x8000] = write_val;
-        return;
-    }
-    printf("PPU: VRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
-    return;
-}
-
-
 /*
 
     PPU timer/ tick
@@ -259,7 +252,6 @@ static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
     } else {
         ppu->stat &= ~(1 << 2); // Stat bit 2 becomes 0.
     }
-
 }
 
 
@@ -277,6 +269,9 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
     // & 0x03 -> Filters only the first 2 bits.
     ppu->stat = (ppu->stat & 0xFC) | (mode & 0x03);
 
+    //printf("PPU: stat=%02X, & mode=%02X\n", ppu->stat, mode);
+    // This usually prints: stat=80 something. mode=02 or 03. sometimes 0
+
     switch (mode) {
         case PPU_MODE_HBLANK:   // Mode 0; int select
             if (ppu->stat & (1 << 3)) {
@@ -284,6 +279,7 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
             }
             break;
         case PPU_MODE_VBLANK:   // Mode 1; int select
+            gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);   // always request the interrupt
             if (ppu->stat & (1 << 4)) {
                 gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
             }
@@ -342,7 +338,7 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         // The IO cycles read FF44, that 0x8F (143) that ly reached 144.
 
         if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
-            printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
+            //printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
             ppu_set_mode(gb, ppu, PPU_MODE_VBLANK); // PPU also makes gb_request_interrupt..
             //gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
         } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.

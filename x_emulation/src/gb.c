@@ -1,4 +1,8 @@
+
+#define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
+
+#include "cpu.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -95,6 +99,32 @@ about 59.73 frames per second
 
 
 
+// PRINT REPORT:
+static void debug_print_stats(GB *gb) {
+    printf(
+        "[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
+        "ppu_tick_calls=%llu ppu_cycles_seen=%llu \n"
+        "ly_wraps=%llu vblank_entries=%llu\n"
+        "LY=%u stat-mode=%u... \n",
+        (unsigned long long) gb->db_stats.frames,
+        (unsigned long long) gb->db_stats.cpu_steps,
+        (unsigned long long) gb->db_stats.cpu_cycles,
+        (unsigned long long) gb->db_stats.ppu_tick_calls,
+        (unsigned long long) gb->db_stats.ppu_cycles_seen,
+        (unsigned long long) gb->db_stats.ly_wraps,
+        (unsigned long long) gb->db_stats.vblank_entries,
+        gb->ppu.ly,
+        gb->ppu.stat & 0x03
+    );
+    printf("\n[DBG] IE=%02X, IF=%02X, IE&IF=%04X, IME=%02X, HALT=%02X\n",
+        gb->interrupts.IE,
+        gb->interrupts.IF,
+        (gb->interrupts.IE & gb->interrupts.IF),
+        gb->cpu.state.IME,
+        gb->cpu.state.halt
+    );
+}
+
 // Top-Level "Machine" Setup/ Initializer
 int gb_init(GB *gb) {
     printf("Initializing GB...");
@@ -184,29 +214,6 @@ static void sleep_until_ns(uint64_t target_ns) {
 }
 
 
-
-// PRINT REPORT:
-static void debug_print_stats(GB *gb) {
-    printf(
-        "[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
-        "ppu_tick_calls=%llu ppu_cycles_seen=%llu \n"
-        "ly_wraps=%llu vblank_entries=%llu LY=%u mode=%u... \nIE=%04X, IF=%04X, IE&IF=%04X, IME=%04X, HALT=%04X\n",
-        (unsigned long long) gb->db_stats.frames,
-        (unsigned long long) gb->db_stats.cpu_steps,
-        (unsigned long long) gb->db_stats.cpu_cycles,
-        (unsigned long long) gb->db_stats.ppu_tick_calls,
-        (unsigned long long) gb->db_stats.ppu_cycles_seen,
-        (unsigned long long) gb->db_stats.ly_wraps,
-        (unsigned long long) gb->db_stats.vblank_entries,
-        gb->ppu.ly,
-        gb->ppu.stat & 0x03,
-        gb->interrupts.IE,
-        gb->interrupts.IF,
-        (gb->interrupts.IE & gb->interrupts.IF),
-        gb->cpu.state.IME,
-        gb->cpu.state.halt
-    );
-}
 
 /*
 
@@ -324,18 +331,25 @@ uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
 void gb_request_interrupt(GB *gb, uint8_t interrupt_bit) {
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
     gb->interrupts.IF |= (1 << interrupt_bit);
-    printf("IF REQUEST INTERRUPT! hit. interrupts.IF=%02X\n", gb->interrupts.IF);
+    //printf("IF REQUEST INTERRUPT! hit. interrupts.IF=%02X\n", gb->interrupts.IF);
 }
 
 // Special interupt handling both IE (Interrupt Enable) and IF (Interrupt Flag):
 uint8_t ie_read(GB *gb, uint16_t addr) {
     (void)addr;
-    return gb->interrupts.IE;
+    uint8_t read_value = gb->interrupts.IE;
+    printf("IE Read hit. PC=%04X , OPCODE=%02X, value=%02X\n",
+        gb->cpu.reg.PC, gb->instruction.opcode, read_value);
+    return read_value;
 }
 void ie_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    printf("IE Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
+    printf("IE-Debug:: A-Reg=%02X, ", gb->cpu.reg.A);
+    printf("IE Write hit. PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+        gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
     gb->interrupts.IE = interrupt_hex & 0x1F;
+    // printf("IE Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
+    // gb->interrupts.IE = interrupt_hex & 0x1F;
 }
 uint8_t if_read(GB *gb, uint16_t addr) {
     (void)addr;

@@ -164,17 +164,17 @@ void trace_cart_write() {
 
 }
 
-void trace_mmu_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
+void trace_mmu_read(uint8_t opcode, uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
 
     // M R 0x0000 0x00 00 00 // MMU Read Adderess ReadValue - Bus_tag
-    fprintf(trace_log_file, "M R %04X %02X - %s\n", addr, val, bus_tag_name[src_tag]);
+    fprintf(trace_log_file, "M R OP[%02X] | %04X %02X - %s\n", opcode, addr, val, bus_tag_name[src_tag]);
     fflush(trace_log_file);
 
 }
 
-void trace_mmu_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
+void trace_mmu_write(uint8_t opcode, uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
     // M R 0x0000 0x00 00 00 // MMU Read Adderess ReadValue - Bus_tag
-    fprintf(trace_log_file, "M W %04X %02X - %s\n", addr, val, bus_tag_name[src_tag]);
+    fprintf(trace_log_file, "M W OP[%02X] | %04X %02X - %s\n", opcode, addr, val, bus_tag_name[src_tag]);
     fflush(trace_log_file);
 
 }
