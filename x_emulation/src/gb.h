@@ -81,7 +81,7 @@ typedef struct gb_s {
 
 enum {
     GB_INTERRUPT_VBLANK   = 0,
-    GB_INTERRUPT_LCD_STAT = 1,
+    GB_INTERRUPT_LCD_STAT = 1,  // 0x48
     GB_INTERRUPT_TIMER    = 2,
     GB_INTERRUPT_SERIAL   = 3,
     GB_INTERRUPT_JOYPAD   = 4

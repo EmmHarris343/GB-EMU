@@ -1,4 +1,3 @@
-
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <stdio.h>
 #include <stdint.h>
@@ -25,8 +24,8 @@ const CPU cpu_post_bios_state = {
     .reg.PC = 0x0100,
     .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
-    .state.IE = 0x00,     // IE at location 0xFFFF = 0x00
-    .state.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
+    // .state.IE = 0x00,     // IE at location 0xFFFF = 0x00
+    // .state.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -42,8 +41,8 @@ const CPU cpu_reg_simple_tstate = {
     .reg.PC = 0x0779,
     .state.IME = 0,       // Master Interupt
     .state.IME_delay = 0, // IME state after next instruction.
-    .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
-    .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
+    // .state.IE = 0x00,     // IE at location 0xFF0F = 0xE1
+    // .state.IF = 0xE1,     // IF at location 0xFFFF = 0x00
     .state.halt = 0,
     .state.pause = 0,
     .state.stop = 0,
@@ -208,83 +207,80 @@ void print_instruction_counts() {
     }
 }
 
-static void cpu_trace_log_step(GB *gb, uint8_t opcode, uint32_t cycles_taken) {
-    CPU *cpu = &gb->cpu;
+// static void cpu_trace_log_step(GB *gb, uint8_t opcode, uint32_t cycles_taken) {
+//     CPU *cpu = &gb->cpu;
 
-    CPUTraceEntry entry = {
-        .step = gb->step_count,
-        .pc = cpu->reg.PC,
-        .opcode = opcode,
-        .cycles = cycles_taken,
-        .sp = cpu->reg.SP,
-        .a = cpu->reg.A,
-        .f = cpu->reg.F,
-        .b = cpu->reg.B,
-        .c = cpu->reg.C,
-        .d = cpu->reg.D,
-        .e = cpu->reg.E,
-        .h = cpu->reg.H,
-        .l = cpu->reg.L,
-        .ime = cpu->state.IME,
-        .ie = gb->interrupts.IE,
-        .iflag = gb->interrupts.IF
-    };
+//     CPUTraceEntry entry = {
+//         .step = gb->step_count,
+//         .pc = cpu->reg.PC,
+//         .opcode = opcode,
+//         .cycles = cycles_taken,
+//         .sp = cpu->reg.SP,
+//         .a = cpu->reg.A,
+//         .f = cpu->reg.F,
+//         .b = cpu->reg.B,
+//         .c = cpu->reg.C,
+//         .d = cpu->reg.D,
+//         .e = cpu->reg.E,
+//         .h = cpu->reg.H,
+//         .l = cpu->reg.L,
+//         .ime = cpu->state.IME,
+//         .ie = gb->interrupts.IE,
+//         .iflag = gb->interrupts.IF
+//     };
+//     //cpu_trace_buffer_push(&gb->debug.cpu_trace, entry);
+// }
 
+// static void cpu_trace_buffer_dump(FILE *file, const CPUTraceBuffer *buffer) {
+//     uint32_t start;
+//     uint32_t i;
 
+//     if (buffer->count == 0) {
+//         fprintf(file, "CPU trace buffer empty.\n");
+//         return;
+//     }
 
-    //cpu_trace_buffer_push(&gb->debug.cpu_trace, entry);
-}
+//     start = (buffer->head + CPU_TRACE_CAPACITY - buffer->count) % CPU_TRACE_CAPACITY;
 
-static void cpu_trace_buffer_dump(FILE *file, const CPUTraceBuffer *buffer) {
-    uint32_t start;
-    uint32_t i;
+//     for (i = 0; i < buffer->count; i++) {
+//         uint32_t index = (start + i) % CPU_TRACE_CAPACITY;
+//         const CPUTraceEntry *entry = &buffer->entries[index];
 
-    if (buffer->count == 0) {
-        fprintf(file, "CPU trace buffer empty.\n");
-        return;
-    }
+//         fprintf(file,
+//                 "STP=%llu PC=%04X OP=%02X CYC=%u SP=%04X "
+//                 "A=%02X F=%02X B=%02X C=%02X D=%02X E=%02X H=%02X L=%02X "
+//                 "IME=%u IE=%02X IF=%02X\n",
+//                 (unsigned long long) entry->step,
+//                 entry->pc,
+//                 entry->opcode,
+//                 entry->cycles,
+//                 entry->sp,
+//                 entry->a,
+//                 entry->f,
+//                 entry->b,
+//                 entry->c,
+//                 entry->d,
+//                 entry->e,
+//                 entry->h,
+//                 entry->l,
+//                 entry->ime,
+//                 entry->ie,
+//                 entry->iflag);
+//     }
+// }
 
-    start = (buffer->head + CPU_TRACE_CAPACITY - buffer->count) % CPU_TRACE_CAPACITY;
+// static void cpu_trace_buffer_init(CPUTraceBuffer *buffer) {
+//     memset(buffer, 0, sizeof(*buffer));
+// }
 
-    for (i = 0; i < buffer->count; i++) {
-        uint32_t index = (start + i) % CPU_TRACE_CAPACITY;
-        const CPUTraceEntry *entry = &buffer->entries[index];
+// static void cpu_trace_buffer_push(CPUTraceBuffer *buffer, CPUTraceEntry entry) {
+//     buffer->entries[buffer->head] = entry;
+//     buffer->head = (buffer->head + 1) % CPU_TRACE_CAPACITY;
 
-        fprintf(file,
-                "STP=%llu PC=%04X OP=%02X CYC=%u SP=%04X "
-                "A=%02X F=%02X B=%02X C=%02X D=%02X E=%02X H=%02X L=%02X "
-                "IME=%u IE=%02X IF=%02X\n",
-                (unsigned long long) entry->step,
-                entry->pc,
-                entry->opcode,
-                entry->cycles,
-                entry->sp,
-                entry->a,
-                entry->f,
-                entry->b,
-                entry->c,
-                entry->d,
-                entry->e,
-                entry->h,
-                entry->l,
-                entry->ime,
-                entry->ie,
-                entry->iflag);
-    }
-}
-
-static void cpu_trace_buffer_init(CPUTraceBuffer *buffer) {
-    memset(buffer, 0, sizeof(*buffer));
-}
-
-static void cpu_trace_buffer_push(CPUTraceBuffer *buffer, CPUTraceEntry entry) {
-    buffer->entries[buffer->head] = entry;
-    buffer->head = (buffer->head + 1) % CPU_TRACE_CAPACITY;
-
-    if (buffer->count < CPU_TRACE_CAPACITY) {
-        buffer->count++;
-    }
-}
+//     if (buffer->count < CPU_TRACE_CAPACITY) {
+//         buffer->count++;
+//     }
+// }
 
 void opcode_tosummary(GB *gb) {
     uint8_t op_code = gb->instruction.opcode;
@@ -327,7 +323,6 @@ void load_opcode(GB *gb, uint16_t addr_pc) {
 }
 
 
-
 // Initalize the CPU, set the defaults for DMG 01 (Original) - Registers, Interupts etc.
 int cpu_init(GB *gb) {
     printf(":CPU: Initialization, setting registers and settings. For VER: %s\n", "DMG 01");
@@ -347,33 +342,38 @@ int cpu_init(GB *gb) {
     return 0;
 }
 
-static void ime_delay(CPU *cpu)
+static void ime_delay(GB *gb)
 {
-    if (cpu->state.IME_delay > 0) {
-        cpu->state.IME_delay--;
+    if (gb->cpu.state.IME_delay > 0) {
+        gb->cpu.state.IME_delay--;
 
-        if (cpu->state.IME_delay == 0) {
-            cpu->state.IME = 1;
+        // Only set IME to 1. If IME_delay was set, then transitioned down to 0.
+        if (gb->cpu.state.IME_delay == 0) {
+            printf("IME delay reached 0. Set IME SET! (1)\n");
+            gb->cpu.state.IME = 1;
+            printf("IE: 0x%02X IF 0x%02X, IME: %02x\n", gb->interrupts.IE, gb->interrupts.IF, gb->cpu.state.IME);
         }
     }
 }
 
 // Step the CPU by 1 instruction. Will return the cycles taken for that instruction.
 uint32_t cpu_step(GB *gb) {
-    gb->cpu.cycle = 0;  // Reset the cycle back to 0 on each Step.
+    gb->cpu.cycle = 0;  // Reset the t-cycle back to 0 on each Step.
 
-    // If it processed an interupt, use 20 cycles, then return.
-    if (cpu_interrupt_handling(gb)) {
+    if (cpu_interrupt_handling(gb)) { // Processed interrupt. Return 20 t-cycles
         gb->cpu.cycle = 20;
         return gb->cpu.cycle;
     }
-    // Halt was set, use 4 cycles then return.
-    if (gb->cpu.state.halt) {
+    else if (gb->cpu.state.halt) {    // No interrupt processed, BUT Halt set. Continue in 'low-power' mode.
         gb->cpu.cycle = 4;
+
+        // This will continue to burn cycles. Until the interrupt has been processed.
+        // No instructions will be loaded or executed in this state!
+
         return gb->cpu.cycle;
     }
 
-    // Only get/ process opcode after any interrupts.
+    // Only get/ process opcode after any interrupts processed / halt cleared.
     load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t inside gb->instruction.
 
     if (execute_instruction(gb, &gb->cpu, gb->instruction) != 0) {
@@ -382,73 +382,10 @@ uint32_t cpu_step(GB *gb) {
     }
 
     // IME (Interupt delay logic)
-    ime_delay(&gb->cpu);
+    ime_delay(gb);
 
     // Add the opcode that was executed (if any)
     opcode_tosummary(gb);
 
     return gb->cpu.cycle;   // Should be set after each execution
-}
-
-
-
-// *----
-/// TEST:
-/// ONLY:
-/// MODULES:
-// *----
-void tstate_set_registers(GB *gb) {
-    // Set the Registers initial state (After Bootrom Pass)
-    gb->cpu.reg = cpu_reg_simple_tstate.reg;
-
-}
-// void tstate_set_flag(){
-//     // Certain instructions will not run unless specific flags set.
-//     // IE: Subtraction (N)
-//     // IE: CC (condition)... Such as: JP NZ (Will only jump if Z not set!)
-
-//     // Set Flag Registers   (This is actually Registers F)
-//     set_flag(0);    // Z
-//     clear_flag(1);  // N
-//     clear_flag(2);  // H
-//     clear_flag(3);  // C
-
-// }
-// void tstate_set_ram() {
-//     // Write to a specific area of RAM,
-//     // So when it loads from that area. It can be verified to be something other than giberish or, all 0s
-
-// }
-
-int intiate_cpu_test(GB *gb, instruction_T *passed_instrc, CPU *cpu, CPU *expected_state) {
-    // Set OPCODE Instruction
-    // op_instruction = *passed_instrc;
-    gb->cpu = *cpu;
-
-
-    return 0;
-}
-
-// This ensures everything is done, then finally calls the Execute Instruction
-void run_cpu_test(GB *gb, uint8_t test_op_code) {
-    //uint8_t special_op_code = 0x5C; // 5C = LD E, H
-
-    //tstate_set_opcode(test_op_code, 0, 0);            // The Opcode (& the Operands), to pass to CPU Instruction
-
-    tstate_set_registers(gb);
-    // tstate_set_flag();              // How do I know which flag Needs to be set?
-    // tstate_set_ram();
-
-    printf(":CPU: Initial CPU state set. Ready for Execution of Test\n");
-
-    printf("Showing Registers first, making sure working..\n\n");
-    //check_registers();
-
-
-    // if (execute_test(&gb->cpu, , op_instruction) != 0) {
-    //     printf(":CPU: Error Executing CPU instruction!\n");
-    // }
-
-    printf("Post Execution Registers... \n");
-    //check_registers();
 }

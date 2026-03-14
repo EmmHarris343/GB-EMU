@@ -20,6 +20,7 @@ static const char *bus_tag_name[BUS_MAX] = {
     "ECHO",
     "OAM",
     "IO",
+    "IF",
     "IE",
     "UNMAPPED"
 };

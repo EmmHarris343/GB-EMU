@@ -1,13 +1,14 @@
-#include "mmu.h"
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdint.h>
 
+#include "gb.h"
 #include "cpu.h"
 #include "cpu_instructions.h"
-#include "gb.h"
-#include "logger.h"
+#include "mmu.h"
+
+//#include "logger.h"
 
 extern FILE *debug_dump_file;
 
@@ -62,20 +63,22 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
 // INTERUPT Instructions:
 // HALT!
 static void HALT(GB *gb, CPU *cpu, instruction_T instruction) {     // Halt - Set cpu halt flag. (will not stop emulation)
-    printf("HALT Called. Exit Now.. (Guessing)\n");
+    printf("HALT Called. Process IME, or interrupt!\n");
     cpu->state.halt = 1;
 }
 static void DI(GB *gb, CPU *cpu, instruction_T instruction) {        // DI - Disables interrupt Handling (Flag set to := 0)
-    printf("DI Called.                  ; IME := 0 (Interupt flag 0 - disabled)\n");
+    printf("DI Called.                  ; IME := 0 (Immediately clear interrupt flag => 0 - disabled (no delay))\n");
     cpu->state.IME = 0;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
+    // t-cycles = 4
     // Bytes = 1
     // No flags affected. (Inside F Flags)
 }
 
 static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Enables interrupt Handling (Flag set to := 1)
-    printf("EI Called.                  ; IME := 1 (Interupt flag 1 - enabled (AFTER DELAY))\n");
+    printf("EI Called.                  ; IME := 1 (Set interrupt flag => 1 - enabled (AFTER DELAY))\n");
 
     // This uses a delay logic of 2 (counting down after instruction finishes)
     // This ensures IME is set ONLY after the current instruction (EI) AND the subsequent operation both have finished executing.
@@ -84,7 +87,12 @@ static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Ena
 
     cpu->state.IME_delay = 2;
     cpu->reg.PC ++;
+    cpu->cycle = 4;
 
+    // printf("IE value? %02X\n", gb->interrupts.IE);
+    // printf("IF value? %02X\n", gb->interrupts.IF);
+
+    // t-cycles = 4
     // Bytes = 1
     // No flags affected. (Inside F Flags)
 }
@@ -2440,15 +2448,15 @@ CALL cc,a16: add +12 T-cycles if taken
 //     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", cpu->reg.PC, cpu->reg.SP);
 // }
 
-void log_cpu_trace(GB *gb) {
-    // Some basic level of human readable. Quick output of CPU state.
-    CPU *cpu = &gb->cpu;    // I just like the arrows. Really that's it.
+// void log_cpu_trace(GB *gb) {
+//     // Some basic level of human readable. Quick output of CPU state.
+//     CPU *cpu = &gb->cpu;    // I just like the arrows. Really that's it.
 
-    logging_cpu_trace("[CPU] STEP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%02X IME=0x%02X IE=0x%04X IF=0x%04X\n",
-    gb->step_count, cpu->reg.PC, gb->instruction.opcode, cpu->reg.A, cpu->reg.F,
-    cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L,
-    cpu->reg.SP, cpu->state.IME, cpu->state.IE, cpu->state.IF);
-}
+//     logging_cpu_trace("[CPU] STEP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%02X IME=0x%02X IE=0x%04X IF=0x%04X\n",
+//     gb->step_count, cpu->reg.PC, gb->instruction.opcode, cpu->reg.A, cpu->reg.F,
+//     cpu->reg.B, cpu->reg.C, cpu->reg.D, cpu->reg.E, cpu->reg.H, cpu->reg.L,
+//     cpu->reg.SP, cpu->state.IME, gb->interrupts.IE, gb->interrupts.IF);
+// }
 
 static void interrupt_stack_push(GB *gb, CPU *cpu, uint8_t write_val) {
     cpu->reg.SP --;
@@ -2458,62 +2466,57 @@ static void interrupt_stack_push(GB *gb, CPU *cpu, uint8_t write_val) {
     mmu_write(gb, cpu->reg.SP, write_val & 0xFF);
 }
 
-static void cpu_service_interrupt(GB *gb, uint8_t bit, uint16_t vector){
-    CPU *cpu = &gb->cpu;
-
+static void cpu_service_interrupt(GB *gb, uint8_t interrupt_bit, uint16_t vector){
     // Disable any further interrupts.
-    cpu->state.IME = 0;
+    gb->cpu.state.IME = 0;
 
     // CPU exit halt if halted.
-    cpu->state.halt = 0;
+    gb->cpu.state.halt = 0;
 
     // Clear Interrupt Flag (Request flag)
-    gb->interrupts.IF &= ~(1u << bit);
+    gb->interrupts.IF &= (uint8_t)~(1 << interrupt_bit);
 
     // Push Current PC into SP stack.
-    interrupt_stack_push(gb, cpu, cpu->reg.PC);
+    interrupt_stack_push(gb, &gb->cpu, gb->cpu.reg.PC);
 
     // Jump to the Interrupt Handler location (or vector);
-    cpu->reg.PC = vector;
+    printf("Finished processing service interrupt. Jumping to vector: 0x%04X\n", vector);
+    gb->cpu.reg.PC = vector;
 }
 
 uint8_t cpu_interrupt_handling(GB *gb) {
-    CPU *cpu = &gb->cpu;
-    uint8_t pending_interupt = gb->interrupts.IE & gb->interrupts.IF;
+    uint8_t pending_interrupt = gb->interrupts.IE & gb->interrupts.IF;
 
 
-    if (pending_interupt == 0) { // If no intterupt to process, return.
+    if (pending_interrupt == 0) { // If no intterupt to process, return.
         return 0;
     }
 
-    if (cpu->state.halt) {  // Clear halt if set.
-        cpu->state.halt = 0;
-    }
-    if (!cpu->state.IME) {  // Process CPU IME interrupt first.
+    // There is an interrupt to process:
+    if (!gb->cpu.state.IME) {  // IME is 0, not allowed to process. Return.
+        //printf("IME not set.. Return to CPU_Step.\n");
         return 0;
     }
 
-    // Interrupts:
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
-
     // Pending interrupts need to be processed in order (lowest to highest)
-    if (pending_interupt & (1 << 0)) {
+    if (pending_interrupt & (1u << 0)) {
         cpu_service_interrupt(gb, 0, 0x40);
         return 1;
     }
-    if (pending_interupt & (1 << 1)) {
+    if (pending_interrupt & (1u << 1)) {
         cpu_service_interrupt(gb, 1, 0x48);
         return 1;
     }
-    if (pending_interupt & (1 << 2)) {
+    if (pending_interrupt & (1u << 2)) {
         cpu_service_interrupt(gb, 2, 0x50);
         return 1;
     }
-    if (pending_interupt & (1 << 3)) {
+    if (pending_interrupt & (1u << 3)) {
         cpu_service_interrupt(gb, 3, 0x58);
         return 1;
     }
-    if (pending_interupt & (1 << 4)) {
+    if (pending_interrupt & (1u << 4)) {
         cpu_service_interrupt(gb, 4, 0x60);
         return 1;
     }

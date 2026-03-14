@@ -21,6 +21,18 @@ On overflow. load tma into tima and request timer interrupt.
 // FF06	TMA	    Timer
 // FF07	TAC	    Timer
 
+int timer_init(GB *gb) {
+    gb->timer.div = 0x00;
+    gb->timer.tima = 0x00;
+    gb->timer.tma = 0x00;
+    gb->timer.tac = 0x00;
+
+    gb->timer.div_cycles = 0x0000;
+    gb->timer.tima_cycles = 0x0000;
+
+    return 0;
+}
+
 
 uint8_t timer_div_read(GB *gb, uint16_t addr) { // 0xFF04
     if (addr == 0xFF04) { return gb->timer.div; }

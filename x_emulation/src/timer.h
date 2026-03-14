@@ -40,6 +40,7 @@ void timer_tima_write(GB *gb, uint16_t addr, uint8_t val);
 void timer_tma_write(GB *gb, uint16_t addr, uint8_t val);
 void timer_tac_write(GB *gb, uint16_t addr, uint8_t val);
 
+int timer_init(GB *gb);
 
 void timer_tick(GB *gb, Timer *timer, uint32_t cycles);
 

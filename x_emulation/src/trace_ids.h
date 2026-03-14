@@ -9,6 +9,7 @@ typedef enum {
     BUS_ECHO,
     BUS_OAM,
     BUS_IO,
+    BUS_IF,
     BUS_IE,
     BUS_UNMAPPED,
     BUS_MAX

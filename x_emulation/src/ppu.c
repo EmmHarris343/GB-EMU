@@ -150,6 +150,7 @@ uint8_t ppu_stat_read(GB *gb) {
 }
 
 void ppu_lcdc_write(GB *gb, uint8_t write_val) {
+    printf("PPU: ppu.LCDC write hit! WriteVal: 0x%02X\n", write_val);
     PPU *ppu = &gb->ppu;
     uint8_t old_value = ppu->lcdc;
 
@@ -183,7 +184,7 @@ uint8_t ppu_io_read(GB *gb, uint16_t addr) {
             uint8_t *reg_ptr = ppu_regs[index];
 
             if (reg_ptr != NULL) {
-                printf("PPU: IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X\n", addr, *reg_ptr);
+                //printf("PPU: Default. IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X\n", addr, *reg_ptr);
                 return *reg_ptr;
             }
 
@@ -208,7 +209,7 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
             uint8_t *reg_ptr = ppu_regs[index];
 
             if (reg_ptr != NULL) {
-                printf("PPU: IO_READ HIT! Addr=0x%04X, RegPtr Val= 0x%02X, WriteVal=0x%02X\n", addr, *reg_ptr, write_val);
+                //printf("PPU: Default. IO_WRITE HIT! Addr=0x%04X, RegPtr Val= 0x%02X, WriteVal=0x%02X\n", addr, *reg_ptr, write_val);
                 *reg_ptr = write_val;
             }
             return;
@@ -268,23 +269,26 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
     uint8_t previous_mode = ppu->stat & 0x03;
 
     if (previous_mode == mode) {
+        //printf("PPU: set mode same, return.\n");
         return;
     }
 
+    // & 0xFC -> Removes first two bits 0000 00xx
+    // & 0x03 -> Filters only the first 2 bits.
     ppu->stat = (ppu->stat & 0xFC) | (mode & 0x03);
 
     switch (mode) {
-        case PPU_MODE_HBLANK:
+        case PPU_MODE_HBLANK:   // Mode 0; int select
             if (ppu->stat & (1 << 3)) {
                 gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
             }
             break;
-        case PPU_MODE_VBLANK:
+        case PPU_MODE_VBLANK:   // Mode 1; int select
             if (ppu->stat & (1 << 4)) {
                 gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
             }
             break;
-        case PPU_MODE_OAM:
+        case PPU_MODE_OAM:      // Mode 2; int select
             if (ppu->stat & (1 << 5)) {
                 gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
             }
@@ -334,6 +338,8 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
 
         // Visable Scanlines y = (0 - 143)
         // VBlank  Scanlines y = (144 - 153)
+
+        // The IO cycles read FF44, that 0x8F (143) that ly reached 144.
 
         if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
             printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");

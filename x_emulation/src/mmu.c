@@ -2,13 +2,14 @@
 
 #include "logger.h"
 
+#include "gb.h"
 #include "mmu.h"
 #include "cart.h"
 #include "loc_ram.h"
 #include "ppu.h"
 #include "oam.h"
 #include "io.h"
-#include "gb.h"
+
 
 
 
@@ -51,8 +52,8 @@ static MMU_MapRoute mmu_map[] = {
     {0xFEA0, 0xFEFF, unusable_read, unusable_write, BUS_UNMAPPED},
     {0xFF00, 0xFF7F, io_read, io_write, BUS_IO},
     {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM },          // High RAM (Fast Ram)
-    {0xFF0F, 0xFF0F, if_read, if_write, BUS_IE},
-    {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE} // FFF4
+    {0xFF0F, 0xFF0F, if_read, if_write, BUS_IF},
+    {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
 };
 static const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
 
@@ -67,6 +68,9 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             read_8bit_val = mmu_map[i].read(gb, addr);
             //printf("What is MMU_map[i] value? %d", mmu_map[i]);
+            // if (addr == 0xFFFF) {
+            //     printf("SPECIAL MMU PRINT: IE READ: 0x%02X\n", read_8bit_val);
+            // }
             trace_mmu_read(addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
@@ -80,6 +84,9 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             mmu_map[i].write(gb, addr, write_val);
+            if (addr == 0xFFFF) {
+                printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
+            }
             trace_mmu_write(addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }

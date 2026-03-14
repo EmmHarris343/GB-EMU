@@ -15,7 +15,7 @@ int main() {
         if (start_emulation() !=0)         // e_ctrl -> Configs, Setup MBC Config, Load ROM, Setup RAM, Initialize CPU,
         {
             fprintf(stderr, "Error during startup Sequence. ABORT:\n");
-            //return -2;
+            return -2;
 
         }
     }
