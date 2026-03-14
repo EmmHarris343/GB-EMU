@@ -387,8 +387,27 @@ uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
     return 0xFF;
 }
 
-void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
+void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (cart->state.mbc3.ram_rtc_enabled) {
+            if (cart->state.mbc3.ram_bank_mode == 0) {  // Write RAM
+                uint8_t bank = cart->state.mbc3.current_ram_bank;
+                size_t b_offset = (bank * 0x2000)+(addr - 0x2000);
 
+                uint8_t old_val = cart->storage.ram_data[b_offset];
+
+                cart->storage.ram_data[b_offset] = write_val;
+                logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X O_V=%02X W_V=%02X| B=%02X\n", addr, old_val, write_val, bank);
+
+                return;
+            }
+            if (cart->state.mbc3.ram_bank_mode == 1) {  // Write RTC Registers
+
+                return;
+            }
+        }
+    }
+    return;
 }
 
 uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
