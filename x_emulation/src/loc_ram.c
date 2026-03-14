@@ -1,73 +1,63 @@
 #include "loc_ram.h"
 #include "gb.h"
 
-static uint8_t HRAM[HRAM_SIZE];
-static uint8_t WRAM[WRAM_SIZE];
-static uint8_t ERAM[ECHRAM_SIZE];
-
-
-
 int loc_ram_init(GB *gb) {
-    printf("Initialize ERAM, WRAM, HRAM..\n");
+    printf("Initialize WRAM, HRAM.\n");
 
-    // Set all the HRAM, WRAM, ERAM to completely blank values.
-    memset(HRAM, 0x00, HRAM_SIZE);
-    memset(WRAM, 0x00, WRAM_SIZE);
-    memset(ERAM, 0x00, ECHRAM_SIZE);
-
-    // memset(HRAM, 0x76, HRAM_SIZE);  // Make all HRAM data HALT OPCODES <-- don't do that. causing major problems.
-    // memset(WRAM, 0, WRAM_SIZE);
-    // memset(ERAM, 0, ERAM_SIZE); // This is mostly a route area. Technically NOTHIGN should be written here. If it is, I believe the gameboy would freeze up normally
+    // Set the HRAM, WRAM to completely blank 0x00 values.
+    memset(gb->memory.hram, 0x00, sizeof(gb->memory.hram));
+    memset(gb->memory.wram, 0x00, sizeof(gb->memory.wram));
 
     printf("Done.\n");
     return 0;
 }
 
-
 // RAM Functions
 
 // WRAM (Working Ram)
 uint8_t loc_wram_read(GB *gb, uint16_t addr) {
+
     //printf(":loc_ram: Hit WRAM Read!\n");
-    if (addr < 0xC000 || addr > 0xDFFF) { // Invalid range:
-        printf("loc_ram: WRAM invalid Read! -> Addr:0x%04X\n", addr);
-        return 0xFF;
+    if (addr >= 0xC000 || addr <= 0xDFFF) { // Allowed range:
+        uint16_t offset = addr - 0xC000;
+        return gb->memory.wram[offset];
     }
-    uint16_t offset = addr - 0xC000;
-    return WRAM[offset];
+    printf("loc_ram: WRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
 }
-void loc_wram_write(GB *gb, uint16_t addr, uint8_t val) {
-    if (addr < 0xC000 || addr > 0xDFFF) { // Invalid range:
-        printf("loc_ram: WRAM invalid Write!\n");
+void loc_wram_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    if (addr >= 0xC000 || addr <= 0xDFFF) { // Allowed range:
+        uint16_t offset = addr - 0xC000;
+        gb->memory.wram[offset] = write_val;
         return;
     }
-    uint16_t offset = addr - 0xC000;
-    WRAM[offset] = val;
+    printf("loc_ram: WRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
 }
 
 // EchRAM (ECHO RAM) This is a mirror of the WRAM.
 uint8_t loc_echram_read(GB *gb, uint16_t addr) {
     return loc_wram_read(gb, addr - 0x2000);    // is a mirror of wram.
 }
-void loc_echram_write(GB *gb, uint16_t addr, uint8_t val) {
-    loc_wram_write(gb, addr - 0x2000, val);     // is a mirror of wram.
+void loc_echram_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    loc_wram_write(gb, addr - 0x2000, write_val);     // is a mirror of wram.
 }
 
 // HRAM
 uint8_t loc_hram_read(GB *gb, uint16_t addr) {
-    if (addr < 0xFF80 || addr > 0xFFFE) {
-        // Invalid
-        printf("loc_ram: HRAM invalid Read, Returning 0xFF!\n");
-        return 0xFF;
+    if (addr >= 0xFF80 || addr <= 0xFFFE) {   // Allowed range:
+        uint16_t offset = addr - 0xFF80;
+        return gb->memory.hram[offset];
     }
-    return HRAM[addr - 0xFF80];
-
+    printf("loc_ram: HRAM invalid Read! -> Addr: 0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
 }
-void loc_hram_write(GB *gb, uint16_t addr, uint8_t val) {
-    if (addr < 0xFF80 || addr > 0xFFFE) {
-        // Invalid
-        printf("loc_ram: HRAM invalid Write\n");
+void loc_hram_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    if (addr >= 0xFF80 || addr <= 0xFFFE) { // Allowed Range:
+        uint16_t offset = addr - 0xFF80;
+        gb->memory.hram[offset] = write_val;
         return;
     }
-    HRAM[addr - 0xFF80] = val;
+    printf("loc_ram: HRAM invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
 }
