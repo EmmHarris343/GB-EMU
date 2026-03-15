@@ -91,6 +91,9 @@ int gb_init(GB *gb);
 
 
 // Run by frame..
+void gb_step_frame(GB *gb, uint64_t next_frame_time_ns);
+
+// other run functions..
 int gb_run(GB *gb);
 
 int gb_run_steps(GB *gb, int max_steps);
@@ -108,6 +111,9 @@ uint8_t if_read(GB *gb, uint16_t addr);
 uint8_t ie_read(GB *gb, uint16_t addr);
 void if_write(GB *gb, uint16_t addr, uint8_t val);
 void ie_write(GB *gb, uint16_t addr, uint8_t val);
+
+
+
 
 
 #endif

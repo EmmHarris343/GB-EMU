@@ -169,6 +169,30 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 */
 
 
+void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
+    uint32_t frame_cycles = 0;
+
+    while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
+        uint32_t cycles = gb_step(gb);
+        frame_cycles += cycles;
+    }
+
+    gb->db_stats.frames++;
+
+    if ((gb->db_stats.frames % 60) == 0) {
+        debug_print_stats(gb);
+    }
+
+    if (gb->panic) {    // Include both as it's migrated.
+        printf("GB Panic, Cancelling run..\n");
+        // DUMP GB Trace logs
+        exit(1);
+    }
+
+    next_frame_time_ns += GB_FRAME_NS;
+    sleep_until_ns(next_frame_time_ns);
+}
+
 
 int gb_run(GB *gb) {
     // This works by a emulating on a per frame setup.

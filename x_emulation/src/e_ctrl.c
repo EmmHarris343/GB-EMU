@@ -1,4 +1,10 @@
+#define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
+#define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
+
+
 #include <unistd.h>
+#include <time.h>
+
 
 #include "e_ctrl.h"
 #include "core/cart/cart.h"
@@ -7,6 +13,11 @@
 #include "core/cpu/cpu.h"
 #include "core/gb.h"
 #include "core/ppu/ppu.h"
+
+// The display / test video portion:
+#include <SDL2/SDL.h>
+#include "core/video/adapter.h"
+#include "host/basic_viewer.h"
 
 #include "debug/logger.h"
 
@@ -32,6 +43,36 @@ extern FILE *cart_mbc_log_file;
 /// TODO: Remove e_ctrl and combine with e_core.
 /// WHY: this basically does the same task, it just exposes functions to e_core, to execute functions in other files..
 // Realistically. it's kind of redundant.
+
+// Linux specific time functions:
+static uint64_t time_now_ns(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ((uint64_t) ts.tv_sec * GB_UL_VAL) + (uint64_t) ts.tv_nsec;
+}
+static void sleep_until_ns(uint64_t target_ns) {
+    struct timespec ts;
+    uint64_t now_ns;
+    uint64_t remaining_ns;
+
+    for (;;) {  // Creates infinit loop
+        now_ns = time_now_ns();
+        if (now_ns >= target_ns) {
+            break;
+        }
+
+        remaining_ns = target_ns - now_ns;
+
+        ts.tv_sec = (time_t)(remaining_ns / GB_UL_VAL);
+        ts.tv_nsec = (long) (remaining_ns % GB_UL_VAL);
+
+        clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+    }
+}
+
+
 
 
 
@@ -64,6 +105,77 @@ int start_emulation() {
     printf(":E_CTRL: Beginning Emulation\n");
     GB gb;
 
+    // Strickly the video stuff.
+    DebugVideoSource video_source;
+    BasicViewer viewer;
+    // Technically the "running" thingy:
+    int running;
+
+    video_init_source(&gb, &video_source);
+
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        printf("Failure during the SDL_init.\n");
+        return 1;
+    }
+    if (basic_viewer_init(&viewer, video_source, DEBUG_VIEW_BG_MAP, 2) != 0) {
+        SDL_Quit();
+        printf("Failure during basic_viewer init.\n");
+        return 1;
+    }
+
+    // Initialize the GB at the "machine" level.
+    if (gb_init(&gb) != 0) {
+        fprintf(stderr, "unable to Initializing Cartridge Error:\n");
+        return -1;
+    }
+    if (init_log_files() != 0) {
+        printf("Unable to Initializing log files.");
+        return -1;
+    }
+
+    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
+    sleep(2);   // Sleep is just so the initial startup can be readable.
+
+    // The main emulation loop. (Moved from the old gb_run(&gb) function.)
+
+    uint64_t next_frame_time_ns = time_now_ns();
+
+    while (running) {
+        SDL_Event event;
+        if (gb.panic) {
+            break;
+        }
+        if (gb.quit) {
+            break;
+        }
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                running = 0;
+            }
+        }
+
+        gb_step_frame(&gb, next_frame_time_ns);
+
+        //build_test_bg_pattern(&gb.ppu, gb.ppu.vram);
+        build_test_pattern(&gb.ppu);
+
+
+        basic_viewer_present(&viewer);
+
+        SDL_Delay(16);
+    }
+    basic_viewer_shutdown(&viewer);
+    SDL_Quit();
+    return 0;
+}
+
+// OLD Version... just did the basic emulation no video / decode anything..
+/*
+int start_emulation() {
+    printf(":E_CTRL: Beginning Emulation\n");
+    GB gb;
+
     // Initialize the GB at the "machine" level.
     if (gb_init(&gb) != 0) {
         fprintf(stderr, "unable to Initializing Cartridge Error:\n");
@@ -81,6 +193,7 @@ int start_emulation() {
 
     return 0;
 }
+*/
 
 
 // Bad name, this is is more of a "Init GB, and begin execution"

@@ -5,6 +5,11 @@
 #include <string.h>
 #include <stdint.h>
 
+#define GB_LCD_WIDTH   160
+#define GB_LCD_HEIGHT  144
+#define GB_BG_WIDTH    256
+#define GB_BG_HEIGHT   256
+
 typedef struct gb_s GB;
 
 typedef struct ppu_s {
@@ -32,6 +37,11 @@ typedef struct ppu_s {
     // Data storage:
     uint8_t oam[0xA0];      // Object Attribute Memory, can reference sprite / tiles.
     uint8_t vram[0x2000];   // Vram total size.
+
+    // I don't love these here. maybe it's fine..
+    uint32_t debug_lcd_rgba[GB_LCD_WIDTH * GB_LCD_HEIGHT];
+    uint32_t debug_bg_rgba[GB_BG_WIDTH * GB_BG_HEIGHT];
+
 } PPU;
 
 typedef enum {

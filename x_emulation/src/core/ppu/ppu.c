@@ -101,7 +101,6 @@ void ppu_init_timer(PPU *ppu) {
     ppu->wx = 0;        // FF4B
 
     // ppu->oam[0xA0] = 0;
-    ppu->vram[0x2000] = 0;
 
     ppu->line_cycles = 0;
     ppu->mode = 0;
