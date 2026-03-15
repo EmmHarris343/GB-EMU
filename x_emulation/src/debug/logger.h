@@ -39,4 +39,7 @@ void trace_io_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 void trace_io_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 
 
+void trace_general_read(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag);
+void trace_general_write(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag);
+
 #endif

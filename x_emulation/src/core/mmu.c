@@ -1,13 +1,13 @@
 #include <stdlib.h>
 
-#include "logger.h"
+//#include "logger.h"
 
 #include "gb.h"
 #include "mmu.h"
-#include "cart.h"
+#include "cart/cart.h"
 #include "loc_ram.h"
-#include "ppu.h"
-#include "oam.h"
+#include "ppu/ppu.h"
+#include "ppu/oam.h"
 #include "io.h"
 
 
@@ -71,7 +71,7 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
             // if (addr == 0xFFFF) {
             //     printf("SPECIAL MMU PRINT: IE READ: 0x%02X\n", read_8bit_val);
             // }
-            trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
+            //trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
     }
@@ -90,7 +90,7 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
             // if (write_val == 0xFF) {
             //     printf("SPECIAL MMU PRINT: Write to of FF to space. ADDR:0x%04X Value:0x%02X \n", addr, write_val);
             // }
-            trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
+            //trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }
 }

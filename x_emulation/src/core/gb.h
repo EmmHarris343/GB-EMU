@@ -3,15 +3,15 @@
 
 #include <stdint.h>
 
-#include "cpu.h"
+#include "cpu/cpu.h"
 #include "mmu.h"
 #include "io.h"
-#include "cart.h"
-#include "mbc.h"
+#include "cart/cart.h"
+#include "cart/mbc.h"
 #include "loc_ram.h"
-#include "ppu.h"
-#include "apu.h"
-#include "timer.h"
+#include "ppu/ppu.h"
+#include "apu/apu.h"
+#include "timer/timer.h"
 
 #define GB_CPU_HZ 4194304
 #define GB_FPS 59.7275

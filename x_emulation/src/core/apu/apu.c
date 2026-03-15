@@ -1,5 +1,5 @@
 #include "apu.h"
-#include "gb.h"
+#include "../gb.h"
 
 
 int apu_init(GB *gb) {

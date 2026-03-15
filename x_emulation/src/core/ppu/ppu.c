@@ -1,5 +1,5 @@
 #include "ppu.h"
-#include "gb.h"
+#include "../gb.h"
 #include <string.h>
 
 
@@ -338,14 +338,12 @@ So line_cycles is the per-scanline timing accumulator.
 
 */
 
+
+/// BIG: TODO: --- I completely forgot to setup the DMA IO code/ PPU code (techniccally it might nto be PPU).
+
+
 // PPU Tick, advances through scanliens and modes based on elasped cycles.
 void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
-    // if (ppu->ly == ppu->lyc)
-    // {
-    //     printf("COINCIDENCE: LY=%d LYC=%d STAT=%02X\n",
-    //         ppu->ly, ppu->lyc, ppu->stat);
-    // }
-
     if ((ppu->lcdc & 0x80) == 0) {
         ppu->line_cycles = 0;
         ppu->ly = 0;

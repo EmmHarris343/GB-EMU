@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "gb.h"
+#include "../gb.h"
 #include "cpu.h"
 #include "cpu_instructions.h"
-#include "mmu.h"
+#include "../mmu.h"
 
 //#include "logger.h"
 

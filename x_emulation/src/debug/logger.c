@@ -37,6 +37,26 @@ static const char *io_tag_name[9] = {
     "IO_MAX",
 };
 
+static const char *system_tag_name[16] = {
+    "CORE",
+    "DEBUG",
+    "CPU",
+    "ROM",
+    "RAM",
+    "CART",
+    "MBC",
+    "MMU",
+    "MEMORY",
+    "FRAME",
+    "PPU",
+    "TIMER",
+    "APU",
+    "IO",
+    "INTERRUPT",
+    "IO_MAX",
+};
+
+
 int logging_init(const char *filename) {
     debug_dump_file = fopen(filename, "w");
     if (!debug_dump_file) {
@@ -171,15 +191,11 @@ void trace_mmu_read(uint8_t opcode, uint16_t addr, uint8_t val, int map_index, u
     fflush(trace_log_file);
 
 }
-
 void trace_mmu_write(uint8_t opcode, uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
     // M R 0x0000 0x00 00 00 // MMU Read Adderess ReadValue - Bus_tag
     fprintf(trace_log_file, "M W OP[%02X] | %04X %02X - %s\n", opcode, addr, val, bus_tag_name[src_tag]);
     fflush(trace_log_file);
-
 }
-
-
 void trace_io_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
 
     // M R 0x0000 0x00 00 00 // MMU Read Adderess ReadValue - Bus_tag
@@ -187,10 +203,20 @@ void trace_io_read(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
     fflush(trace_log_file);
 
 }
-
 void trace_io_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag) {
     // M R 0x0000 0x00 00 00 // MMU Read Adderess ReadValue - Bus_tag
     fprintf(trace_log_file, "IO W %04X %02X - %s\n", addr, val, io_tag_name[src_tag]);
     fflush(trace_log_file);
 
+}
+
+
+// Not meant to be any speicifc machine.
+void trace_general_read(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag) {
+    fprintf(trace_log_file, "G R OP[%02X] | %04X %02X - Sys:%s\n", opcode, addr, val, system_tag_name[system_tag]);
+    fflush(trace_log_file);
+}
+void trace_general_write(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag) {
+    fprintf(trace_log_file, "G W OP[%02X] | %04X %02X - Sys:%s\n", opcode, addr, val, system_tag_name[system_tag]);
+    fflush(trace_log_file);
 }

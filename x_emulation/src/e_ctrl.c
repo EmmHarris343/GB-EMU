@@ -1,14 +1,14 @@
 #include <unistd.h>
 
 #include "e_ctrl.h"
-#include "cart.h"
-#include "cart_types.h"
-#include "loc_ram.h"
-#include "cpu.h"
-#include "gb.h"
-#include "ppu.h"
+#include "core/cart/cart.h"
+#include "core/cart/cart_types.h"
+#include "core/loc_ram.h"
+#include "core/cpu/cpu.h"
+#include "core/gb.h"
+#include "core/ppu/ppu.h"
 
-#include "logger.h"
+#include "debug/logger.h"
 
 
 
@@ -19,9 +19,6 @@
 #include "../test/cpu_test.h"
 
 #endif
-
-// Testing, because don't have any build flag set.
-//#include "../test_cpu/cpu_test.h"
 
 extern Headers headers;
 

@@ -2,10 +2,10 @@
 
 #include "mbc.h"
 #include "cart_types.h"
-#include "gb.h"
+#include "../gb.h"
 
 
-#include "logger.h"
+#include "../../debug/logger.h"
 
 int mbc_none_setup(GB *gb, Cartridge *cart) {
     return 0;

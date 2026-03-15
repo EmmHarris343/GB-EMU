@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "trace_ids.h"
+#include "../debug/trace_ids.h"
 
 
 typedef struct gb_s GB;

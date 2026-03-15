@@ -1,5 +1,5 @@
 #include "joy.h"
-#include "gb.h"
+#include "../gb.h"
 
 
 

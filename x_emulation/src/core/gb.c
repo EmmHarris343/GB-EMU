@@ -2,7 +2,7 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
 
-#include "cpu.h"
+#include "cpu/cpu.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -14,79 +14,8 @@
 uint64_t machine_total_cycles;
 
 // BIG NOTE:
-// subsystem headers
-// should avoid including gb.h unless absolutely necessary
-
-// subsystem .c files
-// can include both their own header and gb.h when needed
-// This avoids circular include damage.
-
-
-// Local subsystem functions:
-// void cpu_reset(struct cpu_s *cpu);
-// void ppu_reset(struct ppu_s *ppu);
-// void timer_reset(struct timer_s *timer);
-
-
-// Subsystem functions that would need machine-wide access:
-// uint32_t cpu_step(struct gb_s *gb);
-// void ppu_tick(struct ppu_s *ppu, struct gb_s *gb, uint32_t cycles);
-// void timer_tick(struct timer_s *timer, struct gb_s *gb, uint32_t cycles);
-
-// Cross-cutting helper APIs
-// uint8_t gb_read_ie(struct gb_s *gb);
-// uint8_t gb_read_if(struct gb_s *gb);
-// void gb_request_interrupt(struct gb_s *gb, uint8_t mask);
-
-
-// Maybe do as well:
-// BAD: gb->cpu.if_reg |= 0x01;
-// GOOD: gb_request_interrupt(gb, INT_VBLANK);
-
-// BAD: gb->ppu.ly = 0;
-// GOOD: ppu_set_ly(&gb->ppu, gb, value);
-
-// BAD: gb->ppu.mode = 1;
-// GOOD: ppu_enter_mode(&gb->ppu, gb, PPU_MODE_VBLANK);
-
-// DO THIS: ------------------
-// cycles = cpu_step(gb);
-// gb_tick(gb, cycles);
-
-/*
-
-CURRENTLY doing (simple mode)
-void gb_tick(struct gb_s *gb, uint32_t cycles)
-{
-    timer_tick(&gb->timer, gb, cycles);
-    ppu_tick(&gb->ppu, gb, cycles);
-}
-
-LATER can do:
-void gb_tick(struct gb_s *gb, uint32_t cycles)
-{
-    while (cycles > 0) {
-        timer_tick(&gb->timer, gb, 1);
-        ppu_tick(&gb->ppu, gb, 1);
-        dma_tick(&gb->dma, gb, 1);
-        cycles--;
-    }
-}
-
-WAY more advanced:
-void gb_tick(struct gb_s *gb, uint32_t cycles)
-{
-    scheduler_advance(&gb->scheduler, gb, cycles);
-}
-*/
-
-/*
-
-===-- gb.c --===
-The Top-Level "Machine"s:
-
-*/
-
+// Avoid including "gb.h" inside any header file. Instead do: typedef struct gb_s GB;
+// Only include gb.h inside the c file, and only import it if it is absolutely needed.
 
 /*
 GB Normal run time/ HZ.
@@ -231,6 +160,15 @@ void gb_tick(GB *gb, uint32_t cycles){
     timer_tick(gb, &gb->timer, cycles);
     ppu_tick(gb, &gb->ppu, cycles);
 }
+/*
+WAY more advanced timer/ scheduler. Consider for later:
+void gb_tick(struct gb_s *gb, uint32_t cycles)
+{
+    scheduler_advance(&gb->scheduler, gb, cycles);
+}
+*/
+
+
 
 int gb_run(GB *gb) {
     // This works by a emulating on a per frame setup.

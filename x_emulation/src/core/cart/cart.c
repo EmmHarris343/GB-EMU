@@ -3,7 +3,7 @@
 #include "cart.h"
 #include "cart_types.h"
 #include "mbc.h"
-#include "gb.h"
+#include "../gb.h"
 
 
 Headers headers;

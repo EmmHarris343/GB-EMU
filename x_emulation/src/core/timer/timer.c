@@ -1,5 +1,5 @@
 #include "timer.h"
-#include "gb.h"
+#include "../gb.h"
 
 
 /*

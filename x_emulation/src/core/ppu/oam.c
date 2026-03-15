@@ -1,6 +1,6 @@
 
 #include "oam.h"
-#include "gb.h"
+#include "../gb.h"
 
 
 // Read / Write OAM functions (OAM, is I think like sprites and stuff)

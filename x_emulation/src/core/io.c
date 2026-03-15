@@ -1,11 +1,11 @@
 #include "io.h"
 #include "gb.h"
-#include "ppu.h"
-#include "timer.h"
-#include "apu.h"
-#include "joy.h"
+#include "ppu/ppu.h"
+#include "timer/timer.h"
+#include "apu/apu.h"
+#include "joy/joy.h"
 
-#include "logger.h"
+//#include "logger.h"
 
 // IO Register Routing Map:
 static IO_RegMap io_map[] = {
@@ -29,7 +29,7 @@ uint8_t io_read(GB *gb, uint16_t addr) {
     for (int i = 0; i < io_map_size; i++) {
         if (addr >= io_map[i].start && addr <= io_map[i].end) {
             read_8bit = io_map[i].read(gb, addr);
-            trace_io_read(addr, read_8bit, i, (uint8_t)io_map[i].tag);
+            //trace_io_read(addr, read_8bit, i, (uint8_t)io_map[i].tag);
             return read_8bit;
         }
     }
@@ -45,7 +45,7 @@ void io_write(GB *gb, uint16_t addr, uint8_t write_val)
     for (int i = 0; i < io_map_size; i++) {
         if (addr >= io_map[i].start && addr <= io_map[i].end) {       // Changed >= is this right?
             io_map[i].write(gb, addr, write_val);
-            trace_io_write(addr, write_val, i, (uint8_t)io_map[i].tag);
+            //trace_io_write(addr, write_val, i, (uint8_t)io_map[i].tag);
         }
     }
 }

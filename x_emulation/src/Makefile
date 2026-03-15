@@ -7,7 +7,11 @@ CFLAGS = -g -std=c11 -Wall
 # -Wextra
 
 # Object files (Not all of these exist)
-OBJ = e_core.o e_ctrl.c gb.c cpu.c cpu_instructions.c mmu.c cart.c mbc.c loc_ram.c ppu.c oam.c io.c joy.c timer.c apu.c logger.c
+OBJ = e_core.o e_ctrl.c core/gb.c core/cpu/cpu.c core/cpu/cpu_instructions.c\
+	  core/io.c core/mmu.c core/loc_ram.c\
+	  core/cart/cart.c core/cart/mbc.c\
+	  core/ppu/ppu.c core/ppu/oam.c\
+	  core/joy/joy.c core/timer/timer.c core/apu/apu.c debug/logger.c
 # removed build files:  ../test_cpu/cpu_test.c ../test_cpu/common/utile.c ../test_cpu/0_alu/alu_test.c
 
 
