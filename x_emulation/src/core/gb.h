@@ -87,7 +87,7 @@ enum {
     GB_INTERRUPT_JOYPAD   = 4
 };
 
-int gb_init(GB *gb);
+int gb_init(GB *gb, const char *rom_file);
 
 
 // Run by frame..

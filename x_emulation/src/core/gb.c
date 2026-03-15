@@ -31,7 +31,7 @@ about 59.73 frames per second
 // PRINT REPORT:
 static void debug_print_stats(GB *gb) {
     printf(
-        "[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
+        "\n[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
         "ppu_tick_calls=%llu ppu_cycles_seen=%llu \n"
         "ly_wraps=%llu vblank_entries=%llu\n"
         "LY=%u stat-mode=%u... \n",
@@ -45,7 +45,7 @@ static void debug_print_stats(GB *gb) {
         gb->ppu.ly,
         gb->ppu.stat & 0x03
     );
-    printf("\n[DBG] IE=%02X, IF=%02X, IE&IF=%04X, IME=%02X, HALT=%02X\n",
+    printf("[DBG] IE=%02X, IF=%02X, IE&IF=%04X, IME=%02X, HALT=%02X\n",
         gb->interrupts.IE,
         gb->interrupts.IF,
         (gb->interrupts.IE & gb->interrupts.IF),
@@ -55,7 +55,7 @@ static void debug_print_stats(GB *gb) {
 }
 
 // Top-Level "Machine" Setup/ Initializer
-int gb_init(GB *gb) {
+int gb_init(GB *gb, const char *rom_file) {
     printf("Initializing GB...");
 
     gb->interrupts.IE = 0x00,    // IE at location 0xFFFF = 0x00
@@ -67,8 +67,7 @@ int gb_init(GB *gb) {
 
     memset(&gb->db_stats, 0, sizeof(gb->db_stats));
 
-    const char *rom_file = "../../rom/pkmn_red.gb"; // Not ideal,  I should pass it.. or load it from something.
-    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
+
     printf("NOTE: Using rom file: %s\n\n", rom_file);
 
     if (cpu_init(gb) != 0){
@@ -181,9 +180,17 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 
     if ((gb->db_stats.frames % 60) == 0) {
         debug_print_stats(gb);
+
+        // print whats in vram for this frame (every 60 frames)
+        for (uint16_t i = 0; i < 64; i++) {
+            printf("%02X ", gb->ppu.vram[i]);
+            if ((i & 0x0F) == 0x0F) {
+                printf("\n");
+            }
+        }
     }
 
-    if (gb->panic) {    // Include both as it's migrated.
+    if (gb->panic) {
         printf("GB Panic, Cancelling run..\n");
         // DUMP GB Trace logs
         exit(1);
@@ -194,6 +201,7 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 }
 
 
+// No longer used. Using gb_step_frame
 int gb_run(GB *gb) {
     // This works by a emulating on a per frame setup.
 
@@ -300,15 +308,15 @@ void gb_request_interrupt(GB *gb, uint8_t interrupt_bit) {
 uint8_t ie_read(GB *gb, uint16_t addr) {
     (void)addr;
     uint8_t read_value = gb->interrupts.IE;
-    printf("IE Read hit. PC=%04X , OPCODE=%02X, value=%02X\n",
-        gb->cpu.reg.PC, gb->instruction.opcode, read_value);
+    // printf("IE Read hit. PC=%04X , OPCODE=%02X, value=%02X\n",
+    //     gb->cpu.reg.PC, gb->instruction.opcode, read_value);
     return read_value;
 }
 void ie_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
-        gb->cpu.reg.A,
-        gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
+    // printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+    //     gb->cpu.reg.A,
+    //     gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
     gb->interrupts.IE = interrupt_hex & 0x1F;
     // printf("IE Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
     // gb->interrupts.IE = interrupt_hex & 0x1F;
@@ -320,7 +328,7 @@ uint8_t if_read(GB *gb, uint16_t addr) {
 }
 void if_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    printf("IF Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
+    // printf("IF Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
     gb->interrupts.IF = interrupt_hex & 0x1F;
 }
 

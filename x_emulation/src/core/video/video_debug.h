@@ -35,4 +35,6 @@ struct DebugVideoSource {
 
 void build_test_pattern(PPU *ppu);
 
+void build_debug_test_bg(PPU *ppu, const uint8_t *vram);
+
 #endif

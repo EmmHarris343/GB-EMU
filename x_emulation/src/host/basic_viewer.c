@@ -13,7 +13,7 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         return -1;
     }
 
-    SDL_Renderer *rendererobj;
+
 
     viewer->window = NULL;
     viewer->renderer = NULL;
@@ -41,40 +41,30 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         SDL_WINDOW_SHOWN
     );
 
-    // SDL_Window *window = SDL_CreateWindow(
-    //     "Gameboy Emulation - Test Graphics",
-    //     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-    //     SCREEN_WIDTH * 4, SCREEN_HEIGHT *4,     // Scale up window :: Width: 580 X Height: 510
-    //     SDL_WINDOW_SHOWN);
-
-
-    if (viewer->window == NULL) {
-        printf("Window is null. Aborting..\n");
+    if (!viewer->window) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         return -1;
     }
 
-    fprintf(stderr, "Renderer Null; Failure creating renderer. Error: %s\n", SDL_GetError());
-
-    rendererobj = SDL_CreateRenderer(viewer->window, -1, SDL_RENDERER_ACCELERATED);
-    if (rendererobj == NULL) {
+    viewer->renderer = SDL_CreateRenderer(viewer->window , -1, SDL_RENDERER_SOFTWARE);
+    if (!viewer->renderer) {
         fprintf(stderr, "Renderer Null; Failure creating renderer. Error: %s\n", SDL_GetError());
         return -1;
     }
 
-    // viewer->texture = SDL_CreateTexture(
-    //     viewer->renderer,
-    //     SDL_PIXELFORMAT_RGBA8888,
-    //     SDL_TEXTUREACCESS_STREAMING,
-    //     surface.width,
-    //     surface.height
-    // );
-    // if (viewer->texture == NULL) {
-    //     printf("Texture is null. Aborting..\n");
-    //     fprintf(stderr, "SDL_CreateTexture failed: %s\n", SDL_GetError());
-    //     return -1;
-    // }
+    viewer->texture = SDL_CreateTexture(
+        viewer->renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        surface.width,
+        surface.height
+    );
+    if (viewer->texture == NULL) {
+        fprintf(stderr, "SDL_CreateTexture failed: %s\n", SDL_GetError());
+        return -1;
+    }
 
+    printf("Finished initializing Basic Viewer\n");
     return 0;
 }
 
@@ -87,12 +77,14 @@ int basic_viewer_present(BasicViewer *viewer) {
     }
 
     if (viewer->source.ops.get_surface(viewer->source.ctx, viewer->current_view, &surface) != 0) {
+        printf("Failed to get surface from adapter/ video_debug?\n");
         return -1;
     }
 
     pitch_bytes = surface.pitch_pixels * (int)sizeof(uint32_t);
 
     if (SDL_UpdateTexture(viewer->texture, NULL, surface.pixels, pitch_bytes) != 0) {
+        printf("Failed to update texture?\n");
         return -1;
     }
 

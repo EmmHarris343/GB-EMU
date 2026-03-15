@@ -7,15 +7,11 @@
 
 
 #include "e_ctrl.h"
-#include "core/cart/cart.h"
-#include "core/cart/cart_types.h"
-#include "core/loc_ram.h"
-#include "core/cpu/cpu.h"
 #include "core/gb.h"
 #include "core/ppu/ppu.h"
 
 // The display / test video portion:
-#include <SDL2/SDL.h>
+//#include <SDL2/SDL.h>
 #include "core/video/adapter.h"
 #include "host/basic_viewer.h"
 
@@ -105,6 +101,11 @@ int start_emulation() {
     printf(":E_CTRL: Beginning Emulation\n");
     GB gb;
 
+    // Which rom file to use.
+    const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
+    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
+
     // Strickly the video stuff.
     DebugVideoSource video_source;
     BasicViewer viewer;
@@ -124,7 +125,7 @@ int start_emulation() {
     }
 
     // Initialize the GB at the "machine" level.
-    if (gb_init(&gb) != 0) {
+    if (gb_init(&gb, rom_file) != 0) {
         fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }
@@ -137,6 +138,8 @@ int start_emulation() {
     sleep(2);   // Sleep is just so the initial startup can be readable.
 
     // The main emulation loop. (Moved from the old gb_run(&gb) function.)
+
+    running = 1;
 
     uint64_t next_frame_time_ns = time_now_ns();
 
@@ -158,8 +161,8 @@ int start_emulation() {
         gb_step_frame(&gb, next_frame_time_ns);
 
         //build_test_bg_pattern(&gb.ppu, gb.ppu.vram);
-        build_test_pattern(&gb.ppu);
-
+        //build_test_pattern(&gb.ppu);
+        build_debug_test_bg(&gb.ppu, gb.ppu.vram);
 
         basic_viewer_present(&viewer);
 
@@ -196,13 +199,17 @@ int start_emulation() {
 */
 
 
-// Bad name, this is is more of a "Init GB, and begin execution"
+// Bad name, DO NOT USE! this is is more of a "Init GB, and begin execution"
 int startup_sequence() {
     printf(":E_CTRL: Startup Sequence Beginning\n");
     GB gb;
 
+    const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
+    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
+
     // Initialize the GB at the "machine" level.
-    if (gb_init(&gb) != 0) {
+    if (gb_init(&gb, rom_file) != 0) {
         fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }
@@ -220,18 +227,19 @@ int startup_sequence() {
     return 0;
 }
 
-// Bad name, this is is more of a "Init GB, and begin execution"
+// Bad. DO NOT USE! name, this is is more of a "Init GB, and begin execution"
 int startup_seq_bytime() {
     printf(":E_CTRL: Exec Time Interval - Beginning\n");
 
     // GB 'core', encapsulates everything from CPU, to APU, to Cycles/Time.
     GB gb;
 
-    const char *rom_file = "../../rom/pkmn_red.gb";
-    printf("NOTE: Using rom file: %s\n\n", rom_file);
+    const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
+    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
 
     // Initialize the GB 'core',
-    if (gb_init(&gb) != 0) {
+    if (gb_init(&gb, rom_file) != 0) {
         fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }

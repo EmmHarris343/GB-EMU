@@ -67,7 +67,7 @@ static void HALT(GB *gb, CPU *cpu, instruction_T instruction) {     // Halt - Se
     cpu->state.halt = 1;
 }
 static void DI(GB *gb, CPU *cpu, instruction_T instruction) {        // DI - Disables interrupt Handling (Flag set to := 0)
-    printf("DI Called.                  ; IME := 0 (Immediately clear interrupt flag => 0 - disabled (no delay))\n");
+    //printf("DI Called.                  ; IME := 0 (Immediately clear interrupt flag => 0 - disabled (no delay))\n");
     cpu->state.IME = 0;
     cpu->reg.PC ++;
     cpu->cycle = 4;
@@ -78,7 +78,7 @@ static void DI(GB *gb, CPU *cpu, instruction_T instruction) {        // DI - Dis
 }
 
 static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Enables interrupt Handling (Flag set to := 1)
-    printf("EI Called.                  ; IME := 1 (Set interrupt flag => 1 - enabled (AFTER DELAY))\n");
+    //printf("EI Called.                  ; IME := 1 (Set interrupt flag => 1 - enabled (AFTER DELAY))\n");
 
 
     // This uses a delay logic of 2 (counting down after instruction finishes)
@@ -2546,7 +2546,7 @@ CALL cc,a16: add +12 T-cycles if taken
 //     cpu->reg.SP, cpu->state.IME, gb->interrupts.IE, gb->interrupts.IF);
 // }
 
-static void interrupt_stack_push(GB *gb, CPU *cpu, uint8_t write_val) {
+static void interrupt_stack_push(GB *gb, CPU *cpu, uint16_t write_val) {
     cpu->reg.SP --;
     mmu_write(gb, cpu->reg.SP, (write_val >>8) & 0xFF);
 
@@ -2564,8 +2564,12 @@ static void cpu_service_interrupt(GB *gb, uint8_t interrupt_bit, uint16_t vector
     // Clear Interrupt Flag (Request flag)
     gb->interrupts.IF &= (uint8_t)~(1 << interrupt_bit);
 
+    // printf("INT StackPush PC=%04X SP(before)=%04X\n", gb->cpu.reg.PC, gb->cpu.reg.SP);
+
     // Push Current PC into SP stack.
     interrupt_stack_push(gb, &gb->cpu, gb->cpu.reg.PC);
+
+    // printf("INT StackPush PC=%04X SP(AFTER)=%04X\n", gb->cpu.reg.PC, gb->cpu.reg.SP);
 
     // Jump to the Interrupt Handler location (or vector);
     printf("Finished processing service interrupt. Jumping to vector: 0x%04X\n", vector);

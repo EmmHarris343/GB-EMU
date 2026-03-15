@@ -227,13 +227,13 @@ void ppu_lcdc_write(GB *gb, uint8_t write_val) {
 
     gb->ppu.lcdc = write_val;
 
-    if ((old_value ^ write_val) & 0x80) {
-        printf("[PPU] LCDC changed %02X -> %02X | LCD %s\n",
-               old_value, write_val, (write_val & 0x80) ? "ON" : "OFF");
-    }
+    // if ((old_value ^ write_val) & 0x80) {
+    //     printf("[PPU] LCDC changed %02X -> %02X | LCD %s\n",
+    //            old_value, write_val, (write_val & 0x80) ? "ON" : "OFF");
+    // }
 }
 void ppu_stat_write(GB *gb, uint8_t write_val) {
-    printf("PPU: ppu.stat write hit! WriteVal: 0x%02X\n", write_val);
+    // printf("PPU: ppu.stat write hit! WriteVal: 0x%02X\n", write_val);
     uint8_t stat = gb->ppu.stat;
 
     /* keep bits 0-2 from the current STAT */
