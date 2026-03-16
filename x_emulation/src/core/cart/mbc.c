@@ -7,13 +7,78 @@
 
 #include "../../debug/logger.h"
 
-int mbc_none_setup(GB *gb, Cartridge *cart) {
+static void mbc_none_state_init(Cartridge *cart) {
+    // nothing to do..
+}
+
+static int mbc_none_decode(Cartridge *cart, uint8_t type_code) {
+    // Default MBC1 - turn off all features.
+    cart->config.mbc_type = MBC_NONE;
+
     return 0;
 }
 
-void mbc_none(Cartridge *cart) {
-
+uint8_t mbc_none_read(Cartridge *cart, uint16_t addr) {
+    if (addr >= 0x0000 && addr <= 0x7FFF) {
+        return cart->storage.rom_data[addr];
+    }
+    return 0xFF;
 }
+
+void mbc_none_write(Cartridge *cart, uint16_t addr, uint8_t write_val) {
+    // No write intercept. Maybe possible RAM, but no switching or anything else.
+    (void)addr;
+    (void)write_val;
+    return;
+}
+
+void mbc_none_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
+    /*
+        Optionally up to 8 KiB of RAM could be connected at $A000-BFFF.
+        Using a discrete logic decoder in place of a full MBC chip.
+    */
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (cart->state.mbc_none.ram_enabled) {
+            cart->storage.ram_data[addr] = write_val;
+            logging_cart_mbc_log("[MBC_NONE] R EXT-R |A=%04X V=%02X|\n", addr, write_val);
+            return;
+        }
+    }
+    return;
+}
+
+uint8_t mbc_none_read_ext(Cartridge *cart, uint16_t addr){
+    /*
+        Optionally up to 8 KiB of RAM could be connected at $A000-BFFF.
+        Using a discrete logic decoder in place of a full MBC chip.
+    */
+
+    // RAM bank size: 0x2000 // IF any.
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (cart->state.mbc_none.ram_enabled) {
+            logging_cart_mbc_log("[MBC_NONE] R EXT-R |A=%04X|\n", addr);
+            return cart->storage.ram_data[addr];
+        }
+    }
+    return 0xFF;
+}
+
+const Operations mbc_none_ops = {
+    .write = mbc_none_write,
+    .read = mbc_none_read,
+    .write_ext = mbc_none_write_ext,
+    .read_ext = mbc_none_read_ext,
+};
+
+int mbc_none_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+    mbc_none_state_init(cart);
+    // Bind mbc_none config:
+    cart->ops = mbc_none_ops;
+
+    printf("Finished MBC_NONE setup/ init\n");
+    return 0;
+}
+
 
 
 /*
@@ -40,10 +105,16 @@ For 1 MiB+ ROM
 
 */
 static void mbc1_state_init(Cartridge *cart) {
+    uint8_t ram_enabled;
+    uint8_t rom_bank_low5;
+    uint8_t rom_bank_high2;
+    uint8_t banking_mode;
+    // uint16_t current_rom_bank;   // don't think I need?
+    // uint8_t current_ram_bank;
     cart->state.mbc1.ram_enabled = 0;
-    cart->state.mbc1.current_rom_bank = 1;
-    cart->state.mbc1.current_ram_bank = 0;
-    cart->state.mbc1.mode = 0;
+    cart->state.mbc1.bank_low5 = 1; // Bank 1 is normally Default.
+    cart->state.mbc1.bank_high2 = 0;
+    cart->state.mbc1.banking_mode = 0;
 }
 
 static int mbc1_decode(Cartridge *cart, uint8_t type_code) {
@@ -70,19 +141,112 @@ static int mbc1_decode(Cartridge *cart, uint8_t type_code) {
     return 0;
 }
 
-void mbc1_write(Cartridge *cart, uint16_t addr, uint8_t val) {
+void mbc1_write(Cartridge *cart, uint16_t addr, uint8_t write_val) {
+    if (addr < 0x2000) {    // 0000-1FFF:: RAM enable (0x0A enables)
+        cart->state.mbc1.ram_enabled = ((write_val & 0x0F) == 0x0A) ? 1 : 0;
+        logging_cart_mbc_log("[MBC3] W-INCPT :: Addr= %04X Write=%02X RAM ENABLED.\n", addr, write_val);
+        printf("MBC1 Write-Intercept :: Ram_enabled\n");
+        return;
+    }
 
+    if (addr < 0x4000) {    // 2000-3FFF:: lower 5 bits of ROM bank number
+        uint8_t low5 = write_val & 0x1F;
+        if (low5 == 0) low5 = 1;           // bank 0 forbidden for switch area
+        cart->state.mbc1.bank_low5 = low5;
+        logging_cart_mbc_log("[MBC1] W-INCPT :: Addr= %04X Write=%02X BANK-Low5=%02X\n", addr, write_val, cart->state.mbc1.bank_low5);
+    }
+    if (addr < 0x6000) {    // 4000-5FFF:: upper ROM bank bits (mode 0) OR RAM bank (mode 1)
+        cart->state.mbc1.bank_high2 = write_val & 0x03;
+        logging_cart_mbc_log("[MBC1] W-INCPT :: Addr= %04X Write=%02X BANK-High2=%02X\n", addr, write_val, cart->state.mbc1.bank_high2);
+        return;
+    }
+    if (addr < 0x8000) {    // 6000-7FFF:: banking mode select
+        cart->state.mbc1.banking_mode = write_val & 0x01;
+        logging_cart_mbc_log("[MBC1] W-INCPT :: Addr= %04X Write=%02X BankingMode Switch=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
+        return;
+    }
+    // Didn't land anywhere correct. Return.
+    return;
+}
+
+static inline uint32_t mbc1_rom_bank_0(const Cartridge *cart) {
+    if (cart->state.mbc1.banking_mode == 0) {
+        return 0;
+    }
+    uint32_t num_banks = (uint32_t)(cart->config.rom_size / 0x4000);
+    if (num_banks == 0) return 0;
+
+    uint32_t bank = ((uint32_t)(cart->state.mbc1.bank_high2 & 0x03) << 5);
+    bank %= num_banks;
+    return bank;
+}
+
+static inline uint32_t mbc1_rom_bank_x(const Cartridge *cart) {
+    uint32_t bank = ((uint32_t)(cart->state.mbc1.bank_high2 & 0x03) << 5) |
+                    (uint32_t)(cart->state.mbc1.bank_low5 & 0x1F);
+
+    // "forbidden" bank numbers where lower 5 bits are 0 -> bump by 1
+    if ((bank & 0x1F) == 0) {
+        bank += 1;
+    }
+
+    // clamp by ROM size (number of 16KB banks)
+    uint32_t num_banks = (uint32_t)(cart->config.rom_size / 0x4000);
+    if (num_banks == 0) return 0;
+
+    bank %= num_banks;
+    return bank;
 }
 
 uint8_t mbc1_read(Cartridge *cart, uint16_t addr) {
+    if (addr < 0x4000) {
+        uint32_t bank = mbc1_rom_bank_0(cart);
+        uint32_t offset = bank * 0x4000u + (uint32_t)addr;
+        if (offset < cart->config.rom_size) return cart->storage.rom_data[offset];
+        return 0xFF;
+    }
+
+    if (addr < 0x8000) {
+        uint32_t bank = mbc1_rom_bank_x(cart);
+        uint32_t offset = bank * 0x4000u + (uint32_t)(addr - 0x4000);
+        if (offset < cart->config.rom_size) return cart->storage.rom_data[offset];
+        return 0xFF;
+    }
     return 0xFF;
 }
 
-void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t val) {
+void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
+    // A000-BFFF: external RAM write (if present + enabled)
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (!cart->state.mbc1.ram_enabled) return;
+        if (cart->storage.ram_data == NULL || cart->config.ram_size == 0) return;
 
+        uint32_t ram_bank = 0;
+        if (cart->state.mbc1.banking_mode == 1) {
+            ram_bank = (uint32_t)(cart->state.mbc1.bank_high2 & 0x03);
+            logging_cart_mbc_log("[MBC1] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
+        }
+
+        uint32_t offset = ram_bank * 0x2000u + (uint32_t)(addr - 0xA000);
+        if (offset < cart->config.ram_size) cart->storage.ram_data[offset] = write_val;
+        return;
+    }
 }
 
 uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
+    if (addr >= 0xA000 && addr <= 0xBFFF) {
+        if (!cart->state.mbc1.ram_enabled) return 0xFF;
+        if (cart->storage.ram_data == NULL || cart->config.ram_size == 0) return 0xFF;
+
+        uint32_t ram_bank = 0;
+        if (cart->state.mbc1.banking_mode == 1) {
+            ram_bank = (uint32_t)(cart->state.mbc1.bank_high2 & 0x03);
+        }
+
+        uint32_t offset = ram_bank * 0x2000u + (uint32_t)(addr - 0xA000);
+        if (offset < cart->config.ram_size) return cart->storage.ram_data[offset];
+        return 0xFF;
+    }
     return 0xFF;
 }
 
@@ -93,6 +257,15 @@ const Operations mbc1_ops = {
     .read_ext = mbc1_read_ext,
 };
 
+// Setup the ram data
+void mbc1_init_ram(Cartridge *cart) {
+    size_t ram_size = cart->config.ram_size;    // MBC1 RAM size should be: 32kb total. (8kb * 4 banks);
+
+    // Initialize Cartridge RAM data, setting all values to 0.
+    uint8_t *ram_data = calloc(ram_size, sizeof(uint8_t));
+    cart->storage.ram_data = ram_data;
+}
+
 int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc1_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC1_DECODE] Error Decoding MBC\n");
@@ -100,8 +273,14 @@ int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     }
 
     mbc1_state_init(cart);
+
+    // Ram init:
+    mbc1_init_ram(cart);
+
     // Bind mbc1 config:
     cart->ops = mbc1_ops;
+
+    printf("Finished MBC1 setup/ init\n");
 
     return 0;
 }
@@ -157,6 +336,18 @@ void mbc2_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 }
 
 uint8_t mbc2_read(Cartridge *cart, uint16_t addr) {
+    if (addr <= 0x3FFF) {   // Fixed-Bank
+        // printf(":MBC1: Read Matches ROM Bank 00 -> Fixed Bank Val: 0x%02X\n", cart->cartstorage.rom_data[addr]);
+        return cart->storage.rom_data[addr];
+    }
+    if (addr <= 0x7FFF) {   // Switch-Bank
+        uint8_t bank = cart->state.mbc2.current_rom_bank;
+        uint32_t rom_offset =
+        (bank * 0x4000) + (addr - 0x4000);
+        // printf(":MBC3: Read Matches ROM Bank: 0x%02X -> Switch-Bank Val: 0x%02X\n", bank, cart->cartstorage.rom_data[rom_offset]);
+
+        return cart->storage.rom_data[rom_offset];
+    }
     return 0xFF;
 }
 
@@ -364,7 +555,8 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         }
 
         return;
-    }}
+    }
+}
 
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
     if (addr <= 0x3FFF) {   // Fixed-Bank
@@ -595,7 +787,7 @@ int mbc_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     switch (type_code) {
         case 0x00:
             cart->config.mbc_type = MBC_NONE;
-            return mbc_none_setup(gb, cart);
+            return mbc_none_setup(gb, cart, type_code);
         case 0x01 ... 0x03:
             cart->config.mbc_type = MBC1;
             return mbc1_setup(gb, cart, type_code);

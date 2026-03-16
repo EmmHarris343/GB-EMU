@@ -18,12 +18,18 @@ typedef enum {
 
 
 // The MBC States:
+// MBC None
+typedef struct {
+    uint8_t ram_enabled;    // Not really sure if this is needed but... Oh well.
+} MBC_NONE_state;
 // MBC1 state:
 typedef struct {
     uint8_t ram_enabled;
+    uint8_t bank_low5;
+    uint8_t bank_high2;
+    uint8_t banking_mode;
     uint16_t current_rom_bank;
     uint8_t current_ram_bank;
-    uint8_t mode;
 } MBC1_state;
 
 // MBC2 state:
@@ -53,6 +59,7 @@ typedef struct {
 
 
 typedef struct {
+    MBC_NONE_state mbc_none;
     MBC1_state mbc1;
     MBC2_state mbc2;
     MBC3_state mbc3;

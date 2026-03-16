@@ -196,6 +196,20 @@ int load_headers(const char *filename) {
     fread(full_header, 1, HEADER_SIZE, rom_file);
     fclose(rom_file);
 
+    // TO ADD LATER:
+    // 0143 - CGB Flag (Tells wether the ROM supports DMB or GBC only.) - Very helpful to know!
+    // 80h - Game supports CGB functions, but works on old gameboys also
+    // C0h - Game works on CGB onl
+
+    // 0146 - SGB Flag
+    // 00h = No SGB functions (Normal Gameboy or CGB only game)
+    // 03h = Game supports SGB functions (Super GameBoy)
+    // 146B = 014B - Old Licensee Code ... Can be used to see if it will support SGB (Super Gameboy).
+    // SGB only supports $33
+    printf("Check if game has SGB Flag... ====>%02X\n", full_header[0x46]);
+
+
+    headers.cart_type_code = full_header[0x47];
     // NOTICE: Header Addresses are usually like "0x0134", how I read the header file, means all those codes have 0x100 removed already.
     headers.cart_type_code = full_header[0x47];
     headers.rom_size_code = full_header[0x48];           // Rom

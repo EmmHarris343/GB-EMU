@@ -15,6 +15,7 @@ const char* optype_names[] = {
     "UDEF", "NOP", "ALU", "LD", "LD16", "LDH", "LDSP", "JUMP", "CALL", "POP", "PUSH", "RL_A", "RR_A", "RET", "RST", "MISC", "CB", "UNKNOWN"
 };
 
+// DMG-01
 const CPU cpu_post_bios_state = {
     .reg.AF = 0x01B0,
     .reg.BC = 0x0013,
@@ -30,7 +31,8 @@ const CPU cpu_post_bios_state = {
     .state.panic = 0      // Mine.... if this is set. It means instruction likely wasn't made yet. IE Hard abort
 };
 
-const CPU cpu_reg_simple_tstate = {
+// Was meant for the GBC, but it's a little more complicated based on headers of ROM.
+const CPU cpu_reg_simple_gbc_tstate = {
     .reg.AF = 0x0100,     // B0 = 1011 (IE Z set, N not set, H set, C set)
     .reg.BC = 0x021B,
     .reg.DE = 0x032D,
@@ -362,7 +364,7 @@ uint32_t cpu_step(GB *gb) {
     else if (gb->cpu.state.halt) {    // No interrupt processed, BUT Halt set. Continue in 'low-power' mode.
         gb->cpu.cycle = 4;
 
-        printf("Burning Halt cycles...\n");
+        //printf("Burning Halt cycles...\n");
         // This will continue to burn cycles. Until the interrupt has been processed.
         // No instructions will be loaded or executed in this state!
 

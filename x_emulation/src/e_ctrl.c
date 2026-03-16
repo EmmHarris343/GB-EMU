@@ -102,7 +102,16 @@ int start_emulation() {
     GB gb;
 
     // Which rom file to use.
-    const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
+
+    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
+
+    const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
+    //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
     //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
 

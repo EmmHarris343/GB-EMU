@@ -171,6 +171,11 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
     uint32_t frame_cycles = 0;
 
+    if (gb->cpu.state.stop){ // CPU does nothing until interrupt
+        gb->cpu.cycle += 4;
+        return;
+    }
+
     while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
         uint32_t cycles = gb_step(gb);
         frame_cycles += cycles;

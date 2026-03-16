@@ -109,8 +109,12 @@ static void NOP(GB *gb, CPU *cpu, instruction_T instruction) {                  
 }
 // STOP
 static void STOP(GB *gb, CPU *cpu, instruction_T instruction) {      // Unsure, might be like Pause.
-    printf("STOP Called, not setup PANIC HALT\n");
-    cpu->state.panic = 1;
+    printf("STOP Called.. Waiting until Interrupt.\n");
+    cpu->reg.PC += 1;
+    cpu->state.stop = 1;
+    cpu->cycle = 4;
+
+    //gb->panic = 1;
 }
 // DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
 static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
@@ -118,13 +122,13 @@ static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
     // DAA => Decimal Adjust Accumulator.
     printf("DAA. Called, not setup.\n");
     printf("%sPANIC HALTING%s\n", KRED, KNRM);
-    cpu->state.panic = 1;
+    gb->panic = 1;
 }
 // BLANK
 static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do nothing, basically NOP, but any call to this should cause fault.
     // DO NOTHING - Not even any command.
     // This shouldn't Even be called.
-    printf("%sBLANK Called, This should never be called. Panic Halt.%s\n", KRED, KNRM);
+    printf("%sBLANK Called, This should never be called. Panic.%s\n", KRED, KNRM);
     gb->panic = 1;
 }
 
@@ -1475,6 +1479,8 @@ static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs
     uint8_t op_index = (instruction.opcode >> 3) & 0x07;
     uint16_t jump_addr = vec_table[op_index];
 
+    cpu->reg.PC += 1; // RST_vec is 1 byte, advance it before storing.
+
     uint16_t pc_loc = cpu->reg.PC;
 
     uint8_t split_addr_LOW = pc_loc & 0xFF;
@@ -1485,6 +1491,7 @@ static void RST_vec(GB *gb, CPU *cpu, instruction_T instruction) {       // Runs
     external_write(gb, cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
     external_write(gb, cpu->reg.SP, split_addr_LOW);
+
 
     cpu->reg.PC = jump_addr;
     cpu->cycle = 16;
