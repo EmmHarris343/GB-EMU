@@ -151,10 +151,10 @@ static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
     }
 
     if (!old_match && new_match) {
-        printf("[PPU] LYC match rising edge: LY=%02X LYC=%02X STAT=%02X\n",
-            ppu->ly, ppu->lyc, ppu->stat);
+        // printf("[PPU] LYC match rising edge: LY=%02X LYC=%02X STAT=%02X\n",
+        //     ppu->ly, ppu->lyc, ppu->stat);
         if (ppu->stat & (1u << 6)) {
-            printf("[PPU] Request LCD STAT from LYC match\n");
+            // printf("[PPU] Request LCD STAT from LYC match\n");
             gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
         }
     }

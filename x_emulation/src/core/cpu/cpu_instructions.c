@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <stdbool.h> // Remove later
+
 #include "../gb.h"
 #include "cpu.h"
 #include "cpu_instructions.h"
@@ -129,7 +131,9 @@ static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
 static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do nothing, basically NOP, but any call to this should cause fault.
     // DO NOTHING - Not even any command.
     // This shouldn't Even be called.
+
     printf("%sBLANK Called, This should never be called. Panic.%s\n", KRED, KNRM);
+    printf("FATAL ERROR: PC=%04X, OPCODE=[%02X]\n", cpu->reg.PC, instruction.opcode);
     gb->panic = 1;
 }
 
@@ -418,7 +422,7 @@ static void LD_p_a16_SP(GB *gb, CPU *cpu, instruction_T instruction) {
     external_write(gb, n16_addr, SP_LOW);
     external_write(gb, n16_addr + 1, SP_HIGH);
 
-    cpu->reg.PC += 1;
+    cpu->reg.PC += 3;
     cpu->cycle = 20;
 
     // Bytes = 3
@@ -1179,12 +1183,14 @@ static void DEC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
 }
 
 static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop register AF from the stack.
-    uint8_t low_byte = external_read(gb, cpu->reg.SP);
-    cpu->reg.SP ++;
-    uint8_t high_byte = external_read(gb, cpu->reg.SP);
-    cpu->reg.SP ++;
+    uint8_t low = external_read(gb, cpu->reg.SP);
+    cpu->reg.SP++;
 
-    cpu->reg.AF = (high_byte << 8) | (low_byte & 0xF0);     // Being safe, as the 0-3 bits are 0, and the flag is only 4-7. Previous code might work, but might not also.
+    uint8_t high = external_read(gb, cpu->reg.SP);
+    cpu->reg.SP++;
+
+    cpu->reg.A = high;
+    cpu->reg.F = low & 0xF0;
 
     cpu->reg.PC += 1;
     cpu->cycle = 12;
@@ -1304,15 +1310,17 @@ static void CALL_a16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
     // The [remember to come back here] is done by stack pointers / RET (RETurn)
 
     // The RET will later "Pop two bytes from the stack", then jump back to the saved PC.
-    uint16_t pc_loc = (cpu->reg.PC + 3);
-
-    uint8_t split_addr_LOW = pc_loc & 0xFF;
-    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
 
     // YES Low byte First WHEN it's incrementing.. / reading.
     // BUT, because it's Decrementing the SP, High Byte first.
 
     // Push return address onto stack (high byte first)
+    uint16_t pc_loc = (cpu->reg.PC + 3);
+
+    uint8_t split_addr_LOW = pc_loc & 0xFF;
+    uint8_t split_addr_HIGH = (pc_loc >> 8) & 0xFF;
+
+
     cpu->reg.SP --;
     external_write(gb, cpu->reg.SP, split_addr_HIGH);
     cpu->reg.SP --;
@@ -1357,7 +1365,7 @@ static void CALL_cc_a16(GB *gb, CPU *cpu, instruction_T instruction) {   // Call
             // Z flag IS set.
             if ((cpu->reg.F & FLAG_Z)) proceed = 1;
             break;
-        case 0xCD:
+        case 0xDC:
             // C flag IS set.
             if ((cpu->reg.F & FLAG_C)) proceed = 1;
             break;
@@ -1398,7 +1406,7 @@ static void RET(GB *gb, CPU *cpu, instruction_T instruction) {           // RETu
     cpu->reg.SP ++;
 
     cpu->reg.PC = cnvrt_lil_endian(low_byte, high_byte);
-    cpu->cycle = 20;
+    cpu->cycle = 16;
 
     // m-Cycles = 4
     // t-cycles = 20
@@ -2635,28 +2643,45 @@ uint8_t cpu_interrupt_handling(GB *gb) {
     return 0;
 }
 
+static CpuSnapshot cpu_snapshot(GB *gb) {
+    CpuSnapshot snap;
+
+    snap.a = gb->cpu.reg.A;
+    snap.f = gb->cpu.reg.F;
+    snap.b = gb->cpu.reg.B;
+    snap.c = gb->cpu.reg.C;
+    snap.d = gb->cpu.reg.D;
+    snap.e = gb->cpu.reg.E;
+    snap.h = gb->cpu.reg.H;
+    snap.l = gb->cpu.reg.L;
+    snap.pc = gb->cpu.reg.PC;
+    snap.sp = gb->cpu.reg.SP;
+
+    // uint16_t hl = gb->cpu.reg.HL;
+    // snap.mem_hl = external_read(gb, hl);
+    snap.mem_sp = external_read(gb, snap.sp);
+    snap.mem_sp_plus_1 = external_read(gb, (uint16_t)(snap.sp + 1));
+
+    return snap;
+}
+
 
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
-    // Remove all the comments...
+    CpuSnapshot before = cpu_snapshot(gb);
+    // before = cpu_snapshot(gb);
 
-
-    // printf("\n%sExecute CPU Instruction..%s\n",KCYN, KNRM);
-    // printf("[PC]:0x%04X\n[STEP]:%lu \n", gb->cpu.reg.PC, gb->step_count);
-    // printf("Instruction: OPCODE=%02X, OP1=0x%02X, OP2=0x%02X\n\n", instruction.opcode, instruction.operand1, instruction.operand2);
 
     opcodes[instruction.opcode](gb, cpu, instruction);
+
+    //verify_jr(before, &gb->cpu, instruction);
+    //verify_control_flow(gb, before, cpu, instruction);
+
 
     //printf("[Cycles]:%u - Set by instruction -\n", gb->cpu.cycle);
     if (gb->cpu.cycle == 0) {   // If the instruction didn't set the cycle. Default back to tablelist.
         gb->cpu.cycle = opcode_cycles[instruction.opcode];
     }
 
-    // Save to cpu_trace_log ==> Step/PC/OP/ Regs, etc
-    //log_cpu_trace(gb);
-
-    //printf("[CYCLES]:%u\n", gb->cpu.cycle);
-
-    //printf("\n%sExecute Instruction Block Finished.%s\n", KYEL, KNRM);
     return 0;
 }
 

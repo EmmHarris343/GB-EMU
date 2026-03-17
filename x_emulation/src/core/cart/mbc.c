@@ -234,15 +234,26 @@ void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
         }
 
         uint32_t offset = ram_bank * 0x2000u + (uint32_t)(addr - 0xA000);
-        if (offset < cart->state.mbc1.calc_ram_size) cart->storage.ram_data[offset] = write_val;
+        if (offset < cart->state.mbc1.calc_ram_size) {
+            cart->storage.ram_data[offset] = write_val;
+            trace_general_write((0x00), addr, write_val, 4);
+        }
         return;
     }
 }
 
 uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
     if (addr >= 0xA000 && addr <= 0xBFFF) {
-        if (!cart->state.mbc1.ram_enabled) return 0xFF;
-        if (cart->storage.ram_data == NULL || cart->state.mbc1.calc_ram_size == 0) return 0xFF;
+        if (!cart->state.mbc1.ram_enabled) {
+            //printf("Ram isn't enabled, return 0xFF\n");
+            trace_general_read((0x00), addr, (0x00), 4);
+            return 0xFF;
+        }
+        if (cart->storage.ram_data == NULL || cart->state.mbc1.calc_ram_size == 0) {
+            //printf("Ram data null, or ram_size is 0. Return 0xFF\n");
+            trace_general_read((0x00), addr, (0x00), 4);
+            return 0xFF;
+        }
 
         uint32_t ram_bank = 0;
         if (cart->state.mbc1.banking_mode == 1) {
@@ -250,7 +261,11 @@ uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
         }
 
         uint32_t offset = ram_bank * 0x2000u + (uint32_t)(addr - 0xA000);
-        if (offset < cart->state.mbc1.calc_ram_size) return cart->storage.ram_data[offset];
+        if (offset < cart->state.mbc1.calc_ram_size) {
+            return cart->storage.ram_data[offset];
+        }
+        printf("Ramsize/ offset is out of range return 0xFF.\n");
+        trace_general_read((0x00), addr, (0x00), 4);
         return 0xFF;
     }
     return 0xFF;

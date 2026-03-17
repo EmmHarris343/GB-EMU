@@ -130,7 +130,23 @@ void cpu_reset(GB *gb, CPU *cpu);
 // POST run report:
 void print_instruction_counts();
 
+// DEBUG snapshot states:
+typedef struct {
+    uint8_t a;
+    uint8_t f;
+    uint8_t b;
+    uint8_t c;
+    uint8_t d;
+    uint8_t e;
+    uint8_t h;
+    uint8_t l;
+    uint16_t pc;
+    uint16_t sp;
+    uint8_t mem_hl;
 
+    uint8_t mem_sp;
+    uint8_t mem_sp_plus_1;
+} CpuSnapshot;
 
 
 

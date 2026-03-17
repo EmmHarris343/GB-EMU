@@ -102,12 +102,18 @@ int start_emulation() {
     GB gb;
 
     // Which rom file to use.
-    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
-
+    //const char *rom_file = "../../rom/cpu-individual/01-special.gb"; // MBC1
     //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // MBC1
     //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb"; // MBC1
     //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb"; // MBC1
+    //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // MBC1
+
 
     const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
     //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
