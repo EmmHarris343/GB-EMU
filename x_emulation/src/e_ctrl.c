@@ -121,13 +121,15 @@ int start_emulation() {
     // Technically the "running" thingy:
     int running;
 
+    SDL_PixelFormat *gb_pixel_format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
+
     video_init_source(&gb, &video_source);
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("Failure during the SDL_init.\n");
         return 1;
     }
-    if (basic_viewer_init(&viewer, video_source, DEBUG_VIEW_BG_MAP, 2) != 0) {
+    if (basic_viewer_init(&viewer, video_source, DEBUG_VIEW_BG_MAP, 2, *gb_pixel_format) != 0) {
         SDL_Quit();
         printf("Failure during basic_viewer init.\n");
         return 1;
@@ -152,6 +154,8 @@ int start_emulation() {
 
     uint64_t next_frame_time_ns = time_now_ns();
 
+
+
     while (running) {
         SDL_Event event;
         if (gb.panic) {
@@ -170,8 +174,8 @@ int start_emulation() {
         gb_step_frame(&gb, next_frame_time_ns);
 
         //build_test_bg_pattern(&gb.ppu, gb.ppu.vram);
-        //build_test_pattern(&gb.ppu);
-        build_debug_test_bg(&gb.ppu, gb.ppu.vram);
+        //build_test_pattern(&gb.ppu, *gb_pixel_format);
+        build_debug_test_bg(&gb.ppu, gb.ppu.vram, gb_pixel_format);
 
         basic_viewer_present(&viewer);
 

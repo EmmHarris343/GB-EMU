@@ -55,7 +55,7 @@ typedef struct {
 void mmu_init();
 uint8_t mmu_read(GB *gb, uint16_t addr);
 void mmu_write(GB *gb, uint16_t addr, uint8_t val);
-void mmu_debugger(uint16_t addr);
+void mmu_debugger(GB *gb, uint16_t addr) ;
 
 
 #endif

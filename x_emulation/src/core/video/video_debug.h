@@ -1,9 +1,12 @@
 #ifndef VIDEO_DEBUG_H
 #define VIDEO_DEBUG_H
 
+#include <SDL2/SDL_pixels.h>
 #include <stdint.h>
 
 typedef struct ppu_s PPU;
+
+struct SDL_PixelFormat;
 
 #define GB_LCD_WIDTH   160
 #define GB_LCD_HEIGHT  144
@@ -33,8 +36,8 @@ struct DebugVideoSource {
     DebugVideoOps ops;
 };
 
-void build_test_pattern(PPU *ppu);
+void build_test_pattern(PPU *ppu, SDL_PixelFormat *gb_pixel_format);
 
-void build_debug_test_bg(PPU *ppu, const uint8_t *vram);
+void build_debug_test_bg(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format);
 
 #endif

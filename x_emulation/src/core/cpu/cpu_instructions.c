@@ -65,11 +65,12 @@ void tggle_cpu_flag(CPU* cpu, uint8_t flag_hex) {
 static void HALT(GB *gb, CPU *cpu, instruction_T instruction) {     // Halt - Set cpu halt flag. (will not stop emulation)
     printf("HALT Called. Process IME, or interrupt!\n");
     cpu->state.halt = 1;
+    cpu->reg.PC += 1;   // Halt must advance the PC otherwise it will keep returning to this old address.
 }
 static void DI(GB *gb, CPU *cpu, instruction_T instruction) {        // DI - Disables interrupt Handling (Flag set to := 0)
     //printf("DI Called.                  ; IME := 0 (Immediately clear interrupt flag => 0 - disabled (no delay))\n");
     cpu->state.IME = 0;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // t-cycles = 4
@@ -87,7 +88,7 @@ static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Ena
     // TL;DR Why? The GB gives an one-additional-instruction grace period before the interupt is executed.
 
     cpu->state.IME_delay = 2;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // printf("IE value? %02X\n", gb->interrupts.IE);
@@ -105,7 +106,7 @@ static void EI(GB *gb, CPU *cpu, instruction_T instruction) {        // EI - Ena
 // NOP - No operation
 static void NOP(GB *gb, CPU *cpu, instruction_T instruction) {                    // Placeholder..
     // DO NOTHING
-    cpu->reg.PC ++; // Do nothing, just advance the PC
+    cpu->reg.PC += 1; // Do nothing, just advance the PC
 }
 // STOP
 static void STOP(GB *gb, CPU *cpu, instruction_T instruction) {      // Unsure, might be like Pause.
@@ -136,7 +137,7 @@ static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do noth
 static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Complement Carry Flag
     // If it's set, clear it, otherwise set it.
     (cpu->reg.F & FLAG_C) ? clear_cpu_flag(cpu, FLAG_C) : set_cpu_flag(cpu, FLAG_C);    // Invert the C flag.
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // bytes = 1
@@ -152,7 +153,7 @@ static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Comp
 }
 static void SCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Set Carry Flag
     set_cpu_flag(cpu, FLAG_C);
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -287,7 +288,7 @@ static void LD_p_HLI_A(GB *gb, CPU *cpu, instruction_T instruction) {
 
     // Increment HL & the PC By one.
     cpu->reg.HL ++;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -298,7 +299,7 @@ static void LD_p_HLD_A(GB *gb, CPU *cpu, instruction_T instruction) {
     external_write(gb, cpu->reg.HL, a_val);
 
     cpu->reg.HL --;
-    cpu->reg.PC --;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -310,7 +311,7 @@ static void LD_A_p_HLI(GB *gb, CPU *cpu, instruction_T instruction) {
     cpu->reg.A = hl_val;
 
     cpu->reg.HL ++;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
     // Bytes = 1
     // t-cycles = 8
@@ -321,7 +322,7 @@ static void LD_A_p_HLD(GB *gb, CPU *cpu, instruction_T instruction) {
     cpu->reg.A = hl_val;
 
     cpu->reg.HL --;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -359,7 +360,7 @@ static void LDH_p_C_A(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH 
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
     external_write(gb, combined_addr, cpu->reg.A);
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
     cpu->cycle = 8;
 
@@ -369,7 +370,7 @@ static void LDH_p_C_A(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH 
 static void LDH_A_p_C(GB *gb, CPU *cpu, instruction_T instruction) {     // LDH => Load (High Range). 0xFF the high bit, is fixed.
     uint16_t combined_addr = 0xFF00 + cpu->reg.C;
     cpu->reg.A = external_read(gb, combined_addr);
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -417,7 +418,7 @@ static void LD_p_a16_SP(GB *gb, CPU *cpu, instruction_T instruction) {
     external_write(gb, n16_addr, SP_LOW);
     external_write(gb, n16_addr + 1, SP_HIGH);
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 20;
 
     // Bytes = 3
@@ -465,7 +466,7 @@ static void LD_SP_HL(GB *gb, CPU *cpu, instruction_T instruction) {
     /// TODO: double check if this functinality is right..
 
     cpu->reg.SP = cpu->reg.HL;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
 
@@ -668,7 +669,7 @@ static void ADD_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Add 
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -694,7 +695,7 @@ static void ADD_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Add 
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction)
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++ ;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -742,7 +743,7 @@ static void ADC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -762,7 +763,7 @@ static void ADC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
     clear_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always cleared on ADC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -809,7 +810,7 @@ static void SUB_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -837,7 +838,7 @@ static void SUB_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -889,7 +890,7 @@ static void SBC_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {     // Subtr
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // bytes = 1
@@ -921,7 +922,7 @@ static void SBC_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {   // Subtr
     set_cpu_flag(cpu, FLAG_N);  // N Flag (Subtraction) Always SET on SUB/SBC
 
     cpu->reg.A = final_8bit;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // bytes = 1
@@ -970,7 +971,7 @@ static void INC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Incremen
     set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)
 
     *reg_table[op_index] = r8_val;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -993,7 +994,7 @@ static void DEC_r8(GB *gb, CPU *cpu, instruction_T instruction) {    // Decremen
     set_cpu_flag(cpu, FLAG_N);  // N Flag Always Set (SUB Flag)
 
     *reg_table[op_index] = r8_val;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
     // Bytes = 1
     // t-cycles = 4
@@ -1013,7 +1014,7 @@ static void INC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {  // Incremen
 
     external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 12;
 
     // Bytes = 1
@@ -1031,7 +1032,7 @@ static void DEC_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {      // Decr
 
     external_write(gb, cpu->reg.HL, hl_val);    // This writes to ram, the updated value pointed by [HL]
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 12;
 
     // Bytes = 1
@@ -1071,7 +1072,7 @@ static void CP_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // ComP
     ((cpu->reg.A & 0x0F) < (hl_val & 0x0F)) ? set_cpu_flag(cpu, FLAG_H) : clear_cpu_flag(cpu, FLAG_H);  // H Flag
     (cpu->reg.A < hl_val) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);                    // C Flag
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // bytes = 2
@@ -1136,7 +1137,7 @@ static void ADD_HL_r16(GB *gb, CPU *cpu, instruction_T instruction) {
         ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C); // C Flag
 
     cpu->reg.HL = final_result;
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -1152,7 +1153,7 @@ static void INC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
         case 0x33: cpu->reg.SP ++; break;       // Notice this is technically STACK MANIPULATION. INC_SP
     }
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -1169,7 +1170,7 @@ static void DEC_r16(GB *gb, CPU *cpu, instruction_T instruction) {
         case 0x3B: cpu->reg.SP --; break;       // Notice this is technically STACK MANIPULATION. DEC_SP
     }
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -1185,7 +1186,7 @@ static void POP_AF(GB *gb, CPU *cpu, instruction_T instruction) {        // Pop 
 
     cpu->reg.AF = (high_byte << 8) | (low_byte & 0xF0);     // Being safe, as the 0-3 bits are 0, and the flag is only 4-7. Previous code might work, but might not also.
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 12;
 
     /*
@@ -1221,7 +1222,7 @@ static void POP_r16(GB *gb, CPU *cpu, instruction_T instruction) {       // Pop 
     // Depending on the OPCODE called, will set the specific Register to the Opcode.
     *reg_table[op_index] = cnvrt_lil_endian(low_byte, high_byte);
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 12;
 
     /*
@@ -1248,7 +1249,7 @@ static void PUSH_AF(GB *gb, CPU *cpu, instruction_T instruction) {       // Push
     cpu->reg.SP --;
     external_write(gb, cpu->reg.SP, cpu->reg.F);
 
-    cpu->reg.PC ++;     // PUSH_AF is only 1 byte.
+    cpu->reg.PC += 1;     // PUSH_AF is only 1 byte.
     cpu->cycle = 16;
 
     // Bytes = 1
@@ -1257,7 +1258,7 @@ static void PUSH_AF(GB *gb, CPU *cpu, instruction_T instruction) {       // Push
 }
 
 
-static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push register r16 into the Stack.
+static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Pushes register r16 into the Stack.
     // Does SLIGHTLY Different logic from AF. -- Why this is under a different function.
 
     /// This decrements SP, pushes value in B, D, H (High Register) into first SP location. Decrements SP then pushes the Low Register into the second SP location.
@@ -1285,7 +1286,7 @@ static void PUSH_r16(GB *gb, CPU *cpu, instruction_T instruction) {      // Push
             break;
     }
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     // Bytes = 1
     // t-cyles = 16
     // FLAGS: None affected
@@ -1438,7 +1439,7 @@ static void RET_cc(GB *gb, CPU *cpu, instruction_T instruction) {        // RETu
         cpu->cycle += 12; // +12 taken cost (+12 t-cycle. 3 m-cycles).
     }
     else {
-        cpu->reg.PC ++;       // Skip over RET instruction (1 Byte)
+        cpu->reg.PC += 1;       // Skip over RET instruction (1 Byte)
     }
 
     // M-Cycles: 5 taken / 2 untaken
@@ -1531,7 +1532,7 @@ static void AND_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     set_cpu_flag(cpu, FLAG_H);    // Always set
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared.
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -1555,7 +1556,7 @@ static void AND_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set 
     set_cpu_flag(cpu, FLAG_H);    // Always set
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
     // Bytes = 1
     // t-cycles = 8
@@ -1598,7 +1599,7 @@ static void OR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {       // Set 
     clear_cpu_flag(cpu, FLAG_H);  // Always cleared
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -1615,7 +1616,7 @@ static void OR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {     // Set 
     clear_cpu_flag(cpu, FLAG_H);  // Always cleared
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -1658,7 +1659,7 @@ static void XOR_A_r8(GB *gb, CPU *cpu, instruction_T instruction) {      // Set 
     clear_cpu_flag(cpu, FLAG_H);  // Always cleared
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
 
     // Bytes = 1
@@ -1675,7 +1676,7 @@ static void XOR_A_p_HL(GB *gb, CPU *cpu, instruction_T instruction) {    // Set 
     clear_cpu_flag(cpu, FLAG_H);  // Always cleared
     clear_cpu_flag(cpu, FLAG_C);  // Always cleared
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 8;
 
     // Bytes = 1
@@ -1706,7 +1707,7 @@ static void CPL(GB *gb, CPU *cpu, instruction_T instruction) {           // ComP
     set_cpu_flag(cpu, FLAG_N);    // N Flag Set (Subtraction Flag)
     set_cpu_flag(cpu, FLAG_H);    // H Flag Set (Half-Carry Flag)         -- This isn't really true, but mimics what original GB hardware did.
 
-    cpu->reg.PC ++;
+    cpu->reg.PC += 1;
     cpu->cycle = 4;
     // Bytes = 1
     // t-cycles = 4
@@ -2571,30 +2572,42 @@ static void cpu_service_interrupt(GB *gb, uint8_t interrupt_bit, uint16_t vector
     // Clear Interrupt Flag (Request flag)
     gb->interrupts.IF &= (uint8_t)~(1 << interrupt_bit);
 
-    // printf("INT StackPush PC=%04X SP(before)=%04X\n", gb->cpu.reg.PC, gb->cpu.reg.SP);
-
     // Push Current PC into SP stack.
     interrupt_stack_push(gb, &gb->cpu, gb->cpu.reg.PC);
 
-    // printf("INT StackPush PC=%04X SP(AFTER)=%04X\n", gb->cpu.reg.PC, gb->cpu.reg.SP);
-
-    // Jump to the Interrupt Handler location (or vector);
-    printf("Finished processing service interrupt. Jumping to vector: 0x%04X\n", vector);
     gb->cpu.reg.PC = vector;
 }
 
 uint8_t cpu_interrupt_handling(GB *gb) {
-    uint8_t pending_interrupt = gb->interrupts.IE & gb->interrupts.IF;
+    /*
+    Interrupt handling quirks:
+    Check if a bit matches in IE and IF.
+        If there is NO pending interrupts:
+            => Just return, nothing to do.
+        If CPU is halted & there is NO pending interrupts:
+            => Return. STAY HALTED, Burn CPU Cycles.
+        If CPU is Halted & there IS pending interrupts:
+            => Clear Halt. (Regardless clear halt)
+            Case:
+                IME = 0 => Return
+                IME = 1 => Process interrupt.
+    */
 
+    // BOTH IE and IF must have at least 1 bit that match to qualify as a 'pending interrupt'.
+    uint8_t pending_interrupt = (gb->interrupts.IE & gb->interrupts.IF) & 0x1F;
 
-    if (pending_interrupt == 0) { // If no intterupt to process, return.
+    if (pending_interrupt == 0) {
+        // There is no pending interrupts. If halted, do not clear just return.
         return 0;
     }
 
-    // There is an interrupt to process:
-    if (!gb->cpu.state.IME) {  // IME is 0, not allowed to process. Return.
-        //printf("IME not set.. Return to CPU_Step.\n");
-        return 0;
+    // === There is a Pending Interrupt ===
+
+    if (gb->cpu.state.halt) {   // Clear the halt state, as the 'pending interrupt'
+        gb->cpu.state.halt = 0;
+    }
+    if (!gb->cpu.state.IME) { // Process Interrupt only if IME is set (IME = 1).
+        return 0; // IME is 0, just return.
     }
 
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4

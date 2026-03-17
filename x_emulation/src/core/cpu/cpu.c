@@ -340,8 +340,7 @@ int cpu_init(GB *gb) {
     return 0;
 }
 
-static void ime_delay(GB *gb)
-{
+static void ime_delay(GB *gb) {
     if (gb->cpu.state.IME_delay > 0) {
         gb->cpu.state.IME_delay--;
 
@@ -357,11 +356,12 @@ static void ime_delay(GB *gb)
 uint32_t cpu_step(GB *gb) {
     gb->cpu.cycle = 0;  // Reset the t-cycle back to 0 on each Step.
 
-    if (cpu_interrupt_handling(gb)) { // Processed interrupt. Return 20 t-cycles
+    if (cpu_interrupt_handling(gb)) {
+        // Processed an Interrupt. Don't Return 20 t-cycles
         gb->cpu.cycle = 20;
         return gb->cpu.cycle;
     }
-    else if (gb->cpu.state.halt) {    // No interrupt processed, BUT Halt set. Continue in 'low-power' mode.
+    else if (gb->cpu.state.halt) {
         gb->cpu.cycle = 4;
 
         //printf("Burning Halt cycles...\n");

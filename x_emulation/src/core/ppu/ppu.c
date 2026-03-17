@@ -151,7 +151,10 @@ static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
     }
 
     if (!old_match && new_match) {
+        printf("[PPU] LYC match rising edge: LY=%02X LYC=%02X STAT=%02X\n",
+            ppu->ly, ppu->lyc, ppu->stat);
         if (ppu->stat & (1u << 6)) {
+            printf("[PPU] Request LCD STAT from LYC match\n");
             gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
         }
     }
@@ -171,8 +174,11 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
     // & 0x03 -> Filters only the first 2 bits.
     ppu->stat = (ppu->stat & 0xFC) | (mode & 0x03);
 
-    //printf("PPU: stat=%02X, & mode=%02X\n", ppu->stat, mode);
-    // This usually prints: stat=80 something. mode=02 or 03. sometimes 0
+    /* STAT interrupt enable:
+        bit 3 = HBLANK
+        bit 4 = VBLANK
+        bit 5 = OAM
+    */
 
     switch (mode) {
         case PPU_MODE_HBLANK:   // Mode 0; int select
@@ -183,7 +189,7 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
         case PPU_MODE_VBLANK:   // Mode 1; int select
             gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);   // always request the interrupt
             if (ppu->stat & (1 << 4)) {
-                gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
+                gb_request_interrupt(gb, GB_INTERRUPT_LCD_STAT);
             }
             break;
         case PPU_MODE_OAM:      // Mode 2; int select

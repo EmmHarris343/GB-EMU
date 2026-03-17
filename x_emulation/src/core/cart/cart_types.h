@@ -25,6 +25,7 @@ typedef struct {
 // MBC1 state:
 typedef struct {
     uint8_t ram_enabled;
+    size_t calc_ram_size;
     uint8_t bank_low5;
     uint8_t bank_high2;
     uint8_t banking_mode;

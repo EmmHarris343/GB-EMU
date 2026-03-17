@@ -34,7 +34,7 @@ static void debug_print_stats(GB *gb) {
         "\n[DBG] frames=%llu cpu_steps=%llu cpu_cycles=%llu "
         "ppu_tick_calls=%llu ppu_cycles_seen=%llu \n"
         "ly_wraps=%llu vblank_entries=%llu\n"
-        "LY=%u stat-mode=%u... \n",
+        "LY=%u stat-mode=%u LCDC=%02X... \n",
         (unsigned long long) gb->db_stats.frames,
         (unsigned long long) gb->db_stats.cpu_steps,
         (unsigned long long) gb->db_stats.cpu_cycles,
@@ -43,7 +43,8 @@ static void debug_print_stats(GB *gb) {
         (unsigned long long) gb->db_stats.ly_wraps,
         (unsigned long long) gb->db_stats.vblank_entries,
         gb->ppu.ly,
-        gb->ppu.stat & 0x03
+        gb->ppu.stat & 0x03,
+        gb->ppu.lcdc
     );
     printf("[DBG] IE=%02X, IF=%02X, IE&IF=%04X, IME=%02X, HALT=%02X\n",
         gb->interrupts.IE,
@@ -183,16 +184,57 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 
     gb->db_stats.frames++;
 
+
+
     if ((gb->db_stats.frames % 60) == 0) {
         debug_print_stats(gb);
 
         // print whats in vram for this frame (every 60 frames)
+        // for (uint16_t i = 0; i < 64; i++) {
+        //     printf("A-%02X ", gb->ppu.vram[0x1800 + i]);
+        //     if ((i & 0x0F) == 0x0F) {
+        //         printf("\n");
+        //     }
+        // }
+        // for (uint16_t i = 0; i < 64; i++) {
+        //     printf("B-%02X ", gb->ppu.vram[0x1C00 + i]);
+        //     if ((i & 0x0F) == 0x0F) {
+        //         printf("\n");
+        //     }
+        // }
+        printf("LCDC=%02X\n", gb->ppu.lcdc);
+
+        printf("Map9800 first 8: ");
+        for (int i = 0; i < 8; i++) {
+            printf("%02X ", gb->ppu.vram[0x1800 + i]);
+        }
+        printf("\n");
+
+        printf("Map9C00 first 8: ");
+        for (int i = 0; i < 8; i++) {
+            printf("%02X ", gb->ppu.vram[0x1C00 + i]);
+        }
+        printf("\n");
+        printf("Tile 7F unsigned: ");
+        uint16_t base_unsigned = 0x07F0;
+        for (uint16_t i = 0; i < 16; i++) {
+            printf("%02X ", gb->ppu.vram[base_unsigned + i]);
+        }
+        printf("\n");
+        printf("Tile 7F signed: ");
+        uint16_t base_signed = 0x17F0;
+        for (int i = 0; i < 16; i++) {
+            printf("%02X ", gb->ppu.vram[base_signed + i]);
+        }
+        printf("\n");
+
         for (uint16_t i = 0; i < 64; i++) {
-            printf("%02X ", gb->ppu.vram[i]);
+            printf("X-%02X ", gb->ppu.vram[i]);
             if ((i & 0x0F) == 0x0F) {
                 printf("\n");
             }
         }
+
     }
 
     if (gb->panic) {
@@ -305,7 +347,7 @@ uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
 
 void gb_request_interrupt(GB *gb, uint8_t interrupt_bit) {
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
-    gb->interrupts.IF |= (1 << interrupt_bit);
+    gb->interrupts.IF |= (1u << interrupt_bit);
     //printf("IF REQUEST INTERRUPT! hit. interrupts.IF=%02X\n", gb->interrupts.IF);
 }
 

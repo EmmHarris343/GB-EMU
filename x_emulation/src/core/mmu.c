@@ -95,10 +95,13 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     }
 }
 
-void mmu_debugger(uint16_t addr) {
+void mmu_debugger(GB *gb, uint16_t addr) {
     printf("::: NOTICE ::: MMU DEBUGGER\n");
     printf(":MMU: Addr %04X\n", addr);
     printf(":MMU: map size = %zu\n", mmu_map_size);
+
+    // THIS ISN'T NEEDED. I'm just tired of removing logger.h every time I disable the mmu trace logging.
+    trace_mmu_write(gb->instruction.opcode, addr, 0, 0, 0);
 
     if (mmu_map_size <= 0) {
         printf("ERROR: mmu_map is null!\n");

@@ -3,7 +3,7 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include "basic_viewer.h"
 
-int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKind view_kind, int window_scale) {
+int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKind view_kind, int window_scale, SDL_PixelFormat gb_pixel_format) {
     DebugSurface surface;
     int window_width;
     int window_height;
@@ -12,9 +12,6 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         printf("Viewer is null aborting..\n");
         return -1;
     }
-
-
-
     viewer->window = NULL;
     viewer->renderer = NULL;
     viewer->texture = NULL;
@@ -27,10 +24,9 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         return -1;
     }
 
-
     window_width = surface.width * window_scale;
     window_height = surface.height * window_scale;
-    printf("What is the widnow heightl look like? %d\n", window_height);
+    printf("What is the widnow height look like? %d\n", window_height);
 
     viewer->window = SDL_CreateWindow(
         "GB-EMU - Emulation - Test Graphics",
@@ -52,6 +48,12 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         return -1;
     }
 
+    viewer->pixel_format = &gb_pixel_format;
+    if (viewer->pixel_format == NULL) {
+        fprintf(stderr, "SDL_AllocFormat failed: %s\n", SDL_GetError());
+        return -1;
+    }
+
     viewer->texture = SDL_CreateTexture(
         viewer->renderer,
         SDL_PIXELFORMAT_RGBA8888,
@@ -63,6 +65,9 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
         fprintf(stderr, "SDL_CreateTexture failed: %s\n", SDL_GetError());
         return -1;
     }
+
+    // // Might help reduce alpha blend modes?
+    // SDL_SetTextureBlendMode(viewer->texture, SDL_BLENDMODE_NONE);
 
     printf("Finished initializing Basic Viewer\n");
     return 0;
@@ -81,9 +86,16 @@ int basic_viewer_present(BasicViewer *viewer) {
         return -1;
     }
 
-    pitch_bytes = surface.pitch_pixels * (int)sizeof(uint32_t);
+    pitch_bytes = surface.pitch_pixels * sizeof(uint32_t);
+    //pitch_bytes = surface.pitch_pixels * (int)sizeof(uint32_t);   // Old way, might not be working.
 
-    if (SDL_UpdateTexture(viewer->texture, NULL, surface.pixels, pitch_bytes) != 0) {
+    if (SDL_UpdateTexture(
+        viewer->texture,
+        NULL,
+        surface.pixels,
+        pitch_bytes  // old way. might be wrong.
+        //pitch_bytes * sizeof(uint32_t)    // Causes seg fault..
+        ) != 0 ) {
         printf("Failed to update texture?\n");
         return -1;
     }
@@ -99,6 +111,10 @@ void basic_viewer_shutdown(BasicViewer *viewer) {
     if (viewer == NULL) {
         return;
     }
+    // if (viewer->pixel_format != NULL) {
+    //     SDL_FreeFormat(viewer->pixel_format);
+    //     viewer->pixel_format = NULL;
+    // }
 
     if (viewer->texture != NULL) {
         SDL_DestroyTexture(viewer->texture);
