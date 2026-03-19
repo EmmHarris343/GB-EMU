@@ -121,11 +121,50 @@ static void STOP(GB *gb, CPU *cpu, instruction_T instruction) {      // Unsure, 
 }
 // DAA (WEIRD INSTRUCTION) -- VERY complicated what it actually does!
 static void DAA(GB *gb, CPU *cpu, instruction_T instruction) {
+    uint8_t reg_a = cpu->reg.A;
+    uint8_t correction = 0x00;
 
-    // DAA => Decimal Adjust Accumulator.
-    printf("DAA. Called, not setup.\n");
-    printf("%sPANIC HALTING%s\n", KRED, KNRM);
-    gb->panic = 1;
+    if (cpu->reg.F & FLAG_N) {  // Previous instruction was Subtraction.
+        if (cpu->reg.F & FLAG_H) {  // H set => subtract 0x06
+            correction |= 0x06;
+        }
+        if (cpu->reg.F & FLAG_C) { // C set => subtract 0x60
+            correction |= 0x60;
+        }
+
+        // C is preserved after subtraction.
+        reg_a -= correction;
+    }
+    else {  // Previous instruction was Addition.
+        if ((cpu->reg.F & FLAG_H) || (reg_a & 0x0F) > 0x09) { // H set, or BCD-low nib exeeded 0x09; add 0x06
+            correction |= 0x06;
+        }
+        if ((cpu->reg.F & FLAG_C) || (reg_a) > 0x99) { // C set, or BCD exeeded 0x99; add 0x60
+            correction |= 0x60;
+        }
+
+        // Set C flag only if correction has 0x60, and was needed, otherwise clear.
+        (correction & 0x60) ? set_cpu_flag(cpu, FLAG_C) : clear_cpu_flag(cpu, FLAG_C);
+        reg_a += correction;
+    }
+
+    (reg_a == 0) ? set_cpu_flag(cpu, FLAG_Z) : clear_cpu_flag(cpu, FLAG_Z);    // Z Flag
+    clear_cpu_flag(cpu, FLAG_H);    // H flag always cleared
+    // C flag preserved for Sub / Set or cleared in Add logic.
+
+    cpu->reg.A = reg_a;
+    cpu->reg.PC += 1;
+    cpu->cycle = 4;
+
+    // bytes = 1
+    // t-cycles = 4
+
+    /*
+        FLAGS:
+        Z = Set if result is 0
+        H = 0 - always cleared
+        C = Set / cleared depending on operations.
+    */
 }
 // BLANK
 static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do nothing, basically NOP, but any call to this should cause fault.
