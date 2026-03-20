@@ -204,15 +204,14 @@ static void ppu_set_mode(GB *gb, PPU *ppu, int mode) {
 
 // PPU VRAM functions:
 uint8_t ppu_vram_read(GB *gb, uint16_t addr){
-    //if (addr < 0x8000 || addr > 0x9FFF) {
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
+    if (addr >= 0x8000 && addr <= 0x9FFF) {
         return gb->ppu.vram[addr - 0x8000];
     }
     printf("PPU: VRAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
     return 0xFF;
 }
 void ppu_vram_write(GB *gb, uint16_t addr, uint8_t write_val){
-    if (addr >= 0x8000 || addr <= 0x9FFF) {
+    if (addr >= 0x8000 && addr <= 0x9FFF) {
         gb->ppu.vram[addr - 0x8000] = write_val;
         return;
     }

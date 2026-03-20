@@ -18,7 +18,7 @@ int loc_ram_init(GB *gb) {
 uint8_t loc_wram_read(GB *gb, uint16_t addr) {
 
     //printf(":loc_ram: Hit WRAM Read!\n");
-    if (addr >= 0xC000 || addr <= 0xDFFF) { // Allowed range:
+    if (addr >= 0xC000 && addr <= 0xDFFF) { // Allowed range:
         uint16_t offset = addr - 0xC000;
         return gb->memory.wram[offset];
     }
@@ -26,7 +26,7 @@ uint8_t loc_wram_read(GB *gb, uint16_t addr) {
     return 0xFF;
 }
 void loc_wram_write(GB *gb, uint16_t addr, uint8_t write_val) {
-    if (addr >= 0xC000 || addr <= 0xDFFF) { // Allowed range:
+    if (addr >= 0xC000 && addr <= 0xDFFF) { // Allowed range:
         uint16_t offset = addr - 0xC000;
         gb->memory.wram[offset] = write_val;
         return;
@@ -45,7 +45,7 @@ void loc_echram_write(GB *gb, uint16_t addr, uint8_t write_val) {
 
 // HRAM
 uint8_t loc_hram_read(GB *gb, uint16_t addr) {
-    if (addr >= 0xFF80 || addr <= 0xFFFE) {   // Allowed range:
+    if (addr >= 0xFF80 && addr <= 0xFFFE) {   // Allowed range:
         uint16_t offset = addr - 0xFF80;
         return gb->memory.hram[offset];
     }
@@ -53,7 +53,7 @@ uint8_t loc_hram_read(GB *gb, uint16_t addr) {
     return 0xFF;
 }
 void loc_hram_write(GB *gb, uint16_t addr, uint8_t write_val) {
-    if (addr >= 0xFF80 || addr <= 0xFFFE) { // Allowed Range:
+    if (addr >= 0xFF80 && addr <= 0xFFFE) { // Allowed Range:
         uint16_t offset = addr - 0xFF80;
         gb->memory.hram[offset] = write_val;
         return;
