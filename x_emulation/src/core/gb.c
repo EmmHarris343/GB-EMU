@@ -356,17 +356,15 @@ uint8_t ie_read(GB *gb, uint16_t addr) {
     (void)addr;
     uint8_t read_value = gb->interrupts.IE;
     // printf("IE Read hit. PC=%04X , OPCODE=%02X, value=%02X\n",
-    //     gb->cpu.reg.PC, gb->instruction.opcode, read_value);
+    //      gb->cpu.reg.PC, gb->instruction.opcode, read_value);
     return read_value;
 }
 void ie_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    // printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
-    //     gb->cpu.reg.A,
-    //     gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
+    printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+        gb->cpu.reg.A,
+        gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
     gb->interrupts.IE = interrupt_hex & 0x1F;
-    // printf("IE Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
-    // gb->interrupts.IE = interrupt_hex & 0x1F;
 }
 uint8_t if_read(GB *gb, uint16_t addr) {
     (void)addr;
@@ -375,7 +373,7 @@ uint8_t if_read(GB *gb, uint16_t addr) {
 }
 void if_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     (void)addr;
-    // printf("IF Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
+    printf("IF Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
     gb->interrupts.IF = interrupt_hex & 0x1F;
 }
 

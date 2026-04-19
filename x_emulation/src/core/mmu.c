@@ -68,8 +68,8 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             read_8bit_val = mmu_map[i].read(gb, addr);
             //printf("What is MMU_map[i] value? %d", mmu_map[i]);
-            // if (addr == 0xFFFF) {
-            //     printf("SPECIAL MMU PRINT: IE READ: 0x%02X\n", read_8bit_val);
+            // if (addr == 0xDF7C || addr == 0xDF7D ) {
+            //     printf("SP READ HIT. BY WHOM?? Addr: 0x%04X: read_val:0x%02X\n", addr, read_8bit_val);
             // }
             //trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
@@ -87,9 +87,32 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
             // if (addr == 0xFFFF) {
             //     printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
             // }
-            // if (write_val == 0xFF) {
-            //     printf("SPECIAL MMU PRINT: Write to of FF to space. ADDR:0x%04X Value:0x%02X \n", addr, write_val);
+
+            // if (addr >= 0xDFF7 && addr <= 0xDFFC) {
+            //     printf(
+            //         "STACK WATCH -WRITE INTERCEPT-: PC=%04X OP=%02X SP=%04X ADDR=%04X NEW_VALUE=%02X\n",
+            //         gb->cpu.reg.PC,
+            //         gb->instruction.opcode,
+            //         gb->cpu.reg.SP,
+            //         addr,
+            //         write_val
+            //     );
             // }
+            if (addr == 0xFF01) {
+                uint8_t ch = write_val;
+
+                if (ch >= 0x20 && ch <= 0x7E) {
+                    printf("SERIAL: 0x%02X '%c'\n", ch, ch);
+                } else if (ch == 0x0A) {
+                    printf("SERIAL: 0x%02X '\\n'\n", ch);
+                } else {
+                    printf("SERIAL: 0x%02X\n", ch);
+                }
+                if (ch == 0x64) {   // the d in failed.
+                    printf("OPCODE=%04X, PC=%04X\n", gb->instruction.opcode, gb->cpu.reg.PC);
+                }
+
+            }
             //trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
         }
     }

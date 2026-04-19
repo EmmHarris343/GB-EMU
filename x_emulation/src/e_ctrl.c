@@ -101,7 +101,66 @@ int start_emulation() {
     printf(":E_CTRL: Beginning Emulation\n");
     GB gb;
 
-    // Which rom file to use.
+    // Blarrg test roms. (MOST! pass now!)
+    //const char *rom_file = "../../rom/cpu-individual/01-special.gb"; // PASSED!!!
+    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // failed. "EI Failed"
+    //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // FAILED - Says E8 E8. FAILED. (E8 is Add SP, e8 soo)
+    //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb"; // PASSED. WOOOOOOOOT!
+    //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb"; // PASSED! NICE!!!
+    //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb"; // PASSED!! Wooooot
+    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // PASSED!! HELL YEA!
+    //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb"; // PASSED!!!!
+    //const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // FAILED 37, 3F! (Is that 37=SCF, and 3F=CCF)??
+    //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb"; // PASSED. WOOOOOOOOT!
+    //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // PASSED. WOOOOOOOOT!
+
+    // Mooneye rom tests:
+    // NOTE. Most of these test roms are..
+    // Timing tests, requires div/ the tick be advanced in the middle of instructions. I DO NOT DO THAT.
+    // YET.
+
+    //const char *rom_file = "../../rom/test-acceptance/add_sp_e_timing.gb";  // Corruption and crash.
+    //const char *rom_file = "../../rom/test-acceptance/boot_regs-dmg0.gb"; // MBC1 // failed
+    //const char *rom_file = "../../rom/test-acceptance/intr_timing.gb"; // D=ok E=ok Passed?
+    //const char *rom_file = "../../rom/test-acceptance/call_cc_timing.gb";     // Fail round 2
+    //const char *rom_file = "../../rom/test-acceptance/call_timing.gb";  // Fail round 2
+    //const char *rom_file = "../../rom/test-acceptance/call_timing2.gb";  // Failed B=11! C=11! D=11! H=ok L=66!
+    //const char *rom_file = "../../rom/test-acceptance/div_timing.gb"; // B=ok D=ok C=ok Passed?
+    //const char *rom_file = "../../rom/test-acceptance/di_timing-GS.gb"; // Test ok
+    //const char *rom_file = "../../rom/test-acceptance/halt_ime0_ei.gb"; // Test ok
+    //const char *rom_file = "../../rom/test-acceptance/if_ie_registers.gb"; // Fail B=ok C=88 H=00
+    //const char *rom_file = "../../rom/test-acceptance/ei_sequence.gb"; // Fail c=22 h=0
+    //const char *rom_file = "../../rom/test-acceptance/ei_timing.gb"; // Passed? E=ok B=ok
+    //const char *rom_file = "../../rom/test-acceptance/jp_cc_timing.gb"; // Fail round two
+    //const char *rom_file = "../../rom/test-acceptance/jp_timing.gb"; // Fail round two
+    //const char *rom_file = "../../rom/test-acceptance/ld_hl_sp_e_timing.gb";    // Corruption and crashed.
+
+    // Both these I tried to debug. They won't pass ever. Because of the div timing.
+    //const char *rom_file = "../../rom/test-acceptance/push_timing.gb";  // Failed D=81! E: 24! H: 42! l: 24!
+    //const char *rom_file = "../../rom/test-acceptance/pop_timing.gb";   // Failed, E=01!
+
+    //const char *rom_file = "../../rom/test-acceptance/ret_timing.gb";   // Fail round 2
+    //const char *rom_file = "../../rom/test-acceptance/ret_cc_timing.gb";  // Fail rouind 2
+    //const char *rom_file = "../../rom/test-acceptance/reti_intr_timing.gb";  // Pass?
+    //const char *rom_file = "../../rom/test-acceptance/reti_timing.gb";      // Fail round 2
+
+    // Sub tests.
+    //const char *rom_file = "../../rom/test-acceptance/instr/daa.gb"; // Test failed. Expected: A=44 F=0000, Got: A=00 F=1000
+    //const char *rom_file = "../../rom/test-acceptance/interrupts/ie_push.gb"; // R1 not cancelled
+    //const char *rom_file = "../../rom/test-acceptance/bits/reg_f.gb"; // Pass? C=ok, E=ok
+    //const char *rom_file = "../../rom/test-acceptance/bits/mem_oam.gb"; // Fail all 0s.
+
+    // MBC 1 tests:
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/rom_512kb.gb"; // Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/rom_2Mb.gb";   // Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/bits_bank1.gb";// Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/bits_bank2.gb";// Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/bits_mode.gb"; // Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/bits_ramg.gb"; // Test ok
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/ram_64kb.gb";  // Fail round 4
+    //const char *rom_file = "../../rom/test-emulator-only/mbc1/ram_256kb.gb"; // Test ok
+
+
     //const char *rom_file = "../../rom/cpu-individual/01-special.gb"; // MBC1
     //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // MBC1
     //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // MBC1
@@ -119,7 +178,6 @@ int start_emulation() {
     //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
-    //const char *rom_file = "../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";
 
     // Strickly the video stuff.
     DebugVideoSource video_source;

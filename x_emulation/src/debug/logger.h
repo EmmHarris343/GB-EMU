@@ -42,4 +42,10 @@ void trace_io_write(uint16_t addr, uint8_t val, int map_index, uint8_t src_tag);
 void trace_general_read(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag);
 void trace_general_write(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t system_tag);
 
+void trace_general_line(uint8_t opcode, uint32_t cycle, uint8_t flag, uint16_t addr, uint16_t val, char *text, uint8_t system_tag);
+void trace_general_stack(uint8_t opcode, uint32_t cycle, uint8_t flag, uint16_t pc_addr, uint16_t sp_num, uint8_t low_val, uint8_t high_val,  char *text, uint8_t system_tag);
+void trace_div_timing(uint8_t opcode, uint32_t cycle, uint32_t div, uint16_t addr, uint16_t val, char *text, uint8_t system_tag);
+
+void trace_reg_state(uint8_t opcode, uint16_t addr, uint16_t AF, uint16_t BC, uint16_t DE, uint16_t HL, uint16_t SP, uint8_t system_tag);
+
 #endif

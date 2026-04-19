@@ -4,7 +4,8 @@
 
 
 uint8_t joy_io_read(GB *gb, uint16_t addr){
-    return 0xFF;
+    // return 0xFF;
+    return 0x0F; // Will return bits 3-0 as all 1s. (May allow roms to run)
 }
 void joy_io_write(GB *gb, uint16_t addr, uint8_t write_val){
     (void)addr;

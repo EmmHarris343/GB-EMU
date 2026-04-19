@@ -100,7 +100,7 @@ void timer_tick(GB *gb, Timer *timer, uint32_t cycles) {
     // Div:
     timer->div_cycles += cycles;
 
-    while (timer->div_cycles>= 256) {
+    while (timer->div_cycles >= 256) {
         timer->div_cycles -= 256;
         timer->div ++;
     }

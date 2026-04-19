@@ -264,6 +264,7 @@ uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
         if (offset < cart->state.mbc1.calc_ram_size) {
             return cart->storage.ram_data[offset];
         }
+        printf("MBC1 ReadRAM Error. RamBank=%u Ram_Offset=%u. Offset is larger than MBC1.CalucatedRamSize. CalcRamSize=%zu", ram_bank, offset, cart->state.mbc1.calc_ram_size);
         printf("Ramsize/ offset is out of range return 0xFF.\n");
         trace_general_read((0x00), addr, (0x00), 4);
         return 0xFF;

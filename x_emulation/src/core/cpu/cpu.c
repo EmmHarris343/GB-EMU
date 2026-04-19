@@ -7,7 +7,7 @@
 #include "cpu_instructions.h"
 #include "../mmu.h"
 
-//#include "logger.h"
+#include "../../debug/logger.h"
 
 uint64_t instr_count[INSTR_TYPE_COUNT] = {0};
 uint64_t which_op[256] = {0};       // 64 bit, so it can store a huge amount of numbers. (Realistically, 16 bit likely fine for what I'm doing)
@@ -191,7 +191,18 @@ uint16_t cnvrt_lil_endian(uint8_t LOW, uint8_t HIGH) {
 // External_write/read used by cpu.c + cpu_instructions.c
 void external_write(GB *gb, uint16_t addr, uint8_t write_val) {
     mmu_write(gb, addr, write_val);
+
+    // if (addr >= 0xDFF0 && addr <= 0xDFFF) {
+    //     uint8_t verify = external_read(gb, addr);
+    //     printf("HIT range for write. :: Values :: addr=%04X wrote=%02X readback=%02X PC=%04X OP=%02X\n",
+    //         addr, write_val, verify, gb->cpu.reg.PC, gb->instruction.opcode);
+    //     if (verify != write_val) {
+    //     printf("WRAM VERIFY FAIL: addr=%04X wrote=%02X readback=%02X PC=%04X OP=%02X\n",
+    //         addr, write_val, verify, gb->cpu.reg.PC, gb->instruction.opcode);
+    //     }
+    // }
 }
+
 uint8_t external_read(GB *gb, uint16_t addr_pc) {
     uint8_t read_val = 0;
     read_val = mmu_read(gb, addr_pc);
@@ -299,9 +310,9 @@ void opcode_tosummary(GB *gb) {
     instr_count[op_type]++ ;
 }
 
-/// DECODE:
+/// FETCH:
 // Reads the OP Code + Operands
-void load_opcode(GB *gb, uint16_t addr_pc) {
+void fetch_opcode(GB *gb, uint16_t addr_pc) {
     uint8_t op_code = 0x00;
     uint8_t operand1 = 0x00;
     uint8_t operand2 = 0x00;
@@ -337,6 +348,13 @@ int cpu_init(GB *gb) {
 
     printf("Done. Finished init for DMG 01\n");
 
+    // Special DEBUG init:
+    init_cpu_instruction_test(gb);
+
+    // Special DEBUG mem init:
+    init_cpu_instruction_mem(gb);
+
+
     return 0;
 }
 
@@ -346,8 +364,8 @@ static void ime_delay(GB *gb) {
 
         // Only set IME to 1. If IME_delay was set, then transitioned down to 0.
         if (gb->cpu.state.IME_delay == 0) {
-            //printf("IME delay reached 0. IME SET! (1)\n");
             gb->cpu.state.IME = 1;
+            trace_general_line(gb->instruction.opcode, gb->cpu.reg.F,gb->cpu.reg.PC, 0, 0, "IME SET to 1", 14); // tag 14 = interrupt
         }
     }
 }
@@ -356,23 +374,24 @@ static void ime_delay(GB *gb) {
 uint32_t cpu_step(GB *gb) {
     gb->cpu.cycle = 0;  // Reset the t-cycle back to 0 on each Step.
 
-    if (cpu_interrupt_handling(gb)) {
-        // Processed an Interrupt. Don't Return 20 t-cycles
+    if (cpu_interrupt_handling(gb)) {   // If it did process the interrupt...
         gb->cpu.cycle = 20;
+        trace_general_line(gb->instruction.opcode, gb->cpu.reg.F, gb->cpu.reg.PC, gb->cpu.reg.PC, 0, "Processed Interrupt, Returning and burning 20 t-cycles.", 14); // tag 14 = interrupt
+        //printf("FINAL Interrupt step. Processed Interrupt sucessfully. Burning 20 t-cycles, and returning to GB loop\n");
         return gb->cpu.cycle;
     }
     else if (gb->cpu.state.halt) {
+        //printf("Interrupt was not processed, but cpu shows halted, burn 4 t-cycles and return to gb\n");
         gb->cpu.cycle = 4;
 
-        //printf("Burning Halt cycles...\n");
         // This will continue to burn cycles. Until the interrupt has been processed.
         // No instructions will be loaded or executed in this state!
 
         return gb->cpu.cycle;
     }
 
-    // Only get/ process opcode after any interrupts processed / halt cleared.
-    load_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t inside gb->instruction.
+    // Only get/ process opcodes after any interrupts processed / halt cleared.
+    fetch_opcode(gb, gb->cpu.reg.PC);    // Updates the instruction_t inside gb->instruction.
 
     if (execute_instruction(gb, &gb->cpu, gb->instruction) != 0) {
         gb->panic = 1;

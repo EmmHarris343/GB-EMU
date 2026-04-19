@@ -220,3 +220,24 @@ void trace_general_write(uint8_t opcode, uint16_t addr, uint8_t val, uint8_t sys
     fprintf(trace_log_file, "G W OP[%02X] | %04X %02X - Sys:%s\n", opcode, addr, val, system_tag_name[system_tag]);
     fflush(trace_log_file);
 }
+
+// Trace single line. Not really a read. Not really a write:
+void trace_general_line(uint8_t opcode, uint32_t cycle, uint8_t flag, uint16_t addr, uint16_t val, char *text, uint8_t system_tag) {
+    fprintf(trace_log_file, "G X OP[%02X] Cycl=X F=%02X | PC=%04X VAL=%04X | { %s } - Sys:%s\n", opcode, flag, addr, val, text, system_tag_name[system_tag]);
+    fflush(trace_log_file);
+}
+
+void trace_div_timing(uint8_t opcode, uint32_t cycle, uint32_t div, uint16_t addr, uint16_t val, char *text, uint8_t system_tag) {
+    fprintf(trace_log_file, "G X OP[%02X] Cycl=%u Div=%u | PC=%04X VAL=%04X | { %s } - Sys:%s\n", opcode, cycle, div, addr, val, text, system_tag_name[system_tag]);
+    fflush(trace_log_file);
+}
+
+void trace_reg_state(uint8_t opcode, uint16_t addr, uint16_t AF, uint16_t BC, uint16_t DE, uint16_t HL, uint16_t SP, uint8_t system_tag) {
+    fprintf(trace_log_file, "G X OP[%02X] PC=%04X | AF=%04X, BC=%04X, DE=%04X, HL=%04X, SP=%04X | - Sys:%s\n", opcode, addr, AF, BC, DE, HL, SP, system_tag_name[system_tag]);
+    fflush(trace_log_file);
+}
+
+void trace_general_stack(uint8_t opcode, uint32_t cycle, uint8_t flag, uint16_t pc_addr, uint16_t sp_num, uint8_t low_val, uint8_t high_val,  char *text, uint8_t system_tag) {
+    fprintf(trace_log_file, "G X OP[%02X] Cycl=%u F=%02X | PC=%04X SP=%04X | Low=%02X High=%02X | { %s } - Sys:%s\n", opcode, cycle, flag, pc_addr, sp_num, low_val, high_val, text, system_tag_name[system_tag]);
+    fflush(trace_log_file);
+}

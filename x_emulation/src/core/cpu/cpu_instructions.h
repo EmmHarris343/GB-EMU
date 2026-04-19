@@ -22,6 +22,10 @@ typedef struct {
 // CPU interrupt handling function/ entry point:
 uint8_t cpu_interrupt_handling(GB *gb);
 
+// CPU INIT:
+void init_cpu_instruction_test(GB *gb);
+void init_cpu_instruction_mem(GB *gb);
+
 // Main instruction entry points.
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction);
 int execute_test(GB *gb, CPU *cpu, instruction_T instruction);
