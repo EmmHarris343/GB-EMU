@@ -186,8 +186,13 @@ static void BLANK(GB *gb, CPU *cpu, instruction_T instruction) {      // Do noth
 
 // Carry Flag Instructions:
 static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Complement Carry Flag
-    // If it's set, clear it, otherwise set it.
+    // Invert C flag. Set if unset. Clear if set.
+
+    // Z untouched.
+    clear_cpu_flag(gb, FLAG_N);
+    clear_cpu_flag(gb, FLAG_H);
     (gb->cpu.reg.F & FLAG_C) ? clear_cpu_flag(gb, FLAG_C) : set_cpu_flag(gb, FLAG_C);    // Invert the C flag.
+
     gb->cpu.reg.PC += 1;
     gb->cpu.cycle = 4;
 
@@ -203,6 +208,9 @@ static void CCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Comp
     */
 }
 static void SCF(GB *gb, CPU *cpu, instruction_T instruction) {           // Set Carry Flag
+    // Z untouched.
+    clear_cpu_flag(gb, FLAG_N);
+    clear_cpu_flag(gb, FLAG_H);
     set_cpu_flag(gb, FLAG_C);
     gb->cpu.reg.PC += 1;
     gb->cpu.cycle = 4;
@@ -2667,28 +2675,6 @@ static opcode_t *opcodes[256] = {
 /* FX */ LDH_A_p_a8, POP_AF,      LDH_A_p_C,  DI,       BLANK,        PUSH_AF, OR_A_n8,     RST_vec,  /* || */ LD_HL_SP_Pe8,  LD_SP_HL,  LD_A_p_a16,  EI,        BLANK,       BLANK,     CP_A_n8,    RST_vec,
 };
 
-
-// void run_debug(GB *gb, CPU *cpu) {
-//     uint8_t hl_val = external_read(gb, gb->cpu.reg.HL);
-//     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, gb->cpu.reg.HL, hl_val, gb->cpu.reg.A, gb->cpu.reg.PC);
-//     logging_log("HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, gb->cpu.reg.HL, hl_val, gb->cpu.reg.A, gb->cpu.reg.PC);
-// }
-
-// void debug_nop(GB *gb, CPU *cpu) {
-//     uint8_t hl_val = external_read(gb, gb->cpu.reg.HL);
-//     //logging_log("[STEP %d] HL=0x%04X [HL]=0x%04X A=0x%02X PC=0x%04X\n", step_count_icpu, gb->cpu.reg.HL, hl_val, gb->cpu.reg.A, gb->cpu.reg.PC);
-//     logging_log("NOP detected. PC=0x%04X SP=0x%04X\n", gb->cpu.reg.PC, gb->cpu.reg.SP);
-// }
-
-// void log_cpu_trace(GB *gb) {
-//     // Some basic level of human readable. Quick output of CPU state.
-//     CPU *cpu = &gb->cpu;    // I just like the arrows. Really that's it.
-
-//     logging_cpu_trace("[CPU] STEP=%d PC=0x%04X | OP=0x%02X | A=0x%02X F=0x%02X B=0x%02X C=0x%02X D=0x%02X E=0x%02X H=0x%02X L=0x%02X SP=0x%02X IME=0x%02X IE=0x%04X IF=0x%04X\n",
-//     gb->step_count, gb->cpu.reg.PC, gb->instruction.opcode, gb->cpu.reg.A, gb->cpu.reg.F,
-//     gb->cpu.reg.B, gb->cpu.reg.C, gb->cpu.reg.D, gb->cpu.reg.E, gb->cpu.reg.H, gb->cpu.reg.L,
-//     gb->cpu.reg.SP, cpu->state.IME, gb->interrupts.IE, gb->interrupts.IF);
-// }
 
 static void interrupt_stack_push(GB *gb, uint16_t write_val) {
     ////trace_general_line(gb->instruction.opcode, gb->cpu.cycle, gb->cpu.reg.F, gb->cpu.reg.PC, write_val, "Interrupt - Pushing Val to SP", 14); // tag 14 = interrupt

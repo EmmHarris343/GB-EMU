@@ -69,9 +69,6 @@ static void sleep_until_ns(uint64_t target_ns) {
 }
 
 
-
-
-
 int init_log_files() {
     const char *log_file = "../log/debug_log.txt";
     if (logging_init(log_file) != 0) {
@@ -110,7 +107,7 @@ int start_emulation() {
     //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb"; // PASSED!! Wooooot
     //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // PASSED!! HELL YEA!
     //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb"; // PASSED!!!!
-    //const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // FAILED 37, 3F! (Is that 37=SCF, and 3F=CCF)??
+    const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // PASSED!! Fixed SCF CCF bug
     //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb"; // PASSED. WOOOOOOOOT!
     //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // PASSED. WOOOOOOOOT!
 
@@ -174,7 +171,7 @@ int start_emulation() {
     //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // MBC1
 
 
-    const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
+    //const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
     //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!

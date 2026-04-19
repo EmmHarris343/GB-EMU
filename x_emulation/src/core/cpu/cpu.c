@@ -348,13 +348,6 @@ int cpu_init(GB *gb) {
 
     printf("Done. Finished init for DMG 01\n");
 
-    // Special DEBUG init:
-    init_cpu_instruction_test(gb);
-
-    // Special DEBUG mem init:
-    init_cpu_instruction_mem(gb);
-
-
     return 0;
 }
 
