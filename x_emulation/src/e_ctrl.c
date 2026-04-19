@@ -99,17 +99,17 @@ int start_emulation() {
     GB gb;
 
     // Blarrg test roms. (MOST! pass now!)
-    //const char *rom_file = "../../rom/cpu-individual/01-special.gb"; // PASSED!!!
-    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // failed. "EI Failed"
-    //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // FAILED - Says E8 E8. FAILED. (E8 is Add SP, e8 soo)
-    //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb"; // PASSED. WOOOOOOOOT!
-    //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb"; // PASSED! NICE!!!
-    //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb"; // PASSED!! Wooooot
-    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // PASSED!! HELL YEA!
-    //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb"; // PASSED!!!!
-    const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // PASSED!! Fixed SCF CCF bug
-    //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb"; // PASSED. WOOOOOOOOT!
-    //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // PASSED. WOOOOOOOOT!
+    //const char *rom_file = "../../rom/cpu-individual/01-special.gb";              // PASSED!!!
+    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb";           // failed. "EI Failed"
+    const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb";               // PASSED!!
+    //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb";             // PASSED. WOOOOOOOOT!
+    //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb";                // PASSED! NICE!!!
+    //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb";               // PASSED!! Wooooot
+    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb";   // PASSED!! HELL YEA!
+    //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb";          // PASSED!!!!
+    //const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb";               // PASSED!! Fixed SCF CCF bug
+    //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb";              // PASSED. WOOOOOOOOT!
+    //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb";            // PASSED. WOOOOOOOOT!
 
     // Mooneye rom tests:
     // NOTE. Most of these test roms are..

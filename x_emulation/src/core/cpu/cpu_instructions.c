@@ -1248,16 +1248,18 @@ static void CP_A_n8(GB *gb, CPU *cpu, instruction_T instruction) {       // ComP
 // Special SP / e8 ADD function.
 static void ADD_SP_e8(GB *gb, CPU *cpu, instruction_T instruction) {     // e8 = SIGNED int.
     int8_t e_val = (int8_t)instruction.operand1;       // NOTICE int8_t = signed, because e = signed 8bit register. Because it's relative a: +-
-    uint8_t add_result = (gb->cpu.reg.A + e_val);
+    uint8_t u8 = instruction.operand1;
+    uint16_t sp_val = gb->cpu.reg.SP;
+    uint16_t combined_result = (uint16_t)(sp_val + e_val);
 
     // NOTE: ADD_SP_e8  Z and N aare always cleared.
     clear_cpu_flag(gb, FLAG_Z); // Z Flag Cleared
     clear_cpu_flag(gb, FLAG_N); // N Flag Cleared (Subtraction)
-    ((gb->cpu.reg.A & 0x0F) + (e_val & 0x0F) > 0x0F) ? set_cpu_flag(gb, FLAG_H) : clear_cpu_flag(gb, FLAG_H); // H Flag
-    (add_result > 0xFF) ? set_cpu_flag(gb, FLAG_C) : clear_cpu_flag(gb, FLAG_C); // C Flag
+    (((sp_val & 0x000F) + (u8 & 0x000F)) > 0x000F) ? set_cpu_flag(gb, FLAG_H) : clear_cpu_flag(gb, FLAG_H); // H Flag
+    (((sp_val & 0x00FF) + u8) > 0x00FF) ? set_cpu_flag(gb, FLAG_C) : clear_cpu_flag(gb, FLAG_C); // C Flag
 
 
-    gb->cpu.reg.A = add_result;
+    gb->cpu.reg.SP = combined_result;
     gb->cpu.cycle = 16;
     gb->cpu.reg.PC += 2;
 
