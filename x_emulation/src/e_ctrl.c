@@ -93,15 +93,11 @@ int init_log_files() {
     return 0;
 }
 
-
-int start_emulation() {
-    printf(":E_CTRL: Beginning Emulation\n");
-    GB gb;
-
+const char * get_rom_file() {
     // Blarrg test roms. (MOST! pass now!)
     //const char *rom_file = "../../rom/cpu-individual/01-special.gb";              // PASSED!!!
-    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb";           // failed. "EI Failed"
-    const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb";               // PASSED!!
+    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb";           // failed. "EI - Failed #2"
+    //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb";            // PASSED!!
     //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb";             // PASSED. WOOOOOOOOT!
     //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb";                // PASSED! NICE!!!
     //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb";               // PASSED!! Wooooot
@@ -111,10 +107,9 @@ int start_emulation() {
     //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb";              // PASSED. WOOOOOOOOT!
     //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb";            // PASSED. WOOOOOOOOT!
 
-    // Mooneye rom tests:
-    // NOTE. Most of these test roms are..
-    // Timing tests, requires div/ the tick be advanced in the middle of instructions. I DO NOT DO THAT.
-    // YET.
+    /// MOONEYE: test rooms.
+    // NOTE. Most of these test roms are.. timing tests.
+    // Requires div/ the tick be advanced in the middle of instructions. I DO NOT DO THAT.. YET
 
     //const char *rom_file = "../../rom/test-acceptance/add_sp_e_timing.gb";  // Corruption and crash.
     //const char *rom_file = "../../rom/test-acceptance/boot_regs-dmg0.gb"; // MBC1 // failed
@@ -126,7 +121,7 @@ int start_emulation() {
     //const char *rom_file = "../../rom/test-acceptance/di_timing-GS.gb"; // Test ok
     //const char *rom_file = "../../rom/test-acceptance/halt_ime0_ei.gb"; // Test ok
     //const char *rom_file = "../../rom/test-acceptance/if_ie_registers.gb"; // Fail B=ok C=88 H=00
-    //const char *rom_file = "../../rom/test-acceptance/ei_sequence.gb"; // Fail c=22 h=0
+    //const char *rom_file = "../../rom/test-acceptance/ei_sequence.gb"; // Failed. B=OK C=A2
     //const char *rom_file = "../../rom/test-acceptance/ei_timing.gb"; // Passed? E=ok B=ok
     //const char *rom_file = "../../rom/test-acceptance/jp_cc_timing.gb"; // Fail round two
     //const char *rom_file = "../../rom/test-acceptance/jp_timing.gb"; // Fail round two
@@ -142,7 +137,7 @@ int start_emulation() {
     //const char *rom_file = "../../rom/test-acceptance/reti_timing.gb";      // Fail round 2
 
     // Sub tests.
-    //const char *rom_file = "../../rom/test-acceptance/instr/daa.gb"; // Test failed. Expected: A=44 F=0000, Got: A=00 F=1000
+    //const char *rom_file = "../../rom/test-acceptance/instr/daa.gb"; // PASSED!
     //const char *rom_file = "../../rom/test-acceptance/interrupts/ie_push.gb"; // R1 not cancelled
     //const char *rom_file = "../../rom/test-acceptance/bits/reg_f.gb"; // Pass? C=ok, E=ok
     //const char *rom_file = "../../rom/test-acceptance/bits/mem_oam.gb"; // Fail all 0s.
@@ -158,23 +153,23 @@ int start_emulation() {
     //const char *rom_file = "../../rom/test-emulator-only/mbc1/ram_256kb.gb"; // Test ok
 
 
-    //const char *rom_file = "../../rom/cpu-individual/01-special.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/02-interrupts.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/03-op_sp,hl.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/04-op_r,imm.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/05-op_rp.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/06-ld_r,r.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/07-jr,jp,call,ret,rst.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/08-misc_instrs.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/09-op_r,r.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/10-bit_ops.gb"; // MBC1
-    //const char *rom_file = "../../rom/cpu-individual/11-op_a,(hl).gb"; // MBC1
 
+    /// GAMES:
 
-    //const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
+    const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
+    //const char *rom_file = "../../rom/oddworld(mbc1).gb"; // MBC1 DMG GB Game.
     //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
+
+    return rom_file;
+}
+
+int start_emulation() {
+    printf(":E_CTRL: Beginning Emulation\n");
+    GB gb;
+
+    const char *rom_file = get_rom_file();
 
     // Strickly the video stuff.
     DebugVideoSource video_source;
@@ -214,8 +209,6 @@ int start_emulation() {
     running = 1;
 
     uint64_t next_frame_time_ns = time_now_ns();
-
-
 
     while (running) {
         SDL_Event event;
