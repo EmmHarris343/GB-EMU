@@ -21,7 +21,7 @@ extern const Operations mbc3_ops;
 extern const Operations mbc5_ops;
 
 // The main configuration entry point for the MBC
-int mbc_setup(GB *gb, Cartridge *cart, uint8_t type_code);
+int mbc_init(GB *gb, Cartridge *cart, uint8_t type_code);
 
 
 // MBC-1

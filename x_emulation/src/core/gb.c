@@ -55,9 +55,9 @@ static void debug_print_stats(GB *gb) {
     );
 }
 
-// Top-Level "Machine" Setup/ Initializer
+// Top-Level "Machine" GB Setup/ Initializer
 int gb_init(GB *gb, const char *rom_file) {
-    printf("Initializing GB...");
+    printf("Initializing GB...\n");
 
     gb->interrupts.IE = 0x00,    // IE at location 0xFFFF = 0x00
     gb->interrupts.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
@@ -69,13 +69,12 @@ int gb_init(GB *gb, const char *rom_file) {
     memset(&gb->db_stats, 0, sizeof(gb->db_stats));
 
 
-    printf("NOTE: Using rom file: %s\n\n", rom_file);
+    printf(":GB: Using rom file: %s\n\n", rom_file);
 
     if (cpu_init(gb) != 0){
         fprintf(stderr, "Error Initializing GB CPU:\n");
         return -1;
     }
-    //mmu_init(gb);
     if (cartridge_init(gb, rom_file) != 0) {
         fprintf(stderr, "Error Initializing GB Cartridge:\n");
         return -1;
@@ -96,6 +95,8 @@ int gb_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Error Initializing GB APU config:\n");
         return -1;
     }
+
+    printf("GB Initialization Complete.\n");
 
     return 0;
 }
@@ -188,53 +189,6 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 
     if ((gb->db_stats.frames % 60) == 0) {
         debug_print_stats(gb);
-
-        // print whats in vram for this frame (every 60 frames)
-        // for (uint16_t i = 0; i < 64; i++) {
-        //     printf("A-%02X ", gb->ppu.vram[0x1800 + i]);
-        //     if ((i & 0x0F) == 0x0F) {
-        //         printf("\n");
-        //     }
-        // }
-        // for (uint16_t i = 0; i < 64; i++) {
-        //     printf("B-%02X ", gb->ppu.vram[0x1C00 + i]);
-        //     if ((i & 0x0F) == 0x0F) {
-        //         printf("\n");
-        //     }
-        // }
-        printf("LCDC=%02X\n", gb->ppu.lcdc);
-
-        printf("Map9800 first 8: ");
-        for (int i = 0; i < 8; i++) {
-            printf("%02X ", gb->ppu.vram[0x1800 + i]);
-        }
-        printf("\n");
-
-        printf("Map9C00 first 8: ");
-        for (int i = 0; i < 8; i++) {
-            printf("%02X ", gb->ppu.vram[0x1C00 + i]);
-        }
-        printf("\n");
-        printf("Tile 7F unsigned: ");
-        uint16_t base_unsigned = 0x07F0;
-        for (uint16_t i = 0; i < 16; i++) {
-            printf("%02X ", gb->ppu.vram[base_unsigned + i]);
-        }
-        printf("\n");
-        printf("Tile 7F signed: ");
-        uint16_t base_signed = 0x17F0;
-        for (int i = 0; i < 16; i++) {
-            printf("%02X ", gb->ppu.vram[base_signed + i]);
-        }
-        printf("\n");
-
-        for (uint16_t i = 0; i < 64; i++) {
-            printf("X-%02X ", gb->ppu.vram[i]);
-            if ((i & 0x0F) == 0x0F) {
-                printf("\n");
-            }
-        }
-
     }
 
     if (gb->panic) {
@@ -248,6 +202,60 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 }
 
 
+// TEST -> The GB run loop. Limited by steps.
+int gb_run_steps(GB *gb, int max_steps) {
+    printf("GB RUN. Starting Emulation => limit by steps\n");
+    int step_count;
+    for (step_count = 0; step_count < max_steps; step_count++) {
+        if (gb->panic) {    // Include both as it's migrated.
+            printf("GB Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
+            exit(1);
+            return -1;
+        }
+        if (gb->cpu.state.panic) {
+            printf("CPU Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
+            exit(1);
+            return -1;
+        }
+        gb_step(gb);
+    }
+
+    printf("Finished GB CPU run. - Limited by steps.\n");
+
+    // POST run report:
+    print_instruction_counts();
+
+    printf("GB run finished. Exiting..\n");
+
+    return step_count;
+}
+// TEST -> The GB run loop. Limited by elasped time.
+void gb_run_time(GB *gb, uint64_t max_time) {
+
+
+    gb_step(gb);
+}
+// TEST -> The GB run loop. Limited by cycles.
+uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
+    uint64_t ran_cycles = 0;
+
+    while (ran_cycles < cycle_budget) {
+        if (gb->panic) {    // Include both as it's migrated.
+            break;
+        }
+        if (gb->cpu.state.panic) {
+            break;
+        }
+        uint32_t step_cycles;
+
+        step_cycles = gb_step(gb);
+        ran_cycles += step_cycles;
+    }
+
+    return ran_cycles;
+}
 // No longer used. Using gb_step_frame
 int gb_run(GB *gb) {
     // This works by a emulating on a per frame setup.
@@ -285,66 +293,7 @@ int gb_run(GB *gb) {
 }
 
 
-// The run loop, limited by steps.
-int gb_run_steps(GB *gb, int max_steps) {
-    printf("GB RUN. Starting Emulation => limit by steps\n");
-    int step_count;
-    for (step_count = 0; step_count < max_steps; step_count++) {
-        if (gb->panic) {    // Include both as it's migrated.
-            printf("GB Panic, Cancelling run..\n");
-            // DUMP GB Trace logs
-            exit(1);
-            return -1;
-        }
-        if (gb->cpu.state.panic) {
-            printf("CPU Panic, Cancelling run..\n");
-            // DUMP GB Trace logs
-            exit(1);
-            return -1;
-        }
-        gb_step(gb);
-    }
-
-    printf("Finished GB CPU run. - Limited by steps.\n");
-
-    // POST run report:
-    print_instruction_counts();
-
-    printf("GB run finished. Exiting..\n");
-
-    return step_count;
-}
-
-
-// The run loop, limited by elasped time
-void gb_run_time(GB *gb, uint64_t max_time) {
-
-
-    gb_step(gb);
-}
-
-// The run loop, limited by cycles
-uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
-    uint64_t ran_cycles = 0;
-
-    while (ran_cycles < cycle_budget) {
-        if (gb->panic) {    // Include both as it's migrated.
-            break;
-        }
-        if (gb->cpu.state.panic) {
-            break;
-        }
-        uint32_t step_cycles;
-
-        step_cycles = gb_step(gb);
-        ran_cycles += step_cycles;
-    }
-
-    return ran_cycles;
-}
-
-
-
+// Called by PPU/ LCD for interrupt requests. IE: VBLANK etc
 void gb_request_interrupt(GB *gb, uint8_t interrupt_bit) {
     // VBLANK = 0, LCD_STAT = 1, TIMER = 2, SERIAL = 3, JOYPAD = 4
     gb->interrupts.IF |= (1u << interrupt_bit);

@@ -87,14 +87,12 @@ int basic_viewer_present(BasicViewer *viewer) {
     }
 
     pitch_bytes = surface.pitch_pixels * sizeof(uint32_t);
-    //pitch_bytes = surface.pitch_pixels * (int)sizeof(uint32_t);   // Old way, might not be working.
 
     if (SDL_UpdateTexture(
         viewer->texture,
         NULL,
         surface.pixels,
-        pitch_bytes  // old way. might be wrong.
-        //pitch_bytes * sizeof(uint32_t)    // Causes seg fault..
+        pitch_bytes
         ) != 0 ) {
         printf("Failed to update texture?\n");
         return -1;

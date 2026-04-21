@@ -8,9 +8,7 @@
 
 Headers headers;
 
-/// TODO: WRITE INTERCEPTS:
 /*
-
 Write Table: (Intercepting)
     ---------------------------------------------------------------------------------------
     0000 - 3FFF => FIXED BANK SPACE
@@ -135,52 +133,6 @@ int init_cart_test_mode(GB *gb) {
     return 0;
 }
 
-// DO_NOT_USE Old method, sets static configurations.
-int decode_cart_features(GB *gb) {
-    printf(":Cart: Decoding Cartridge Features... \n");
-    // Set Cartridge type and features.
-    switch (headers.cart_type_code) {
-        case 0x00:
-            gb->cart.config.mbc_type = 0;
-            break;
-        case 0x01 ... 0x03:
-            gb->cart.config.mbc_type = 1;
-            gb->cart.config.has_rom_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            gb->cart.config.has_ram = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            gb->cart.config.has_ram_banking = (headers.cart_type_code == 0x02 || headers.cart_type_code == 0x03);
-            gb->cart.config.has_battery = (headers.cart_type_code == 0x03);
-            break;
-        case 0x13:      // MBC3 + RAM + Battery
-            gb->cart.config.mbc_type = 3;
-            gb->cart.config.has_ram = 1;
-            gb->cart.config.has_battery = 1;
-            break;
-    }
-
-    // ROM Size / Bank count
-    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
-
-    // RAM Size:
-    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
-
-    printf("Done.\n");
-
-    return 0;
-}
-// DO_NOT_USE Old way to setup cartrige
-int configure_cartrige_old(GB *gb) {
-    // ROM Size / Bank count
-    gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
-    gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
-
-    // RAM Size:
-    gb->cart.config.ram_size = ram_size_by_code(headers.ram_size_code);
-
-    return 0;
-}
-
-
 int load_headers(const char *filename) {
     uint8_t full_header[HEADER_SIZE];                   // Not static means, header will be deleted after function finishes.
 
@@ -206,28 +158,22 @@ int load_headers(const char *filename) {
     // 03h = Game supports SGB functions (Super GameBoy)
     // 146B = 014B - Old Licensee Code ... Can be used to see if it will support SGB (Super Gameboy).
     // SGB only supports $33
-    printf("Check if game has SGB Flag... ====>%02X\n", full_header[0x46]);
+    printf("Does game has SGB Flag... ====>%02X\n", full_header[0x46]);
 
-
-    headers.cart_type_code = full_header[0x47];
     // NOTICE: Header Addresses are usually like "0x0134", how I read the header file, means all those codes have 0x100 removed already.
     headers.cart_type_code = full_header[0x47];
-    headers.rom_size_code = full_header[0x48];           // Rom
-    headers.ram_size_code = full_header[0x49];           // Ram  (Memory size)
+    headers.rom_size_code = full_header[0x48];           // ROM
+    headers.ram_size_code = full_header[0x49];           // RAM  (Memory size)
     headers.chksm = full_header[0x4D];
 
-    // Header entry point I haven't really used... maybe delete.
-    for (int i = 0; i <= 3; i++) { headers.entry_point[i] = full_header[i]; }     // Load the 3 Byte Entry point
     printf("Done.\n");
-
     return 0;
 }
 
 int load_cartridge(GB *gb, const char *filename) {
     size_t expt_rom_size = rom_size_by_code(headers.rom_size_code);
-    //size_t expt_rom_size = cart.config.rom_size;
 
-    printf(":Cart: Loading full ROM into Memory... \n");
+    printf(":Cart: Loading ROM into Memory..\n");
     // Load the entire ROM file
     FILE *rom_file = fopen(filename, "rb");             // rb = Read bytes of the file.
     if (!rom_file) {
@@ -280,8 +226,8 @@ int cartridge_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [LoadCartridge] Error loading the cartridge data. (rom file)\n");
         return -1;
     }
-    if (mbc_setup(gb, &gb->cart, headers.cart_type_code) != 0) {
-        fprintf(stderr, "Init Cartrige: [SetupMBC] Error during mbc setup.\n");
+    if (mbc_init(gb, &gb->cart, headers.cart_type_code) != 0) {
+        fprintf(stderr, "Init Cartrige: [MBCInit] Error during mbc setup.\n");
         return -1;
     }
     if (configure_cartrige(gb) != 0) {
@@ -290,47 +236,6 @@ int cartridge_init(GB *gb, const char *rom_file) {
     }
     return 0;
 }
-
-
-// void execute_rom_bankswitch(uint8_t bank_num) {
-//     // Take the provided Bank_num. Use it to change the current ROM Bank.
-//     if (cart.config.rom_bank_count <= bank_num) {
-//         fprintf(stderr, "FATAL ERROR! \n      ----> Invalid Bank switch Location. ROM Bank Count: 0x%04X | Desired ROM Bank: 0x%04X\n", cart.config.rom_bank_count, bank_num);
-//         exit(1);  // catch bad rom Bank switching!
-//     }
-//     else {
-//         cart.cartstorage.current_rom_bank = bank_num;
-//         printf("Switched ROM Bank to: 0x%02X, %d\n", bank_num, bank_num);
-//     }
-// }
-
-// // Reads either fixed bank/ switchable bank.
-// uint8_t read_data(uint16_t addr) {
-//     uint8_t read_rom_data = 0x0;
-//     switch (addr){
-//         case 0x0000 ... 0x3FFF:
-//             printf(":Cart: Matches ROM Bank 00 -> Fixed Bank\n");
-//             read_rom_data = cart.cartstorage.rom_data[addr];
-//             //printf(":Cart: FxB\n");
-//             //printf(":Cart: Data read from ROM (FxB) -> %02X\n", read_data);
-//             return read_rom_data;
-//             break;
-//         case 0x4000 ... 0x7FFF:
-//             printf(":Cart: Matches ROM Bank 01-NN -> Switchable Bank\n");
-//             printf(":Cart: Read Address -> %04X\n", addr);
-//             printf(":Cart: Current ROM bank -> %04X\n", cart.cartstorage.current_rom_bank);
-//             printf(":Cart: ROM BANK ADDR + OFFSET. (Actual location) ---> %04X\n,    With addr - 0x4000: %04X\n", (cart.resource.current_rom_bank * 0x4000), (cart.resource.current_rom_bank * 0x4000) + (addr - 0x4000));
-//             read_rom_data = cart.cartstorage.rom_data[(cart.cartstorage.current_rom_bank * 0x4000) + (addr - 0x4000)];
-//             printf(":Cart: SwB Read\n");
-//             printf(":Cart: Data read from ROM (SwB) -> %02X\n", read_rom_data);
-//             return read_rom_data;
-//             break;
-//         default:
-//         return 0xFF;    // If somehow values are out of range for Reading rom Data.
-//     }
-
-// }
-
 
 /*
 
@@ -344,7 +249,7 @@ uint8_t cart_rom_read(GB *gb, uint16_t addr) {
     return gb->cart.ops.read(&gb->cart, addr);
 }
 
-// cart_rom_write from MMU ... => to write intercept
+// cart_rom_write from MMU
 void cart_rom_write(GB *gb, uint16_t addr, uint8_t val) {
     gb->cart.ops.write(&gb->cart, addr, val);
 }
@@ -354,7 +259,7 @@ uint8_t cart_ram_read(GB *gb, uint16_t addr) {
     return gb->cart.ops.read_ext(&gb->cart, addr);
 }
 
-// cart_ram_write from MMU ... => to write intercept
+// cart_ram_write from MMU
 void cart_ram_write(GB *gb, uint16_t addr, uint8_t val) {
     gb->cart.ops.write_ext(&gb->cart, addr, val);
 }

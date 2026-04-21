@@ -7,7 +7,7 @@
 
 #include "../../debug/logger.h"
 
-static void mbc_none_state_init(Cartridge *cart) {
+static void mbc_none_init_state(Cartridge *cart) {
     // nothing to do..
 }
 
@@ -70,8 +70,8 @@ const Operations mbc_none_ops = {
     .read_ext = mbc_none_read_ext,
 };
 
-int mbc_none_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
-    mbc_none_state_init(cart);
+int mbc_none_init(GB *gb, Cartridge *cart, uint8_t type_code) {
+    mbc_none_init_state(cart);
     // Bind mbc_none config:
     cart->ops = mbc_none_ops;
 
@@ -105,7 +105,7 @@ Also Note, the address range:
 
 
 */
-static void mbc1_state_init(Cartridge *cart) {
+static void mbc1_init_state(Cartridge *cart) {
     uint8_t ram_enabled;
     uint8_t rom_bank_low5;
     uint8_t rom_bank_high2;
@@ -296,9 +296,9 @@ void mbc1_init_ram(Cartridge *cart) {
     cart->storage.ram_data = ram_data;
 }
 
-int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+int mbc1_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc1_decode(cart, type_code) != 0) {
-        fprintf(stderr, "MBC_SETUP: [MBC1_DECODE] Error Decoding MBC\n");
+        fprintf(stderr, ":MBC: [MBC1_SETUP] Error Decoding MBC\n");
         return -1;
     }
     // Note. Test rom I'm using is:
@@ -306,7 +306,7 @@ int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     // ROM Size: 0x04  => 512 KB ROM
     // RAM Size: 0x02  => 8 KB RAM
 
-    mbc1_state_init(cart);
+    mbc1_init_state(cart);
 
     // Ram init:
     mbc1_init_ram(cart);
@@ -314,7 +314,7 @@ int mbc1_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     // Bind mbc1 config:
     cart->ops = mbc1_ops;
 
-    printf("Finished MBC1 setup/ init\n");
+    printf(":MBC: [MBC1_SETUP] Error Decoding MBC\n");
 
     return 0;
 }
@@ -340,7 +340,7 @@ void mbc2 () {  // Unknown priority. Likely lower.
 
     */
 }
-static void mbc2_state_init(Cartridge *cart) {
+static void mbc2_init_state(Cartridge *cart) {
     cart->state.mbc2.ram_enabled = 0;
     cart->state.mbc2.current_rom_bank = 1;
     cart->state.mbc2.current_ram_bank = 0;
@@ -400,13 +400,13 @@ const Operations mbc2_ops = {
     .read_ext = mbc2_read_ext,
 };
 
-int mbc2_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+int mbc2_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc2_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC2_DECODE] Error Decoding MBC\n");
         return -1;
     }
 
-    mbc2_state_init(cart);
+    mbc2_init_state(cart);
     // Bind mbc2 config:
     cart->ops = mbc2_ops;
 
@@ -472,7 +472,7 @@ A000-BFFF: RAM bank or RTC register, depending on current selection
 That is MBC3 in its practical form.
 */
 
-static void mbc3_state_init(Cartridge *cart) {
+static void mbc3_init_state(Cartridge *cart) {
     cart->state.mbc3.ram_rtc_enabled = 0;
     cart->state.mbc3.current_rom_bank = 1;
     cart->state.mbc3.current_ram_bank = 0;
@@ -680,13 +680,14 @@ void mbc3_init_ram(Cartridge *cart) {
     cart->storage.ram_data = ram_data;
 }
 
-int mbc3_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+int mbc3_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc3_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC3_DECODE] Error Decoding MBC\n");
         return -1;
     }
 
-    mbc3_state_init(cart);
+    mbc3_init_state(cart);
+    // MBC3 RAM:
     mbc3_init_ram(cart);
     // Bind mbc3 config:
     cart->ops = mbc3_ops;
@@ -694,6 +695,7 @@ int mbc3_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
     return 0;
 }
 
+/// MBC5:
 
 /*
 
@@ -714,7 +716,7 @@ void mbc5(Cartridge *cart) {
 
 }
 
-static void mbc5_state_init(Cartridge *cart) {
+static void mbc5_init_state(Cartridge *cart) {
     cart->state.mbc5.ram_enabled = 0;
     cart->state.mbc5.rumble_enable = 0;
     cart->state.mbc5.current_rom_bank = 1;
@@ -781,13 +783,13 @@ const Operations mbc5_ops = {
     .read_ext = mbc5_read_ext,
 };
 
-int mbc5_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+int mbc5_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     if (mbc5_decode(cart, type_code) != 0) {
         fprintf(stderr, "MBC_SETUP: [MBC5_DECODE] Error Decoding MBC\n");
         return -1;
     }
 
-    mbc5_state_init(cart);
+    mbc5_init_state(cart);
     // Bind mbc5 config:
     cart->ops = mbc5_ops;
 
@@ -817,23 +819,23 @@ void mbc_other(Cartridge *cart) {
 
 
 
-int mbc_setup(GB *gb, Cartridge *cart, uint8_t type_code) {
+int mbc_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     switch (type_code) {
         case 0x00:
             cart->config.mbc_type = MBC_NONE;
-            return mbc_none_setup(gb, cart, type_code);
+            return mbc_none_init(gb, cart, type_code);
         case 0x01 ... 0x03:
             cart->config.mbc_type = MBC1;
-            return mbc1_setup(gb, cart, type_code);
+            return mbc1_init(gb, cart, type_code);
         case 0x5 ... 0x6:
             cart->config.mbc_type = MBC2;
-            return mbc2_setup(gb, cart, type_code);
+            return mbc2_init(gb, cart, type_code);
         case 0x0F ... 0x15:
             cart->config.mbc_type = MBC3;
-            return mbc3_setup(gb, cart, type_code);
+            return mbc3_init(gb, cart, type_code);
         case 0x19 ... 0x1E:
             cart->config.mbc_type = MBC5;
-            return mbc5_setup(gb, cart, type_code);
+            return mbc5_init(gb, cart, type_code);
         default:
             return -1;
     }
