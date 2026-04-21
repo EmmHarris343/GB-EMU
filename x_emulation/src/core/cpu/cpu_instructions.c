@@ -2273,8 +2273,6 @@ static void CB_PREFIX(GB *gb, CPU *cpu, instruction_T instruction) {
 }
 
 
-
-
 // Individual CPU instructions/ OP Codes
 static opcode_t *opcodes[256] = {
 /*  ---> X0, X1, X2, X3, X4 ... XB .. XF etc */
