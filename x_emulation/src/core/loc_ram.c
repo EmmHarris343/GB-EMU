@@ -2,7 +2,7 @@
 #include "gb.h"
 
 int loc_ram_init(GB *gb) {
-    printf("Initialize WRAM, HRAM.\n");
+    printf(":loc_ram: Initializing Memory. WRAM, HRAM.\n");
 
     // Set the HRAM, WRAM to completely blank 0x00 values.
     memset(gb->memory.hram, 0x00, sizeof(gb->memory.hram));
@@ -37,7 +37,7 @@ void loc_wram_write(GB *gb, uint16_t addr, uint8_t write_val) {
 
 // EchRAM (ECHO RAM) This is a mirror of the WRAM.
 uint8_t loc_echram_read(GB *gb, uint16_t addr) {
-    return loc_wram_read(gb, addr - 0x2000);    // is a mirror of wram.
+    return loc_wram_read(gb, addr - 0x2000);         // is a mirror of wram.
 }
 void loc_echram_write(GB *gb, uint16_t addr, uint8_t write_val) {
     loc_wram_write(gb, addr - 0x2000, write_val);     // is a mirror of wram.

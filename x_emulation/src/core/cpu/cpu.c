@@ -334,7 +334,7 @@ void fetch_opcode(GB *gb, uint16_t addr_pc) {
 
 // Initalize the CPU, set the defaults for DMG 01 (Original) - Registers, Interupts etc.
 int cpu_init(GB *gb) {
-    printf(":CPU: Initialization, setting registers and settings. For VER: %s\n", "DMG 01");
+    printf(":CPU: Initializing CPU Registers, Configurations. For VER: %s\n", "DMG 01");
 
     gb->instruction.opcode = 0x00;
     gb->instruction.operand1 = 0x00;
@@ -346,7 +346,7 @@ int cpu_init(GB *gb) {
     // Sets the cpu.registers to the 'typical' post-boot rom state.
     gb->cpu.reg = cpu_post_bios_state.reg;
 
-    printf("Done. Finished init for DMG 01\n");
+    printf("Done.\n");
 
     return 0;
 }

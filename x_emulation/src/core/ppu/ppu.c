@@ -125,7 +125,7 @@ void ppu_init_reg_map(PPU *ppu) {
 }
 
 int ppu_init(GB *gb) {
-    printf("Initializing PPU; Registers and VRAM.\n");
+    printf(":PPU: Initializing PPU; Registers and VRAM.\n");
 
     // VRAM:
     init_vram(gb);
@@ -137,6 +137,8 @@ int ppu_init(GB *gb) {
 
     // Initialize the register map.
     ppu_init_reg_map(&gb->ppu);
+
+    printf("Done.\n");
 
     return 0;
 }

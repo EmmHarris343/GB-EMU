@@ -57,7 +57,7 @@ static void debug_print_stats(GB *gb) {
 
 // Top-Level "Machine" GB Setup/ Initializer
 int gb_init(GB *gb, const char *rom_file) {
-    printf("Initializing GB...\n");
+    printf(":GB: Initializing GB and subsystems...\n");
 
     gb->interrupts.IE = 0x00,    // IE at location 0xFFFF = 0x00
     gb->interrupts.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
@@ -69,7 +69,7 @@ int gb_init(GB *gb, const char *rom_file) {
     memset(&gb->db_stats, 0, sizeof(gb->db_stats));
 
 
-    printf(":GB: Using rom file: %s\n\n", rom_file);
+    printf(":GB: Using rom file: %s\n", rom_file);
 
     if (cpu_init(gb) != 0){
         fprintf(stderr, "Error Initializing GB CPU:\n");
@@ -96,7 +96,7 @@ int gb_init(GB *gb, const char *rom_file) {
         return -1;
     }
 
-    printf("GB Initialization Complete.\n");
+    printf(":GB: Initialization. Done.\n");
 
     return 0;
 }
