@@ -1,3 +1,6 @@
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_scancode.h>
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
 
@@ -93,6 +96,7 @@ int init_log_files() {
     return 0;
 }
 
+// Gets Name/ Dir. Of which rom file to use. (Entirely manual for now)
 const char * get_rom_file() {
     // Blarrg test roms. (MOST! pass now!)
     //const char *rom_file = "../../rom/cpu-individual/01-special.gb";              // PASSED!!!
@@ -156,9 +160,9 @@ const char * get_rom_file() {
 
     /// GAMES:
 
-    const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
+    //const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
     //const char *rom_file = "../../rom/oddworld(mbc1).gb"; // MBC1 DMG GB Game.
-    //const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
+    const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
 
@@ -166,7 +170,7 @@ const char * get_rom_file() {
 }
 
 int start_emulation() {
-    printf(":E_CTRL: Beginning Emulation\n");
+    printf(":E_CTRL: Initializing SDL, GB, Timers, Log Files...\n");
     GB gb;
 
     const char *rom_file = get_rom_file();
@@ -201,17 +205,20 @@ int start_emulation() {
         return -1;
     }
 
-    printf(":DEBUG: => ROM_RAW: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
-    sleep(2);   // Sleep is just so the initial startup can be readable.
+    printf(":E_CTRL: => ROM Details: Cart_type: 0x%02X ROM Size: 0x%02X RAM Size: 0x%02X\n", headers.cart_type_code, headers.rom_size_code, headers.ram_size_code);
+
+    printf(":E_CTRL: Beginning Emulation in:\n");
+    printf("2..\n");
+    sleep(1);
+    printf("1..\n\n");
+    sleep(1);
 
     // The main emulation loop. (Moved from the old gb_run(&gb) function.)
-
     running = 1;
 
     uint64_t next_frame_time_ns = time_now_ns();
 
     while (running) {
-        SDL_Event event;
         if (gb.panic) {
             break;
         }
@@ -219,9 +226,61 @@ int start_emulation() {
             break;
         }
 
+        SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = 0;
+            switch (event.type) {
+                case SDL_QUIT:
+                    running = 0;
+                case SDL_KEYDOWN:
+                    if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
+                        gb.joy.select = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_y) {   // "Start" button.
+                        gb.joy.start = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_j) {   // "B" button.
+                        gb.joy.b = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_k) {   // "A" button.
+                        gb.joy.a = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_w) {   // "UP" D-pad.
+                        gb.joy.d_up = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_d) {   // "Down" D-pad.
+                        gb.joy.d_down = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_a) {   // "Left" D-pad.
+                        gb.joy.d_left = 0x01;
+                    }
+                    if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
+                        gb.joy.d_right = 0x01;
+                    }
+                case SDL_KEYUP:
+                    if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
+                        gb.joy.select = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_y) {   // "Start" button.
+                        gb.joy.start = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_j) {   // "B" button.
+                        gb.joy.b = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_k) {   // "A" button.
+                        gb.joy.a = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_w) {   // "UP" D-pad.
+                        gb.joy.d_up = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_d) {   // "Down" D-pad.
+                        gb.joy.d_down = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_a) {   // "Left" D-pad.
+                        gb.joy.d_left = 0x00;
+                    }
+                    if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
+                        gb.joy.d_right = 0x00;
+                    }
             }
         }
 

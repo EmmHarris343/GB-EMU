@@ -6,6 +6,7 @@
 #include "cpu/cpu.h"
 #include "mmu.h"
 #include "io.h"
+#include "joy/joy.h"
 #include "cart/cart.h"
 #include "cart/mbc.h"
 #include "loc_ram.h"
@@ -58,6 +59,7 @@ typedef struct gb_s {
     // Routing:
     MMU mmu;
     IO io;
+    JOY joy;
 
     struct oam_s *oam;
 
