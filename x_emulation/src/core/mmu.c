@@ -58,7 +58,6 @@ static MMU_MapRoute mmu_map[] = {
 static const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
 
 uint8_t mmu_read(GB *gb, uint16_t addr) {
-    //printf(":MMU: Read 0x%04X\n", addr);
     uint8_t read_8bit_val = 0x00;
     if (mmu_map_size <= 0) {
         printf("ERROR: mmu_map is emtpy!\n");
@@ -67,6 +66,12 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             read_8bit_val = mmu_map[i].read(gb, addr);
+
+            if (addr == 0xFF00) {
+                //printf("Read Joy FF00 Register hit\n");
+                trace_general_line(gb->instruction.opcode, gb->cpu.cycle, gb->cpu.reg.F, gb->cpu.reg.PC, read_8bit_val, "The Joy Read Hit!", 13);
+                trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
+            }
             //printf("What is MMU_map[i] value? %d", mmu_map[i]);
             // if (addr == 0xDF7C || addr == 0xDF7D ) {
             //     printf("SP READ HIT. BY WHOM?? Addr: 0x%04X: read_val:0x%02X\n", addr, read_8bit_val);
@@ -79,25 +84,13 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
 }
 
 void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
-    //printf("::mmu_write:: addr: 0x%04X, write-val: 0x%02X\n", addr, write_val);
-    //printf(":MMU: Write to memory Space: %04X, Value: %02X\n", addr, write_val);
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             mmu_map[i].write(gb, addr, write_val);
-            // if (addr == 0xFFFF) {
-            //     printf("SPECIAL MMU PRINT: IE WRITE Val: 0x%02X\n", write_val);
-            // }
-
-            // if (addr >= 0xDFF7 && addr <= 0xDFFC) {
-            //     printf(
-            //         "STACK WATCH -WRITE INTERCEPT-: PC=%04X OP=%02X SP=%04X ADDR=%04X NEW_VALUE=%02X\n",
-            //         gb->cpu.reg.PC,
-            //         gb->instruction.opcode,
-            //         gb->cpu.reg.SP,
-            //         addr,
-            //         write_val
-            //     );
-            // }
+            if (addr == 0xFF00) {
+                trace_general_line(gb->instruction.opcode, gb->cpu.cycle, gb->cpu.reg.F, gb->cpu.reg.PC, write_val, "The Joy Write!", 13);
+                trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
+            }
             if (addr == 0xFF01) {
                 uint8_t ch = write_val;
 

@@ -1,8 +1,9 @@
-
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #define _POSIX_C_SOURCE 200809L // This tells glibc to expose the POSIX.1-2008 APIs
 
 #include "cpu/cpu.h"
+#include "joy/joy.h"
+#include "../debug/logger.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,7 +12,18 @@
 
 #include "gb.h"
 
+
+// Crash stuff:
+#include <signal.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
 uint64_t machine_total_cycles;
+
+static int g_trace_fd = -1;
+//static TraceBuffer g_trace_buffer;
+static TraceBuffer g_trace_buffer;
 
 // BIG NOTE:
 // Avoid including "gb.h" inside any header file. Instead do: typedef struct gb_s GB;
@@ -25,6 +37,46 @@ about 69,905 cycles per frame
 about 59.73 frames per second
 
 */
+
+// Attempted crash /segfault dump:
+static void crash_handler(int sig) {
+    const char msg[] = "Fatal signal received. Dumping trace...\n";
+    uint32_t signal_number = (uint32_t)sig;
+
+    if (g_trace_fd >= 0) {
+        write(g_trace_fd, &signal_number, sizeof(signal_number));
+        //write(g_trace_fd, &gb->trace_buffer, sizeof(gb->trace_buffer));
+        write(g_trace_fd, &g_trace_buffer, sizeof(g_trace_buffer));
+    }
+
+    _exit(128 + sig);
+}
+
+static int install_crash_handler(void) {
+    struct sigaction sa;
+    sa.sa_handler = crash_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESETHAND;
+
+    if (sigaction(SIGSEGV, &sa, NULL) != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+
+
+// Circular CPU Trace:
+void trace_buffer_push(TraceBuffer *trace, TraceEntry entry) {
+    trace->entries[trace->write_index] = entry;
+    trace->write_index = (trace->write_index + 1) % TRACE_CAPACITY;
+
+    if (trace->count < TRACE_CAPACITY) {
+        trace->count++;
+    }
+}
+
 
 
 
@@ -87,6 +139,10 @@ int gb_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Error Initializing GB PPU config:\n");
         return -1;
     }
+    if (joy_io_init(gb) != 0) {
+        fprintf(stderr, "Error Initializing GB Joy IO config:\n");
+        return -1;
+    }
     if (timer_init(gb) != 0) {
         fprintf(stderr, "Error Initializing GB Timer config:\n");
         return -1;
@@ -101,7 +157,7 @@ int gb_init(GB *gb, const char *rom_file) {
     return 0;
 }
 
-// The gb step, advances emulation by one cpu step and adds cycles to gb 'tick'.
+// The gb step, advances emulation by one CPU-step and adds cycles to gb 'tick'.
 uint32_t gb_step(GB *gb) {
     uint32_t cycles;
 

@@ -13,6 +13,7 @@
 #include "ppu/ppu.h"
 #include "apu/apu.h"
 #include "timer/timer.h"
+#include "../debug/logger.h"
 
 #define GB_CPU_HZ 4194304
 #define GB_FPS 59.7275
@@ -34,6 +35,34 @@ typedef struct {
     // MemTraceBuffer mem_trace;
     // DebugConfig config;
 } DebugState;
+
+
+typedef struct {
+    uint16_t pc;
+    uint8_t opcode;
+    uint8_t operand1;
+    uint8_t operand2;
+
+    uint16_t af;
+    uint16_t bc;
+    uint16_t de;
+    uint16_t hl;
+    uint16_t sp;
+
+    uint8_t ime;
+    uint8_t iF;
+    uint8_t iE;
+
+    uint64_t instruction_count;
+} TraceEntry;
+
+typedef struct {
+    TraceEntry entries[TRACE_CAPACITY];
+    size_t write_index;
+    size_t count;
+} TraceBuffer;
+
+void trace_buffer_push(TraceBuffer *trace, TraceEntry entry);
 
 typedef struct DebugStats {
     uint64_t cpu_steps;
@@ -73,7 +102,9 @@ typedef struct gb_s {
     uint64_t total_cycles;
     uint32_t frame_cycles;
 
+    // Debug / Crash data
     DebugStats db_stats;
+    TraceBuffer trace_buffer;
 
     /// TODO: move to gb state?
     uint8_t panic;      // Move this to 'machine' panic, not just cpu panic level.

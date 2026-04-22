@@ -169,6 +169,9 @@ const char * get_rom_file() {
     return rom_file;
 }
 
+
+
+
 int start_emulation() {
     printf(":E_CTRL: Initializing SDL, GB, Timers, Log Files...\n");
     GB gb;
@@ -227,10 +230,11 @@ int start_emulation() {
         }
 
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event)) { // SDL_PollEvent. Only sends 1 EVENT per execute. So it's safe to do break.
             switch (event.type) {
                 case SDL_QUIT:
                     running = 0;
+                    break;
                 case SDL_KEYDOWN:
                     if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
                         gb.joy.select = 0x01;
@@ -256,6 +260,7 @@ int start_emulation() {
                     if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
                         gb.joy.d_right = 0x01;
                     }
+                    break;
                 case SDL_KEYUP:
                     if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
                         gb.joy.select = 0x00;
@@ -281,6 +286,7 @@ int start_emulation() {
                     if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
                         gb.joy.d_right = 0x00;
                     }
+                    break;
             }
         }
 

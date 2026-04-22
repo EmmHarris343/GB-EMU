@@ -11,6 +11,10 @@ extern FILE *log_sml;
 extern FILE *cpu_trace_file;
 extern FILE *trace_log_file;
 
+
+
+#define TRACE_CAPACITY 1024
+
 int logging_init(const char *filename);
 void logging_close();
 void logging_log(const char *format, ...);

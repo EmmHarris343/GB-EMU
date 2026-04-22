@@ -10,8 +10,6 @@
 #include "cpu_instructions.h"
 #include "../mmu.h"
 
-#include "../../debug/logger.h"
-
 extern FILE *debug_dump_file;
 
 // The reference for the pointers to functions, to select instruction based on OP_CODE
@@ -2397,9 +2395,36 @@ static CpuSnapshot cpu_snapshot(GB *gb) {
 
 
 
+void add_crash_entry(GB *gb) {
+    TraceEntry new_entry;
+
+    new_entry.opcode = gb->instruction.opcode;
+    new_entry.operand1 = gb->instruction.operand1;
+    new_entry.operand2 = gb->instruction.operand2;
+
+    new_entry.ime = gb->cpu.state.IME;
+    new_entry.ime = gb->cpu.state.IME;
+    new_entry.iE = gb->interrupts.IE;
+    new_entry.iF = gb->interrupts.IE;
+
+    new_entry.instruction_count = gb->step_count;
+
+    // Registries:
+    new_entry.af = gb->cpu.reg.AF;
+    new_entry.bc = gb->cpu.reg.AF;
+    new_entry.de = gb->cpu.reg.AF;
+    new_entry.hl = gb->cpu.reg.AF;
+    new_entry.pc = gb->cpu.reg.PC;
+    new_entry.sp = gb->cpu.reg.SP;
+
+
+    trace_buffer_push(&gb->trace_buffer, new_entry);
+}
 
 
 int execute_instruction(GB *gb, CPU *cpu, instruction_T instruction){
+
+    void add_crash_entry(GB *gb);
     opcodes[instruction.opcode](gb, &gb->cpu, instruction);
 
     if (gb->cpu.cycle == 0) {
