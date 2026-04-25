@@ -81,6 +81,7 @@ const PPU ppu_post_startup = {
     .obp1 = 0xFF,   // FF49
     .wy = 0,        // FF4A
     .wx = 0,        // FF4B
+    .y_condition = 0
 };
 
 
@@ -100,7 +101,10 @@ void ppu_init_timer(PPU *ppu) {
     ppu->wy = 0;        // FF4A
     ppu->wx = 0;        // FF4B
 
+    ppu->y_condition = 0;
+
     // ppu->oam[0xA0] = 0;
+
 
     ppu->line_cycles = 0;
     ppu->mode = 0;
@@ -313,16 +317,6 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
 
 */
 
-
-
-
-
-
-
-
-
-
-
 /*
 
 456 cycles matters because:
@@ -345,7 +339,7 @@ So line_cycles is the per-scanline timing accumulator.
 */
 
 
-/// BIG: TODO: --- I completely forgot to setup the DMA IO code/ PPU code (techniccally it might nto be PPU).
+/// BIG: TODO: --- I completely forgot to setup the DMA IO code/ PPU code (technilly it might not be PPU).
 
 
 // PPU Tick, advances through scanliens and modes based on elasped cycles.
@@ -353,14 +347,14 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
     if ((ppu->lcdc & 0x80) == 0) {
         ppu->line_cycles = 0;
         ppu->ly = 0;
-        ppu_set_mode(gb, ppu, PPU_MODE_HBLANK);
+        ppu_set_mode(gb, ppu, PPU_MODE_HBLANK); // 87=204 dots (Mode 0)
         ppu_update_lyc_flag(gb, ppu);
         return;
     }
 
     ppu->line_cycles += cycles;
 
-    while (ppu->line_cycles >= 456) {   // Each scanline takes 456 Cycles.
+    while (ppu->line_cycles >= 456) {   // Each scanline takes 456 Cycles. Or 456 Dots.
         ppu->line_cycles -= 456;
         ppu->ly++;
 
@@ -369,27 +363,31 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         // Visable Scanlines y = (0 - 143)
         // VBlank  Scanlines y = (144 - 153)
 
-        if (ppu->ly == 144) {   // When y reaches 144, VBlank mode, and request interrupt.
-            //printf("::PPU:: ly reached 144, MOVED TO VBLANK MODE.\n");
+        if (ppu->ly == ppu->wx) {
+            ppu->y_condition = 1;
+        }
+
+        if (ppu->ly == 144) {
+            // When y reaches 144, Switches to Mode 1 VBlank and request interrupt.
             gb->db_stats.vblank_entries += 1;
-            ppu_set_mode(gb, ppu, PPU_MODE_VBLANK); // PPU also makes gb_request_interrupt..
-            //gb_request_interrupt(gb, GB_INTERRUPT_VBLANK);
-        } else if (ppu->ly > 153) { // When y reaches 153+, reset, and allow for OAM frame.
+
+            ppu->y_condition = 0;   // Y condition (for window), resets during vblank.
+            ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
+        } else if (ppu->ly > 153) {
+            // When y reaches 153+ reset ly, switch to Mode 2 OAM for 80 dots.
             ppu->ly = 0;
+            gb->db_stats.ly_wraps +=1;
+
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
             ppu_update_lyc_flag(gb, ppu);
-            gb->db_stats.ly_wraps +=1;
         }
     }
     if (ppu->ly < 144) {
         if (ppu->line_cycles < 80) {
-            //printf("::PPU:: ly is under 80, OAM SCAN MODE\n");
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
         } else if (ppu->line_cycles < (80 + 172)) {
-            //printf("::PPU:: ly is under 252, PPU MODE TRANSFER\n");
             ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
         } else {
-            //printf("::PPU:: ly is over 252, PPU HBLANK MODE, \n");
             ppu_set_mode(gb, ppu,PPU_MODE_HBLANK);
         }
     }

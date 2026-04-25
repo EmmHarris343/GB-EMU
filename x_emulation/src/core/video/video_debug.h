@@ -39,5 +39,6 @@ struct DebugVideoSource {
 void build_test_pattern(PPU *ppu, SDL_PixelFormat *gb_pixel_format);
 
 void build_debug_test_bg(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format);
+void build_bg_window(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format);
 
 #endif

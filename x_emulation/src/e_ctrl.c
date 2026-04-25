@@ -1,3 +1,4 @@
+#include "core/video/display.h"
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_scancode.h>
@@ -179,7 +180,7 @@ int start_emulation() {
     const char *rom_file = get_rom_file();
 
     // Strickly the video stuff.
-    DebugVideoSource video_source;
+    VideoSource video_source;
     BasicViewer viewer;
     // Technically the "running" thingy:
     int running;
@@ -192,7 +193,7 @@ int start_emulation() {
         printf("Failure during the SDL_init.\n");
         return 1;
     }
-    if (basic_viewer_init(&viewer, video_source, DEBUG_VIEW_BG_MAP, 2, *gb_pixel_format) != 0) {
+    if (basic_viewer_init(&viewer, video_source, VIEW_PORT, 4, *gb_pixel_format) != 0) {
         SDL_Quit();
         printf("Failure during basic_viewer init.\n");
         return 1;
@@ -290,11 +291,9 @@ int start_emulation() {
             }
         }
 
-        gb_step_frame(&gb, next_frame_time_ns);
+        gb_step_frame(&gb, next_frame_time_ns, gb_pixel_format);
 
-        //build_test_bg_pattern(&gb.ppu, gb.ppu.vram);
-        //build_test_pattern(&gb.ppu, *gb_pixel_format);
-        build_debug_test_bg(&gb.ppu, gb.ppu.vram, gb_pixel_format);
+        //gen_pixel_line(&gb.ppu, gb.ppu.vram, gb_pixel_format);
 
         basic_viewer_present(&viewer);
 
@@ -304,6 +303,11 @@ int start_emulation() {
     SDL_Quit();
     return 0;
 }
+
+        //build_test_bg_pattern(&gb.ppu, gb.ppu.vram);
+        //build_test_pattern(&gb.ppu, *gb_pixel_format);
+        // build_debug_test_bg(&gb.ppu, gb.ppu.vram, gb_pixel_format);
+        //build_bg_window(&gb.ppu, gb.ppu.vram, gb_pixel_format);
 
 // OLD Version... just did the basic emulation no video / decode anything..
 /*

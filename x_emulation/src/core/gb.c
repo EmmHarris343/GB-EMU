@@ -12,6 +12,8 @@
 
 #include "gb.h"
 
+#include "video/display.h"
+
 
 // Crash stuff:
 #include <signal.h>
@@ -77,6 +79,34 @@ void trace_buffer_push(TraceBuffer *trace, TraceEntry entry) {
     }
 }
 
+
+// Linux specific time functions:
+static uint64_t time_now_ns(void) {
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ((uint64_t) ts.tv_sec * GB_UL_VAL) + (uint64_t) ts.tv_nsec;
+}
+static void sleep_until_ns(uint64_t target_ns) {
+    struct timespec ts;
+    uint64_t now_ns;
+    uint64_t remaining_ns;
+
+    for (;;) {  // Creates infinit loop
+        now_ns = time_now_ns();
+        if (now_ns >= target_ns) {
+            break;
+        }
+
+        remaining_ns = target_ns - now_ns;
+
+        ts.tv_sec = (time_t)(remaining_ns / GB_UL_VAL);
+        ts.tv_nsec = (long) (remaining_ns % GB_UL_VAL);
+
+        clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+    }
+}
 
 
 
@@ -157,63 +187,18 @@ int gb_init(GB *gb, const char *rom_file) {
     return 0;
 }
 
-// The gb step, advances emulation by one CPU-step and adds cycles to gb 'tick'.
-uint32_t gb_step(GB *gb) {
-    uint32_t cycles;
 
-    cycles = cpu_step(gb);  // T-cycles / clock cycle (Not machine cycles)
-    gb_tick(gb, cycles);
-    gb->step_count++;
-
-    gb->db_stats.cpu_steps++;
-    gb->db_stats.cpu_cycles += cycles;
-
-    return cycles;
-}
-
-// Linux specific time functions:
-static uint64_t time_now_ns(void) {
-    struct timespec ts;
-
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    return ((uint64_t) ts.tv_sec * GB_UL_VAL) + (uint64_t) ts.tv_nsec;
-}
-static void sleep_until_ns(uint64_t target_ns) {
-    struct timespec ts;
-    uint64_t now_ns;
-    uint64_t remaining_ns;
-
-    for (;;) {  // Creates infinit loop
-        now_ns = time_now_ns();
-        if (now_ns >= target_ns) {
-            break;
-        }
-
-        remaining_ns = target_ns - now_ns;
-
-        ts.tv_sec = (time_t)(remaining_ns / GB_UL_VAL);
-        ts.tv_nsec = (long) (remaining_ns % GB_UL_VAL);
-
-        clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
-    }
-}
-
-
-
-/*
-
-GB Tick => Machine timing dispatcher.
-
-*/
+// GB Tick => Machine timing dispatcher.
 // Tick; update the total_cycles / frame_cycles,
 void gb_tick(GB *gb, uint32_t cycles){
+    // These 4, are mostly for tracking progress.
     gb->total_cycles += cycles;
     gb->frame_cycles += cycles;
-
     gb->db_stats.ppu_tick_calls++;
     gb->db_stats.ppu_cycles_seen += cycles;
 
+    // Actual logic:
+    // Both Ticks, use the total cycles used by the CPU during the last instruction execution.
     timer_tick(gb, &gb->timer, cycles);
     ppu_tick(gb, &gb->ppu, cycles);
 }
@@ -226,7 +211,25 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 */
 
 
-void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
+// The gb step, advances emulation by one CPU-step and adds cycles to gb 'tick'.
+uint32_t gb_step(GB *gb, SDL_PixelFormat *gb_pixel_format) {
+    uint32_t cycles;
+
+    cycles = cpu_step(gb);  // T-cycles / clock cycle (Not machine cycles)
+    gb_tick(gb, cycles);
+
+    gen_pixel_line(&gb->ppu, gb->ppu.vram, gb_pixel_format);
+
+    // For Logging:
+    gb->step_count++;
+    gb->db_stats.cpu_steps++;
+    gb->db_stats.cpu_cycles += cycles;
+
+    return cycles;
+}
+
+// The step frame. Entry point from e_ctrl
+void gb_step_frame(GB *gb, uint64_t next_frame_time_ns, SDL_PixelFormat *gb_pixel_format) {
     uint32_t frame_cycles = 0;
 
     if (gb->cpu.state.stop){ // CPU does nothing until interrupt
@@ -235,16 +238,8 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
     }
 
     while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
-        uint32_t cycles = gb_step(gb);
-        frame_cycles += cycles;
-    }
-
-    gb->db_stats.frames++;
-
-
-
-    if ((gb->db_stats.frames % 60) == 0) {
-        debug_print_stats(gb);
+        uint32_t cycles = gb_step(gb, gb_pixel_format);
+        frame_cycles += cycles; // Adds cpu cycles to frame_cycles.
     }
 
     if (gb->panic) {
@@ -258,95 +253,8 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns) {
 }
 
 
-// TEST -> The GB run loop. Limited by steps.
-int gb_run_steps(GB *gb, int max_steps) {
-    printf("GB RUN. Starting Emulation => limit by steps\n");
-    int step_count;
-    for (step_count = 0; step_count < max_steps; step_count++) {
-        if (gb->panic) {    // Include both as it's migrated.
-            printf("GB Panic, Cancelling run..\n");
-            // DUMP GB Trace logs
-            exit(1);
-            return -1;
-        }
-        if (gb->cpu.state.panic) {
-            printf("CPU Panic, Cancelling run..\n");
-            // DUMP GB Trace logs
-            exit(1);
-            return -1;
-        }
-        gb_step(gb);
-    }
-
-    printf("Finished GB CPU run. - Limited by steps.\n");
-
-    // POST run report:
-    print_instruction_counts();
-
-    printf("GB run finished. Exiting..\n");
-
-    return step_count;
-}
-// TEST -> The GB run loop. Limited by elasped time.
-void gb_run_time(GB *gb, uint64_t max_time) {
 
 
-    gb_step(gb);
-}
-// TEST -> The GB run loop. Limited by cycles.
-uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
-    uint64_t ran_cycles = 0;
-
-    while (ran_cycles < cycle_budget) {
-        if (gb->panic) {    // Include both as it's migrated.
-            break;
-        }
-        if (gb->cpu.state.panic) {
-            break;
-        }
-        uint32_t step_cycles;
-
-        step_cycles = gb_step(gb);
-        ran_cycles += step_cycles;
-    }
-
-    return ran_cycles;
-}
-// No longer used. Using gb_step_frame
-int gb_run(GB *gb) {
-    // This works by a emulating on a per frame setup.
-
-    // WOULD BE BETTER: setup some kind of accumulator.
-    // Technically called: time accumulator loop.
-
-    uint64_t next_frame_time_ns = time_now_ns();
-
-    while (!gb->quit) {
-        uint32_t frame_cycles = 0;
-
-        while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
-            uint32_t cycles = gb_step(gb);
-            frame_cycles += cycles;
-        }
-
-        gb->db_stats.frames++;
-
-        if ((gb->db_stats.frames % 60) == 0) {
-            debug_print_stats(gb);
-        }
-
-        if (gb->panic) {    // Include both as it's migrated.
-            printf("GB Panic, Cancelling run..\n");
-            // DUMP GB Trace logs
-            exit(1);
-            break;
-        }
-
-        next_frame_time_ns += GB_FRAME_NS;
-        sleep_until_ns(next_frame_time_ns);
-    }
-    return 0;
-}
 
 
 // Called by PPU/ LCD for interrupt requests. IE: VBLANK etc
@@ -382,3 +290,65 @@ void if_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
     gb->interrupts.IF = interrupt_hex & 0x1F;
 }
 
+
+
+
+
+
+/*
+----------------------------------------
+        Test Runs / limited execution
+----------------------------------------
+*/
+
+// TEST -> The GB run loop. Limited by steps.
+int gb_run_steps(GB *gb, int max_steps) {
+    printf("GB RUN. Starting Emulation => limit by steps\n");
+    int step_count;
+    for (step_count = 0; step_count < max_steps; step_count++) {
+        if (gb->panic) {    // Include both as it's migrated.
+            printf("GB Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
+            exit(1);
+            return -1;
+        }
+        if (gb->cpu.state.panic) {
+            printf("CPU Panic, Cancelling run..\n");
+            // DUMP GB Trace logs
+            exit(1);
+            return -1;
+        }
+        //gb_step(gb);
+    }
+
+    printf("Finished GB CPU run. - Limited by steps.\n");
+
+    printf("GB test run finished. Exiting..\n");
+
+    return step_count;
+}
+// TEST -> The GB run loop. Limited by elasped time.
+void gb_run_time(GB *gb, uint64_t max_time) {
+
+
+    //gb_step(gb);
+}
+// TEST -> The GB run loop. Limited by cycles.
+uint64_t gb_run_cycles(GB *gb, uint64_t cycle_budget) {
+    uint64_t ran_cycles = 0;
+
+    while (ran_cycles < cycle_budget) {
+        if (gb->panic) {    // Include both as it's migrated.
+            break;
+        }
+        if (gb->cpu.state.panic) {
+            break;
+        }
+        uint32_t step_cycles;
+
+        // step_cycles = gb_step(gb);
+        // ran_cycles += step_cycles;
+    }
+
+    return ran_cycles;
+}

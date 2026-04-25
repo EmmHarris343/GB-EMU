@@ -5,7 +5,7 @@
 #include "../gb.h"
 
 
-#include "../../debug/logger.h"
+//#include "../../debug/logger.h"
 
 static void mbc_none_init_state(Cartridge *cart) {
     // nothing to do..
@@ -40,7 +40,7 @@ void mbc_none_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         if (cart->state.mbc_none.ram_enabled) {
             cart->storage.ram_data[addr] = write_val;
-            logging_cart_mbc_log("[MBC-NONE] R EXT-R |A=%04X V=%02X|\n", addr, write_val);
+            //logging_cart_mbc_log("[MBC-NONE] R EXT-R |A=%04X V=%02X|\n", addr, write_val);
             return;
         }
     }
@@ -56,7 +56,7 @@ uint8_t mbc_none_read_ext(Cartridge *cart, uint16_t addr){
     // RAM bank size: 0x2000 // IF any.
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         if (cart->state.mbc_none.ram_enabled) {
-            logging_cart_mbc_log("[MBC-NONE] R EXT-R |A=%04X|\n", addr);
+            //logging_cart_mbc_log("[MBC-NONE] R EXT-R |A=%04X|\n", addr);
             return cart->storage.ram_data[addr];
         }
     }
@@ -169,7 +169,7 @@ void mbc1_write(Cartridge *cart, uint16_t addr, uint8_t write_val) {
     }
     if (addr < 0x8000) {    // 6000-7FFF:: banking mode select
         cart->state.mbc1.banking_mode = write_val & 0x01;
-        logging_cart_mbc_log("[MBC1] W-INCPT :: Addr= %04X Write=%02X BankingMode Switch=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
+        //logging_cart_mbc_log("[MBC1] W-INCPT :: Addr= %04X Write=%02X BankingMode Switch=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
         return;
     }
     // Didn't land anywhere correct. Return.
@@ -231,13 +231,13 @@ void mbc1_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
         uint32_t ram_bank = 0;
         if (cart->state.mbc1.banking_mode == 1) {
             ram_bank = (uint32_t)(cart->state.mbc1.bank_high2 & 0x03);
-            logging_cart_mbc_log("[MBC1] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
+            //logging_cart_mbc_log("[MBC1] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, write_val, cart->state.mbc1.banking_mode);
         }
 
         uint32_t offset = ram_bank * 0x2000u + (uint32_t)(addr - 0xA000);
         if (offset < cart->state.mbc1.calc_ram_size) {
             cart->storage.ram_data[offset] = write_val;
-            trace_general_write((0x00), addr, write_val, 4);
+            //trace_general_write((0x00), addr, write_val, 4);
         }
         return;
     }
@@ -262,7 +262,7 @@ uint8_t mbc1_read_ext(Cartridge *cart, uint16_t addr){
             return cart->storage.ram_data[offset];
         }
         printf(":MBC: MBC1 Read-RAM WARNING. Addr Out of RANGE, Returning 0xFF. Details: RamBank=%u Ram_Offset=%u. CalcRamSize=%zu\n", ram_bank, offset, cart->state.mbc1.calc_ram_size);
-        trace_general_read((0x00), addr, (0x00), 4);
+        //trace_general_read((0x00), addr, (0x00), 4);
         return 0xFF;
     }
     return 0xFF;
@@ -520,10 +520,10 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
             /* RAM / RTC enable/disable */
             cart->state.mbc3.ram_rtc_enabled = ((val & 0x0F) == 0x0A) ? 1 : 0;
             if ((val & 0x0F) == 0x0A) {
-                logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
+                //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Enabled.\n", addr, val);
             }
             if ((val & 0x0F) == 0x00) {
-                logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Disabled.\n", addr, val);
+                //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RTC/RAM Disabled.\n", addr, val);
             }
             return;
         }
@@ -544,9 +544,9 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
 
         // Clamp the bank to the total rom bank count.
         if (cart->state.mbc3.current_rom_bank != bank) {
-            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
+            //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
             // Add the bank switch to the CPU trace log. So I know when it happens
-            logging_cpu_trace("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
+            //logging_cpu_trace("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
         }
 
         cart->state.mbc3.current_rom_bank = bank;
@@ -559,12 +559,12 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
         if (val >= 0x00 && val <= 0x03) {  // Despite this space allowing 0x00 to 0x07. MBC3 only supports 4 banks (0x03)
             cart->state.mbc3.current_ram_bank = val;
             cart->state.mbc3.ram_bank_mode = 0;
-            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
+            //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
 
         } else if (val >= 0x08 && val <= 0x0C) {
             cart->state.mbc3.rtc_reg_select = val;
             cart->state.mbc3.ram_bank_mode = 1; // mode 1 = RTC read mode.
-            logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
+            //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RAM_BANK_MODE=%02X\n", addr, val, cart->state.mbc3.ram_bank_mode);
         }
         return;
     }
@@ -608,7 +608,7 @@ void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
                 uint8_t old_val = cart->storage.ram_data[b_offset];
 
                 cart->storage.ram_data[b_offset] = write_val;
-                logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X O_V=%02X W_V=%02X| B=%02X\n", addr, old_val, write_val, bank);
+                //logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X O_V=%02X W_V=%02X| B=%02X\n", addr, old_val, write_val, bank);
 
                 return;
             }
@@ -631,7 +631,7 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
 
                 uint8_t val = cart->storage.ram_data[b_offset];
 
-                logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
+                //logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
                 return cart->storage.ram_data[b_offset];
             }
             if (cart->state.mbc3.ram_bank_mode == 1) {  // Read RTC Registers

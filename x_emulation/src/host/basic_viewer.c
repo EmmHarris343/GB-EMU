@@ -3,8 +3,8 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include "basic_viewer.h"
 
-int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKind view_kind, int window_scale, SDL_PixelFormat gb_pixel_format) {
-    DebugSurface surface;
+int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kind, int window_scale, SDL_PixelFormat gb_pixel_format) {
+    Surface surface;
     int window_width;
     int window_height;
 
@@ -74,7 +74,7 @@ int basic_viewer_init(BasicViewer *viewer, DebugVideoSource source, DebugViewKin
 }
 
 int basic_viewer_present(BasicViewer *viewer) {
-    DebugSurface surface;
+    Surface surface;
     int pitch_bytes;
 
     if (viewer == NULL) {

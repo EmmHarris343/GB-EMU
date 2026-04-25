@@ -15,6 +15,8 @@
 #include "timer/timer.h"
 #include "../debug/logger.h"
 
+#include "video/display.h"
+
 #define GB_CPU_HZ 4194304
 #define GB_FPS 59.7275
 #define GB_CYCLES_PER_FRAME 70224
@@ -124,7 +126,7 @@ int gb_init(GB *gb, const char *rom_file);
 
 
 // Run by frame..
-void gb_step_frame(GB *gb, uint64_t next_frame_time_ns);
+void gb_step_frame(GB *gb, uint64_t next_frame_time_ns, SDL_PixelFormat *gb_pixel_format);
 
 // other run functions..
 int gb_run(GB *gb);
@@ -132,9 +134,9 @@ int gb_run(GB *gb);
 int gb_run_steps(GB *gb, int max_steps);
 void gb_run_time(GB *gb, uint64_t max_time);
 
-uint32_t gb_step(GB *gb);
-void gb_tick(GB *gb, uint32_t cycles);
-void gb_reset(GB *gb);
+// uint32_t gb_step(GB *gb);
+// void gb_tick(GB *gb, uint32_t cycles);
+// void gb_reset(GB *gb);
 
 
 // Special Interupts. Request Interrupt, IF (Interrupt Flag), IE (Interrupt Enable)

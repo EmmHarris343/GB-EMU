@@ -165,26 +165,4 @@ typedef struct {
     uint16_t PC;
 } debug_state;
 
-typedef enum {
-    INSTR_UNDF,
-    INSTR_NOP,
-    INSTR_ALU,
-    INSTR_LD,
-    INSTR_LD16,
-    INSTR_LDH,
-    INSTR_LDSP,
-    INSTR_JUMP,
-    INSTR_CALL,
-    INSTR_POP,
-    INSTR_PUSH,
-    INSTR_RL_A,
-    INSTR_RR_A,
-    INSTR_RET,
-    INSTR_RST,
-    INSTR_MISC,
-    INSTR_CB,
-    INSTR_UNKNOWN,
-    INSTR_TYPE_COUNT
-} instr_type_T;
-
 #endif

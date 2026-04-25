@@ -12,7 +12,8 @@ OBJ = e_core.o e_ctrl.c core/gb.c core/cpu/cpu.c core/cpu/cpu_instructions.c\
 	  core/cart/cart.c core/cart/mbc.c\
 	  core/ppu/ppu.c core/ppu/oam.c\
 	  core/joy/joy.c core/timer/timer.c core/apu/apu.c debug/logger.c\
-	  core/video/adapter.c core/video/video_debug.c\
+	  core/video/display.c\
+	  core/video/adapter.c\
 	  host/basic_viewer.c
 
 # removed build files:  ../test_cpu/cpu_test.c ../test_cpu/common/utile.c ../test_cpu/0_alu/alu_test.c

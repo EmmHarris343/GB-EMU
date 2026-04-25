@@ -9,19 +9,10 @@
 #include "ppu/ppu.h"
 #include "ppu/oam.h"
 #include "io.h"
-
-
-
-
-// Using 1, 16-bit Address space. It can point to 65536 memory locations
-
-
 /*
-
 MMU is:
 A series of Pointers, Configurations, and Rules to direct ANY traffic
 Directs data from: 0000 to FFFF
-
 
 MMU does NOT:
 Does not store any DATA,
@@ -66,16 +57,6 @@ uint8_t mmu_read(GB *gb, uint16_t addr) {
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             read_8bit_val = mmu_map[i].read(gb, addr);
-
-            if (addr == 0xFF00) {
-                //printf("Read Joy FF00 Register hit\n");
-                trace_general_line(gb->instruction.opcode, gb->cpu.cycle, gb->cpu.reg.F, gb->cpu.reg.PC, read_8bit_val, "The Joy Read Hit!", 13);
-                trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
-            }
-            //printf("What is MMU_map[i] value? %d", mmu_map[i]);
-            // if (addr == 0xDF7C || addr == 0xDF7D ) {
-            //     printf("SP READ HIT. BY WHOM?? Addr: 0x%04X: read_val:0x%02X\n", addr, read_8bit_val);
-            // }
             //trace_mmu_read(gb->instruction.opcode, addr, read_8bit_val, i, (uint8_t)mmu_map[i].tag);
             return read_8bit_val;
         }
@@ -87,13 +68,8 @@ void mmu_write(GB *gb, uint16_t addr, uint8_t write_val){
     for (int i = 0; i < mmu_map_size; i++) {
         if (addr >= mmu_map[i].start && addr <= mmu_map[i].end) {
             mmu_map[i].write(gb, addr, write_val);
-            if (addr == 0xFF00) {
-                trace_general_line(gb->instruction.opcode, gb->cpu.cycle, gb->cpu.reg.F, gb->cpu.reg.PC, write_val, "The Joy Write!", 13);
-                trace_mmu_write(gb->instruction.opcode, addr, write_val, i, (uint8_t)mmu_map[i].tag);
-            }
             if (addr == 0xFF01) {
                 uint8_t ch = write_val;
-
                 if (ch >= 0x20 && ch <= 0x7E) {
                     printf("SERIAL: 0x%02X '%c'\n", ch, ch);
                 } else if (ch == 0x0A) {
