@@ -252,7 +252,7 @@ uint8_t get_bg_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t sc
 
     // Location inside the 256x256 background map after SCY/SCX
     uint8_t bg_y = ppu->scy + screen_y; // Should natrually wrap back to 0
-    uint8_t bg_x = ppu->scy + screen_x;
+    uint8_t bg_x = ppu->scx + screen_x;
 
     uint8_t tile_y = (bg_y >> 3);   // Tile row
     uint8_t tile_x = (bg_x >> 3);   // Tile column
