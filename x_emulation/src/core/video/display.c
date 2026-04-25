@@ -1,6 +1,8 @@
 #include <SDL2/SDL_pixels.h>
 #include "display.h"
 #include "../ppu/ppu.h"
+// If I decide to put OAM in ppu, remove this:
+#include "../ppu/oam.h"
 
 #include <SDL2/SDL_surface.h>
 #include <stdint.h>
@@ -63,74 +65,6 @@ static uint8_t decode_tile_pixel(const uint8_t *tile_data, uint8_t y, uint8_t x)
     return (uint8_t)((high_bit << 1) | low_bit);
 }
 
-/*
-
-The Background Layer / Background Tile Map:
-These are technically different, but still the "same".
-The Background Layer = 256x256 Pixels. | The Background Tile Map = 32x32 Tiles.
-Each Tile = 8x8 pixels.
-
-The window is it's own layer, that rests on top of the background.
-    Which is often used for UI elements, progress bars, health, items etc
-    The window has many requirements to be "enabled" including LCDC bit values, LY and WX WY values / coordinates.
-
-The viewport is only 160x144. It scrolls the Background when it reaches the boundry, it wraps back.
-    The view port is "what you see".
-    The view port does NOT scroll with the window. It is constant. But it's coordinates can be changed.
-
-
-*/
-
-
-
-
-
-/// KEY: The main key takeaway of what is happening.
-// Yes the VRAM has tiles, tile maps, sprites, objects, etc.
-// BUT. They need to be drawn on the "LCD" at least from a GB perspective.
-
-// I don't have an LCD, I have a window. Instead of drawing to a LCD, I'm populating a frame buffer.
-// I'm taking advantage of the GB LCDC, LY, pixels, tile maps, working to render the LCD.
-// TO set the correct bits inside the frame buffer. That the SDL2 can read and display in a Host-Window.
-
-
-
-
-
-
-
-
-
-/// PAUSE:
-
-/*
-
-NOW TO DO:
-As LY / the scanline progresses down the screen.
-Draw one line at a time into the buffer.
-
-The scanline would intersect the tiles as it passes through them.
-Drawing 0,1,2,3,4,5,6,7 pixels until it passes those tiles. Then needs to load the next "chunk".
-
-So basically. The current LY I would need to calculate which tiles it would pass through.
-
-Worth also mentioning... I should likely do this ONLY for the "viewport".
-The view port is 160x144. 144 is also the length of LY.
-
-So SCY = LY, SCX = only a percentage of the BG
-
-Basically.....
-I would need to check in the current Y (144) and X (160) space.
-Where SCY and SCX TOP-LEFT location is, and based on that..
-What background Tiles and Window Tiles would need to be rendered/ partially rendered.
-
-Basically a 256x256 box, with a smaller box inside that can be scrolled/ moved around.
-
-
-Then after I would also need to add the OAM / object/ sprite support and draw those.
-
-
-*/
 
 const uint8_t *get_tile_data(int unsigned_indices, uint16_t map_index, const uint8_t *vram) {
     const uint8_t *tile_data;
@@ -201,6 +135,11 @@ uint8_t get_bg_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t sc
 
     // Get & return color ID for the pixel.
     return decode_tile_pixel(tile_data, tile_pixel_y, tile_pixel_x);
+}
+
+uint8_t get_obj_pixel(PPU *ppu, const uint8_t *vram, OAMSprite *sprite, uint8_t screen_y, uint8_t screen_x) {
+
+    return 0;
 }
 
 

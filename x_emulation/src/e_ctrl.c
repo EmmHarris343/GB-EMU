@@ -164,6 +164,11 @@ const char * get_rom_file() {
     //const char *rom_file = "../../rom/zelda_awkng(mbc1).gb"; // MBC1
     //const char *rom_file = "../../rom/oddworld(mbc1).gb"; // MBC1 DMG GB Game.
     const char *rom_file = "../../rom/pokemon_blue.gb"; // MBC3 DMG GB Game.
+    //const char *rom_file = "../../rom/donkey_kong_land.gb"; // MBC??? DMG GB Game.
+    //const char *rom_file = "../../rom/kirby_dream_land.gb"; // MBC??? DMG GB Game.
+    //const char *rom_file = "../../rom/kirby_dream_land_2.gb"; // MBC??? DMG GB Game.
+    //const char *rom_file = "../../rom/mega_man_v.gb"; // MBC??? DMG GB Game.
+
     //const char *rom_file = "../../rom/wrio_land_2.gb"; // MBC3 DMG GB Game.
     //const char *rom_file = "../../rom/pkmn_red.gb"; // NOTICE!! pkmn_red is a mbc3 gameboy COLOUR only game!
 
