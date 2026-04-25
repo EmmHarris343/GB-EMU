@@ -12,8 +12,6 @@
 
 #include "gb.h"
 
-#include "video/display.h"
-
 
 // Crash stuff:
 #include <signal.h>
@@ -212,13 +210,11 @@ void gb_tick(struct gb_s *gb, uint32_t cycles)
 
 
 // The gb step, advances emulation by one CPU-step and adds cycles to gb 'tick'.
-uint32_t gb_step(GB *gb, SDL_PixelFormat *gb_pixel_format) {
+uint32_t gb_step(GB *gb) {
     uint32_t cycles;
 
     cycles = cpu_step(gb);  // T-cycles / clock cycle (Not machine cycles)
     gb_tick(gb, cycles);
-
-    gen_pixel_line(&gb->ppu, gb->ppu.vram, gb_pixel_format);
 
     // For Logging:
     gb->step_count++;
@@ -229,7 +225,7 @@ uint32_t gb_step(GB *gb, SDL_PixelFormat *gb_pixel_format) {
 }
 
 // The step frame. Entry point from e_ctrl
-void gb_step_frame(GB *gb, uint64_t next_frame_time_ns, SDL_PixelFormat *gb_pixel_format) {
+void gb_step_frame(GB *gb, uint64_t *next_frame_time_ns) {
     uint32_t frame_cycles = 0;
 
     if (gb->cpu.state.stop){ // CPU does nothing until interrupt
@@ -238,7 +234,7 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns, SDL_PixelFormat *gb_pixe
     }
 
     while (frame_cycles < GB_CYCLES_PER_FRAME && !gb->panic) {
-        uint32_t cycles = gb_step(gb, gb_pixel_format);
+        uint32_t cycles = gb_step(gb);
         frame_cycles += cycles; // Adds cpu cycles to frame_cycles.
     }
 
@@ -248,8 +244,8 @@ void gb_step_frame(GB *gb, uint64_t next_frame_time_ns, SDL_PixelFormat *gb_pixe
         exit(1);
     }
 
-    next_frame_time_ns += GB_FRAME_NS;
-    sleep_until_ns(next_frame_time_ns);
+    *next_frame_time_ns += GB_FRAME_NS;
+    sleep_until_ns(*next_frame_time_ns);
 }
 
 

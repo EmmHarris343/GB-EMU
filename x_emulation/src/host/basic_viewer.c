@@ -3,7 +3,7 @@
 #define _GNU_SOURCE     // This is needed to get the functions in the libraries to work :/ stupid I know..
 #include "basic_viewer.h"
 
-int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kind, int window_scale, SDL_PixelFormat gb_pixel_format) {
+int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kind, int window_scale) {
     Surface surface;
     int window_width;
     int window_height;
@@ -45,12 +45,6 @@ int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kin
     viewer->renderer = SDL_CreateRenderer(viewer->window , -1, SDL_RENDERER_SOFTWARE);
     if (!viewer->renderer) {
         fprintf(stderr, "Renderer Null; Failure creating renderer. Error: %s\n", SDL_GetError());
-        return -1;
-    }
-
-    viewer->pixel_format = &gb_pixel_format;
-    if (viewer->pixel_format == NULL) {
-        fprintf(stderr, "SDL_AllocFormat failed: %s\n", SDL_GetError());
         return -1;
     }
 

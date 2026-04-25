@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include "../video/display.h"
 
 #define GB_LCD_WIDTH   160
 #define GB_LCD_HEIGHT  144

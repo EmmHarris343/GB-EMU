@@ -17,7 +17,7 @@ typedef struct BasicViewer {
     SDL_PixelFormat *pixel_format;
 } BasicViewer;
 
-int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kind, int window_scale, SDL_PixelFormat gb_pixel_format);
+int basic_viewer_init(BasicViewer *viewer, VideoSource source, ViewKind view_kind, int window_scale);
 int basic_viewer_present(BasicViewer *viewer);
 void basic_viewer_shutdown(BasicViewer *viewer);
 

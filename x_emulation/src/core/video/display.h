@@ -49,6 +49,6 @@ struct VideoSource {
     VideoOps ops;
 };
 
-void gen_pixel_line(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format);
+void gen_pixel_line(PPU *ppu, const uint8_t *vram);
 
 #endif

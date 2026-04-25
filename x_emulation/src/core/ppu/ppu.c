@@ -343,17 +343,20 @@ So line_cycles is the per-scanline timing accumulator.
 
 
 // PPU Tick, advances through scanliens and modes based on elasped cycles.
+// NOTE: This also controls WHEN the pixels are drawn inside display.c!!
 void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
+    uint8_t old_mode = ppu->stat & 0x03;
+    uint8_t new_mode;
     if ((ppu->lcdc & 0x80) == 0) {
         ppu->line_cycles = 0;
         ppu->ly = 0;
         ppu_set_mode(gb, ppu, PPU_MODE_HBLANK); // 87=204 dots (Mode 0)
+        //new_mode = PPU_MODE_HBLANK;
         ppu_update_lyc_flag(gb, ppu);
         return;
     }
 
     ppu->line_cycles += cycles;
-
     while (ppu->line_cycles >= 456) {   // Each scanline takes 456 Cycles. Or 456 Dots.
         ppu->line_cycles -= 456;
         ppu->ly++;
@@ -363,7 +366,7 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         // Visable Scanlines y = (0 - 143)
         // VBlank  Scanlines y = (144 - 153)
 
-        if (ppu->ly == ppu->wx) {
+        if (ppu->ly == ppu->wy) {
             ppu->y_condition = 1;
         }
 
@@ -373,23 +376,34 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
 
             ppu->y_condition = 0;   // Y condition (for window), resets during vblank.
             ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
+            //new_mode = PPU_MODE_VBLANK;
         } else if (ppu->ly > 153) {
             // When y reaches 153+ reset ly, switch to Mode 2 OAM for 80 dots.
             ppu->ly = 0;
             gb->db_stats.ly_wraps +=1;
 
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
+            //new_mode = PPU_MODE_OAM;
             ppu_update_lyc_flag(gb, ppu);
         }
     }
     if (ppu->ly < 144) {
         if (ppu->line_cycles < 80) {
-            ppu_set_mode(gb, ppu, PPU_MODE_OAM);
+            //ppu_set_mode(gb, ppu, PPU_MODE_OAM);
+            new_mode = PPU_MODE_OAM;
         } else if (ppu->line_cycles < (80 + 172)) {
-            ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
+            //ppu_set_mode(gb, ppu, PPU_MODE_TRANSFER);
+            new_mode = PPU_MODE_TRANSFER;
         } else {
-            ppu_set_mode(gb, ppu,PPU_MODE_HBLANK);
+            //ppu_set_mode(gb, ppu,PPU_MODE_HBLANK);
+            new_mode = PPU_MODE_HBLANK;
         }
+
+        if (old_mode != PPU_MODE_HBLANK && new_mode == PPU_MODE_HBLANK) {
+            gen_pixel_line(&gb->ppu, gb->ppu.vram);
+        }
+
+        ppu_set_mode(gb, ppu, new_mode);
     }
 
     ppu_update_lyc_flag(gb, ppu);

@@ -31,18 +31,18 @@ tile_pixel_y, tile_pixel_x
 
 
 
-static uint32_t decode_gray_from_color_id(SDL_PixelFormat *pixel_format, uint8_t color_id) {
+static uint32_t decode_gray_from_color_id(uint8_t color_id) {
     switch (color_id & 0x03) {
         case 0:
-            return SDL_MapRGBA(pixel_format, 255, 255, 255, 255);
+            return 0xFFFFFFFF;
         case 1:
-            return SDL_MapRGBA(pixel_format, 170, 170, 170, 255);
+            return 0xAAAAAAFF;
         case 2:
-            return SDL_MapRGBA(pixel_format, 85, 85, 85, 255);
+            return 0x555555FF;
         case 3:
-            return SDL_MapRGBA(pixel_format, 0, 0, 0, 255);
+            return 0x000000FF;
         default:
-            return SDL_MapRGBA(pixel_format, 255, 0, 255, 255);
+            return 0xFF00FFFF;
     }
 }
 static uint8_t decode_tile_pixel(const uint8_t *tile_data, uint8_t y, uint8_t x) {
@@ -132,71 +132,6 @@ Then after I would also need to add the OAM / object/ sprite support and draw th
 
 */
 
-uint8_t check_win_enabled() {
-    return 0;
-}
-
-uint8_t get_tile_loc() {
-    return 0;
-}
-
-uint8_t get_tile_pixel() {
-    return 0;
-}
-
-uint8_t calc_tile_intersection() {
-    return 0;
-}
-
-void get_bg_tile1(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format) {
-    uint8_t lcdc;
-    lcdc = ppu->lcdc;
-
-    // Bit 4 LCDC changes Reading from Block 0/1 and Block1/2. Bit cleared (0) => -128 to -1 are in block 1 (So needs Signed Int))
-    int unsigned_indices = (lcdc & (1u << 4)) ? 1 : 0;
-
-    // Bit 3 LCDC controls which BG tile map area is used for rendering.
-    uint16_t map_base_offset = (lcdc & (1u << 3)) ? VRAM_BG_OFFSET_9C00 : VRAM_BG_OFFSET_9800;
-
-    // Alright if I take the Y input
-    uint8_t y_offset = 0x0;
-    uint8_t x_offset = 0x0;
-
-    // Basically does a / 8 (but removes any remainder)
-    uint8_t y_tile = (y_offset >> 3);   // Tile row
-    uint8_t x_tile = (x_offset >> 3);   // Tile column
-
-    // Bit masking is likely quicker and easier:
-    uint8_t y_tile_pixel = y_offset > 0 ? (y_offset % 8) : 0; // mod 8, will force it to give me remainder
-    uint8_t x_tile_pixel = x_offset > 0 ? (x_offset % 8) : 0; // mod 8, will force it to give me remainder
-
-    uint16_t map_index  = (uint16_t)(map_base_offset + (y_tile * 32) + x_tile);
-    uint8_t tile_index = vram[map_index];
-
-    const uint8_t *tile_data;
-    if (unsigned_indices) {
-        // Simple math, no negative tile_indexes.
-        tile_data = &vram[VRAM_TILE_8000_OFFSET + (tile_index * 16)]; // This VRAM_TILE_8000 is just 0x0000... I can just remove that entirely
-    } else {
-        // This is to load the -128 to -1 signed addressing thats in block 1;
-
-        int8_t signed_tile_index = (int8_t)tile_index; // Convert tile_index into +/- signed addressing
-
-        // 0x9000 as base pointer. VRAM base 0x8000 => offset 0x1000
-        uint16_t tile_offset = (uint16_t)(0x1000 + (signed_tile_index * 16));
-
-        // Loads 1 8x8 tile (64 toal pixels)
-        tile_data = &vram[tile_offset];
-    }
-    // Get color ID for the pixel.
-    uint8_t pxl_color_id = decode_tile_pixel(tile_data, y_tile_pixel, x_tile_pixel);
-
-    // Places the pixel in the correct Y,X location. Inside the viewport buffer
-    ppu->vp_rgba_buffer[y_tile_pixel * GB_LCD_WIDTH + x_tile_pixel] = decode_gray_from_color_id(gb_pixel_format, pxl_color_id);
-
-}
-
-
 const uint8_t *get_tile_data(int unsigned_indices, uint16_t map_index, const uint8_t *vram) {
     const uint8_t *tile_data;
     uint8_t tile_index = vram[map_index];
@@ -271,7 +206,7 @@ uint8_t get_bg_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t sc
 
 
 // NOTE: This still needs to handle Objects/ Sprite priorities. (Which gets printed)
-void gen_pixel_line(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format) {
+void gen_pixel_line(PPU *ppu, const uint8_t *vram) {
     uint8_t lcdc = ppu->lcdc;
     uint8_t window_enabled = (lcdc & (1u << 5)) ? 1 : 0;
 
@@ -290,7 +225,7 @@ void gen_pixel_line(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_for
         }
 
         // Places the pixel in the correct Y,X location. Inside the viewport buffer
-        ppu->vp_rgba_buffer[((uint16_t) screen_y * GB_LCD_WIDTH) + screen_x] = decode_gray_from_color_id(gb_pixel_format, color_id);
+        ppu->vp_rgba_buffer[((uint16_t) screen_y * GB_LCD_WIDTH) + screen_x] = decode_gray_from_color_id(color_id);
     }
 }
 

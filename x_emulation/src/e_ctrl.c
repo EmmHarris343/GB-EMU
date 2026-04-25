@@ -185,15 +185,13 @@ int start_emulation() {
     // Technically the "running" thingy:
     int running;
 
-    SDL_PixelFormat *gb_pixel_format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-
     video_init_source(&gb, &video_source);
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("Failure during the SDL_init.\n");
         return 1;
     }
-    if (basic_viewer_init(&viewer, video_source, VIEW_PORT, 4, *gb_pixel_format) != 0) {
+    if (basic_viewer_init(&viewer, video_source, VIEW_PORT, 4) != 0) {
         SDL_Quit();
         printf("Failure during basic_viewer init.\n");
         return 1;
@@ -230,6 +228,8 @@ int start_emulation() {
             break;
         }
 
+        uint8_t pressed = 0x0;
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) { // SDL_PollEvent. Only sends 1 EVENT per execute. So it's safe to do break.
             switch (event.type) {
@@ -237,67 +237,29 @@ int start_emulation() {
                     running = 0;
                     break;
                 case SDL_KEYDOWN:
-                    if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
-                        gb.joy.select = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_y) {   // "Start" button.
-                        gb.joy.start = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_j) {   // "B" button.
-                        gb.joy.b = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_k) {   // "A" button.
-                        gb.joy.a = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_w) {   // "UP" D-pad.
-                        gb.joy.d_up = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_d) {   // "Down" D-pad.
-                        gb.joy.d_down = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_a) {   // "Left" D-pad.
-                        gb.joy.d_left = 0x01;
-                    }
-                    if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
-                        gb.joy.d_right = 0x01;
-                    }
-                    break;
                 case SDL_KEYUP:
-                    if (event.key.keysym.sym == SDLK_t) {   // "Select" button.
-                        gb.joy.select = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_y) {   // "Start" button.
-                        gb.joy.start = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_j) {   // "B" button.
-                        gb.joy.b = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_k) {   // "A" button.
-                        gb.joy.a = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_w) {   // "UP" D-pad.
-                        gb.joy.d_up = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_d) {   // "Down" D-pad.
-                        gb.joy.d_down = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_a) {   // "Left" D-pad.
-                        gb.joy.d_left = 0x00;
-                    }
-                    if (event.key.keysym.sym == SDLK_d) {   // "Right" D-pad.
-                        gb.joy.d_right = 0x00;
+                    pressed = (event.type == SDL_KEYDOWN);
+
+                    switch (event.key.keysym.sym) {
+                        case SDLK_w: gb.joy.d_up    = pressed; break;
+                        case SDLK_s: gb.joy.d_down  = pressed; break;
+                        case SDLK_a: gb.joy.d_left  = pressed; break;
+                        case SDLK_d: gb.joy.d_right = pressed; break;
+
+                        case SDLK_k: gb.joy.a       = pressed; break;
+                        case SDLK_j: gb.joy.b       = pressed; break;
+                        case SDLK_y: gb.joy.start   = pressed; break;
+                        case SDLK_t: gb.joy.select  = pressed; break;
                     }
                     break;
             }
         }
 
-        gb_step_frame(&gb, next_frame_time_ns, gb_pixel_format);
-
-        //gen_pixel_line(&gb.ppu, gb.ppu.vram, gb_pixel_format);
+        gb_step_frame(&gb, &next_frame_time_ns);
 
         basic_viewer_present(&viewer);
 
-        SDL_Delay(16);
+        //SDL_Delay(16);
     }
     basic_viewer_shutdown(&viewer);
     SDL_Quit();
