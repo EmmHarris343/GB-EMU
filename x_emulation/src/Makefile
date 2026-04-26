@@ -10,7 +10,7 @@ CFLAGS = -g -std=c11 -Wall
 OBJ = e_core.o e_ctrl.c core/gb.c core/cpu/cpu.c core/cpu/cpu_instructions.c\
 	  core/io.c core/mmu.c core/loc_ram.c\
 	  core/cart/cart.c core/cart/mbc.c\
-	  core/ppu/ppu.c core/ppu/oam.c\
+	  core/ppu/ppu.c\
 	  core/joy/joy.c core/timer/timer.c core/apu/apu.c debug/logger.c\
 	  core/video/display.c\
 	  core/video/adapter.c\

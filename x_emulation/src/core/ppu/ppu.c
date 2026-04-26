@@ -146,6 +146,50 @@ int ppu_init(GB *gb) {
 
     return 0;
 }
+
+
+/*
+
+---- OAM OBJECTS ----
+
+*/
+
+uint8_t oam_read(GB *gb, uint16_t addr) {
+    if (addr >= 0xFE00 && addr <= 0xFE9F) { // Allowed range:
+        uint16_t offset = addr - 0xFE00;
+        return gb->ppu.oam[offset];
+    }
+    printf("oam: OAM invalid Read! -> Addr:0x%04X. Returning 0xFF.\n", addr);
+    return 0xFF;
+}
+void oam_write(GB *gb, uint16_t addr, uint8_t write_val) {
+    if (addr >= 0xFE00 && addr <= 0xFE9F) { // Allowed range:
+        uint16_t offset = addr - 0xFE00;
+        gb->ppu.oam[offset] = write_val;
+        return;
+    }
+    printf("oam: OAM Write invalid Write! -> Addr: 0x%04X. WriteVal: 0x%02X\n", addr, write_val);
+    return;
+}
+
+void oam_dma_transfer(GB *gb, uint8_t write_val) {
+    uint16_t source_addr = (uint16_t)write_val << 8;
+
+    for (uint16_t i = 0; i < 160; i++) {
+        gb->ppu.oam[i] = mmu_read(gb, source_addr + i);
+    }
+}
+
+
+
+/*
+
+---- REST OF PPU CODE ----
+
+*/
+
+
+
 static void ppu_update_lyc_flag(GB *gb, PPU *ppu) {
     uint8_t old_match = (ppu->stat >> 2) & 0x01;
     uint8_t new_match = (ppu->ly == ppu->lyc) ? 1u : 0u;
@@ -296,6 +340,9 @@ void ppu_io_write(GB *gb, uint16_t addr, uint8_t write_val) {
             return;
         case 0xFF45:
             ppu_lyc_write(gb, write_val);
+            return;
+        case 0xFF46:
+            oam_dma_transfer(gb, write_val);   // DMA
             return;
         default: {
             uint8_t index = (uint8_t)(addr & 0x00FF);

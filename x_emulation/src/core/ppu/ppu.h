@@ -6,12 +6,20 @@
 #include <stdint.h>
 #include "../video/display.h"
 
+
 #define GB_LCD_WIDTH   160
 #define GB_LCD_HEIGHT  144
 #define GB_BG_WIDTH    256
 #define GB_BG_HEIGHT   256
 
 typedef struct gb_s GB;
+
+typedef struct {
+    uint8_t y;
+    uint8_t x;
+    uint8_t tile_id;
+    uint8_t attributes;
+} OAM_Entry;
 
 typedef struct ppu_s {
     uint8_t lcdc;   // LCD control
@@ -39,6 +47,8 @@ typedef struct ppu_s {
     // Data storage:
     uint8_t oam[0xA0];      // Object Attribute Memory, can reference sprite / tiles.
     uint8_t vram[0x2000];   // Vram total size.
+
+    OAM_Entry OAM_Entry;
 
     // Is this the best place for the Frame Buffers?
 
@@ -77,6 +87,11 @@ enum {
 
 // Init ppu function
 int ppu_init(GB *gb);
+
+
+// OAM specific Read/Write functions:
+uint8_t oam_read(GB *gb, uint16_t addr);
+void oam_write(GB *gb, uint16_t addr, uint8_t val);
 
 // PPU IO Read/Write functions.
 uint8_t ppu_io_read(GB *gb, uint16_t addr);
