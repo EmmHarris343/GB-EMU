@@ -74,6 +74,22 @@ typedef struct DebugStats {
     uint64_t vblank_entries;
 } DebugStats;
 
+typedef enum {
+    GB_RUN_OK = 0,
+    GB_RUN_PAUSE,
+    GB_RUN_RESET,
+    GB_RUN_STOP,
+    GB_RUN_EXIT,
+    GB_RUN_PANIC = 9
+} RunStates;
+
+typedef struct {
+
+
+} SaveSate;
+
+
+
 typedef struct gb_s {
     // This is the instruction OPCODE + OP1 + OP2.
     instruction_T instruction;
@@ -106,9 +122,16 @@ typedef struct gb_s {
     DebugStats db_stats;
     TraceBuffer trace_buffer;
 
+    // Very important, controls the running, pause, reset, stop, exit, panic conditions.
+    // Worth mentioning only a few are actually setup.
+    uint8_t run_state;
+
+
     /// TODO: move to gb state?
     uint8_t panic;      // Move this to 'machine' panic, not just cpu panic level.
-    uint8_t quit;
+
+    const char *rom_path;
+    const char *ram_save_path;
 } GB;
 
 
@@ -134,14 +157,9 @@ int gb_run(GB *gb);
 int gb_run_steps(GB *gb, int max_steps);
 void gb_run_time(GB *gb, uint64_t max_time);
 
-// uint32_t gb_step(GB *gb);
-// void gb_tick(GB *gb, uint32_t cycles);
-// void gb_reset(GB *gb);
-
 
 // Special Interupts. Request Interrupt, IF (Interrupt Flag), IE (Interrupt Enable)
 void gb_request_interrupt(GB *gb, uint8_t bit);
-
 
 uint8_t interrupt_read(GB *gb, uint16_t addr);
 void interrupt_write(GB *gb, uint16_t addr, uint8_t interrupt_hex);

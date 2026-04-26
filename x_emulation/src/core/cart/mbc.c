@@ -649,7 +649,7 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
                 if (bank <= 0x03) { // Make sure it's not reading from RTC registers
                     size_t b_offset = (bank * 0x2000)+ (size_t)(addr - 0xA000);
                     uint8_t val = cart->storage.ram_data[b_offset];
-                    logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
+                    //logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
                     return cart->storage.ram_data[b_offset];
                 }
                 return 0x00;
@@ -780,10 +780,9 @@ int mbc3_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     // Bind mbc3 config:
     cart->ops = mbc3_ops;
 
-    const char *ram_sav_file = "save/pk_blue.sav";
     // MBC 3 enable save/load:
     if (cart->state.mbc3.allow_save == 1) {
-        if (mbc3_load_save(cart, ram_sav_file) != 0) {
+        if (mbc3_load_save(cart, gb->ram_save_path) != 0) {
             fprintf(stderr, ":MBC: [MBC3 Load-Save] Error loading save into ram.\n");
             return -1;
         }

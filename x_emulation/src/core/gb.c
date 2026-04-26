@@ -142,9 +142,9 @@ int gb_init(GB *gb, const char *rom_file) {
     gb->interrupts.IE = 0x00,    // IE at location 0xFFFF = 0x00
     gb->interrupts.IF = 0xE1,     // IF at location 0xFF0F = 0xE1
 
+    gb->run_state = GB_RUN_OK;
     gb->panic = 0;
-    gb->cpu.state.panic = 0;
-    gb->quit = 0;
+    gb->cpu.state.panic = 0;    // THe cpu panic. I don't like having two of them.
 
     memset(&gb->db_stats, 0, sizeof(gb->db_stats));
 
@@ -191,8 +191,17 @@ void gb_shutdown(GB *gb, const char *save_file) {
         cart_save(gb, save_file);
     }
 
+
 }
 
+void gb_request_shutdown(GB *gb) {
+
+}
+
+void gb_panic_shutdown(GB *gb) {
+    // Stop everything,
+
+}
 
 
 
@@ -248,21 +257,21 @@ void gb_step_frame(GB *gb, uint64_t *next_frame_time_ns) {
         frame_cycles += cycles; // Adds cpu cycles to frame_cycles.
     }
 
-    if (gb->frame_cycles % 200 == 0){
-        printf("PC=%04X ROM_B=%02X VBLKS=%08lX SP=%04X IME=%u IE=%02X IF=%02X HALT=%u LY=%u DIV=%02X TIMA=%02X TAC=%02X\n",
-            gb->cpu.reg.PC,
-            gb->cart.state.mbc3.current_rom_bank,
-            gb->db_stats.vblank_entries,
-            gb->cpu.reg.SP,
-            gb->cpu.state.IME,
-            gb->interrupts.IE,
-            gb->interrupts.IF,
-            gb->cpu.state.halt,
-            gb->ppu.ly,
-            gb->timer.div,
-            gb->timer.tima,
-            gb->timer.tac);
-    }
+    // if (gb->frame_cycles % 200 == 0){
+    //     printf("PC=%04X ROM_B=%02X VBLKS=%08lX SP=%04X IME=%u IE=%02X IF=%02X HALT=%u LY=%u DIV=%02X TIMA=%02X TAC=%02X\n",
+    //         gb->cpu.reg.PC,
+    //         gb->cart.state.mbc3.current_rom_bank,
+    //         gb->db_stats.vblank_entries,
+    //         gb->cpu.reg.SP,
+    //         gb->cpu.state.IME,
+    //         gb->interrupts.IE,
+    //         gb->interrupts.IF,
+    //         gb->cpu.state.halt,
+    //         gb->ppu.ly,
+    //         gb->timer.div,
+    //         gb->timer.tima,
+    //         gb->timer.tac);
+    // }
 
     if (gb->panic) {
         printf("GB Panic, Cancelling run..\n");

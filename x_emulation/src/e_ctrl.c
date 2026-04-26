@@ -175,25 +175,96 @@ const char * get_rom_file() {
     return rom_file;
 }
 
+// Overly complicated way to get the Rom file name, and build the save/<save_file>.sav name.
+char *isolate_rom_filename(const char *path) {
+    char *last_slash = strrchr(path, '/');
+
+    const char *filename = (last_slash) ? last_slash + 1 : path;
+
+    char *output_nodot = malloc(strlen(filename) +1);   // Dot place_holder (the +1 = '\0' end of string value)
+    strcpy(output_nodot, filename);
+
+    char *last_dot = strrchr(output_nodot, '.');
+    if (last_dot && last_dot != output_nodot) {
+        *last_dot = '\0';
+    }
+    char *path_save = "save/";
+    char *save_ext = ".sav";
+
+    char *save_path = malloc(
+        strlen(path_save) +
+              strlen(output_nodot) +
+              strlen(save_ext) +
+              1);
+
+    if (!save_path) {
+        printf("Failed to malloc for save_path returning...\n");
+        free(output_nodot);
+        return NULL;
+    }
+    strcpy(save_path, path_save);   // Copy path_save into save_ath.
+    strcat(save_path, output_nodot);    // Add the FileName "last_dot" (without the .gb extension)
+    strcat(save_path, save_ext);    // Add the .save to the end of the file name.
+
+    free(output_nodot);
+    return save_path;   // don't free save path, as it's the pointer to the value.
+}
 
 
+
+void poll_input(GB *gb) {
+        uint8_t pressed = 0x0;
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) { // SDL_PollEvent. Only sends 1 EVENT per execute. So it's safe to do break.
+            switch (event.type) {
+                case SDL_QUIT:
+                    gb->run_state = GB_RUN_EXIT;
+                    break;
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                    pressed = (event.type == SDL_KEYDOWN);
+
+                    switch (event.key.keysym.sym) {
+                        case SDLK_w: gb->joy.d_up    = pressed; break;
+                        case SDLK_s: gb->joy.d_down  = pressed; break;
+                        case SDLK_a: gb->joy.d_left  = pressed; break;
+                        case SDLK_d: gb->joy.d_right = pressed; break;
+
+                        case SDLK_k: gb->joy.a       = pressed; break;
+                        case SDLK_j: gb->joy.b       = pressed; break;
+                        case SDLK_y: gb->joy.start   = pressed; break;
+                        case SDLK_t: gb->joy.select  = pressed; break;
+                    }
+                    break;
+            }
+        }
+}
 
 int start_emulation() {
     printf(":E_CTRL: Initializing SDL, GB, Timers, Log Files...\n");
     GB gb;
 
-    const char *rom_file = get_rom_file();
-    const char *ram_sav_file = "save/pk_blue.sav";
+    gb.rom_path = get_rom_file();
+    gb.ram_save_path = isolate_rom_filename(gb.rom_path);
+
+    printf("Rom File PATH: %s, RAM Save PATH: %s\n", gb.rom_path, gb.ram_save_path);
+
+
+    // Later: snprintf(out_name, out_size, "save/%s.sav", temp);
+
+    // This is insane how poorly it's setup to handle strings in C.
+
+
     int enable_save = 1;
 
-    // Strickly the video stuff.
+    // Strictly the video stuff.
     VideoSource video_source;
     BasicViewer viewer;
     // Technically the "running" thingy:
     int running;
 
     video_init_source(&gb, &video_source);
-
+    // Initialize all the SDL, video, textures, view_types, scale, rendering, output.
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("Failure during the SDL_init.\n");
         return 1;
@@ -205,10 +276,12 @@ int start_emulation() {
     }
 
     // Initialize the GB at the "machine" level.
-    if (gb_init(&gb, rom_file) != 0) {
+    if (gb_init(&gb, gb.rom_path) != 0) {
         fprintf(stderr, "unable to Initializing Cartridge Error:\n");
         return -1;
     }
+
+    // Initialzing the logging system:
     if (init_log_files() != 0) {
         printf("Unable to Initializing log files.");
         return -1;
@@ -231,44 +304,26 @@ int start_emulation() {
         if (gb.panic) {
             break;
         }
-        if (gb.quit) {
+        if (gb.run_state == GB_RUN_EXIT) {
+            running = 0;
+            break;
+        }
+        if (gb.run_state == GB_RUN_PANIC) {
+            running = 0;
             break;
         }
 
-        uint8_t pressed = 0x0;
-
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) { // SDL_PollEvent. Only sends 1 EVENT per execute. So it's safe to do break.
-            switch (event.type) {
-                case SDL_QUIT:
-                    running = 0;
-                    break;
-                case SDL_KEYDOWN:
-                case SDL_KEYUP:
-                    pressed = (event.type == SDL_KEYDOWN);
-
-                    switch (event.key.keysym.sym) {
-                        case SDLK_w: gb.joy.d_up    = pressed; break;
-                        case SDLK_s: gb.joy.d_down  = pressed; break;
-                        case SDLK_a: gb.joy.d_left  = pressed; break;
-                        case SDLK_d: gb.joy.d_right = pressed; break;
-
-                        case SDLK_k: gb.joy.a       = pressed; break;
-                        case SDLK_j: gb.joy.b       = pressed; break;
-                        case SDLK_y: gb.joy.start   = pressed; break;
-                        case SDLK_t: gb.joy.select  = pressed; break;
-                    }
-                    break;
-            }
-        }
+        poll_input(&gb);
 
         gb_step_frame(&gb, &next_frame_time_ns);
+
+        poll_input(&gb);
 
         basic_viewer_present(&viewer);
     }
 
     // Proceedurs to following when GB emulator is shutting down:
-    gb_shutdown(&gb, ram_sav_file);
+    gb_shutdown(&gb, gb.ram_save_path);
 
 
     basic_viewer_shutdown(&viewer);
