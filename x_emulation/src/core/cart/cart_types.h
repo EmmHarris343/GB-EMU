@@ -45,8 +45,10 @@ typedef struct {
     uint8_t ram_rtc_enabled;
     uint8_t current_rom_bank;   // mbc3 will only need 7bits => fits in uint8_t
     uint8_t current_ram_bank;
-    uint8_t rtc_reg_select;
     uint8_t ram_bank_mode;      /* 0 = RAM bank selected, 1 = RTC register selected */
+    uint8_t ram_dirty;           // Ram is unsaved.
+    uint8_t allow_save;
+    uint8_t rtc_reg_select;
     uint8_t rtc_latch_armed;
 } MBC3_state;
 

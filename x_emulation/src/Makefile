@@ -4,6 +4,8 @@ cc = gcc
 
 
 CFLAGS = -g -std=c11 -Wall
+CFLAGS2 = -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS += -fsanitize=address
 # -Wextra
 
 # Object files (Not all of these exist)

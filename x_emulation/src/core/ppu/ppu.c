@@ -413,24 +413,23 @@ void ppu_tick(GB *gb, PPU *ppu, uint32_t cycles) {
         // Visable Scanlines y = (0 - 143)
         // VBlank  Scanlines y = (144 - 153)
 
-        if (ppu->ly == ppu->wy) {
-            ppu->y_condition = 1;
-        }
+        // if (ppu->ly == ppu->wy) {
+        //     ppu->y_condition = 1;
+        // }
 
         if (ppu->ly == 144) {
             // When y reaches 144, Switches to Mode 1 VBlank and request interrupt.
             gb->db_stats.vblank_entries += 1;
 
-            ppu->y_condition = 0;   // Y condition (for window), resets during vblank.
+            //ppu->y_condition = 0;   // Y condition (for window), resets during vblank.
             ppu_set_mode(gb, ppu, PPU_MODE_VBLANK);
-            //new_mode = PPU_MODE_VBLANK;
+            //printf("IF: state after set vblank: %02X\n", gb->interrupts.IF);
         } else if (ppu->ly > 153) {
             // When y reaches 153+ reset ly, switch to Mode 2 OAM for 80 dots.
             ppu->ly = 0;
             gb->db_stats.ly_wraps +=1;
 
             ppu_set_mode(gb, ppu, PPU_MODE_OAM);
-            //new_mode = PPU_MODE_OAM;
             ppu_update_lyc_flag(gb, ppu);
         }
     }

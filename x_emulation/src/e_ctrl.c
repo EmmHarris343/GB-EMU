@@ -183,6 +183,8 @@ int start_emulation() {
     GB gb;
 
     const char *rom_file = get_rom_file();
+    const char *ram_sav_file = "save/pk_blue.sav";
+    int enable_save = 1;
 
     // Strickly the video stuff.
     VideoSource video_source;
@@ -263,9 +265,12 @@ int start_emulation() {
         gb_step_frame(&gb, &next_frame_time_ns);
 
         basic_viewer_present(&viewer);
-
-        //SDL_Delay(16);
     }
+
+    // Proceedurs to following when GB emulator is shutting down:
+    gb_shutdown(&gb, ram_sav_file);
+
+
     basic_viewer_shutdown(&viewer);
     SDL_Quit();
     return 0;

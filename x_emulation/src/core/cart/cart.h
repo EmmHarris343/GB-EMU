@@ -21,6 +21,8 @@ int cartridge_init(GB *gb, const char *filename);
 int initialize_cartridge_simple(GB *gb);
 int init_cart_test_mode(GB *gb);
 
+void cart_save(GB *gb, const char *save_file);
+
 // ENTRY POINTS (e_ctrl/ MMU):
 uint8_t cart_rom_read(GB *gb, uint16_t addr);
 void cart_rom_write(GB *gb, uint16_t addr, uint8_t val);

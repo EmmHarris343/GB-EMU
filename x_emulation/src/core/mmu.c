@@ -42,8 +42,8 @@ static MMU_MapRoute mmu_map[] = {
     {0xFEA0, 0xFEFF, unusable_read, unusable_write, BUS_UNMAPPED},
     {0xFF00, 0xFF7F, io_read, io_write, BUS_IO},
     {0xFF80, 0xFFFE, loc_hram_read, loc_hram_write, BUS_HRAM },          // High RAM (Fast Ram)
-    {0xFF0F, 0xFF0F, if_read, if_write, BUS_IF},
-    {0xFFFF, 0xFFFF, ie_read, ie_write, BUS_IE}
+    {0xFF0F, 0xFF0F, interrupt_read, interrupt_write, BUS_IF},           // IF Interrupt
+    {0xFFFF, 0xFFFF, interrupt_read, interrupt_write, BUS_IE}           // IE Interrupt
 };
 static const size_t mmu_map_size = sizeof(mmu_map) / sizeof(MMU_MapRoute);
 

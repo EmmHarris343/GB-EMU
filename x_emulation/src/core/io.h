@@ -32,6 +32,8 @@ typedef struct {
 typedef struct {
     GB *gb;
     IO_RegMap map;
+    uint8_t SB;
+    uint8_t SC;
 } IO;
 
 uint8_t io_read(GB *gb, uint16_t addr);

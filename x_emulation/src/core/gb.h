@@ -122,6 +122,8 @@ enum {
 
 int gb_init(GB *gb, const char *rom_file);
 
+void gb_shutdown(GB *gb, const char *save_file);
+
 
 // Run by frame..
 void gb_step_frame(GB *gb, uint64_t *next_frame_time_ns);
@@ -140,12 +142,9 @@ void gb_run_time(GB *gb, uint64_t max_time);
 // Special Interupts. Request Interrupt, IF (Interrupt Flag), IE (Interrupt Enable)
 void gb_request_interrupt(GB *gb, uint8_t bit);
 
-uint8_t if_read(GB *gb, uint16_t addr);
-uint8_t ie_read(GB *gb, uint16_t addr);
-void if_write(GB *gb, uint16_t addr, uint8_t val);
-void ie_write(GB *gb, uint16_t addr, uint8_t val);
 
-
+uint8_t interrupt_read(GB *gb, uint16_t addr);
+void interrupt_write(GB *gb, uint16_t addr, uint8_t interrupt_hex);
 
 
 

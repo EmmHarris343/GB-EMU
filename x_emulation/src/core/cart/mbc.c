@@ -286,10 +286,7 @@ void mbc1_init_ram(Cartridge *cart) {
     }
 
     size_t ram_size = cart->state.mbc1.calc_ram_size;   // Use the calculated RAM size.
-
-    // Initialize Cartridge RAM data, setting all values to 0.
-    uint8_t *ram_data = calloc(ram_size, sizeof(uint8_t));
-    cart->storage.ram_data = ram_data;
+    // I removed all the ram storage assignments to tracea  bug.
 }
 
 int mbc1_init(GB *gb, Cartridge *cart, uint8_t type_code) {
@@ -302,15 +299,15 @@ int mbc1_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     // ROM Size: 0x04  => 512 KB ROM
     // RAM Size: 0x02  => 8 KB RAM
 
-    mbc1_init_state(cart);
+    // mbc1_init_state(cart);
 
-    // Ram init:
-    mbc1_init_ram(cart);
+    // // Ram init:
+    // mbc1_init_ram(cart);
 
-    // Bind mbc1 config:
-    cart->ops = mbc1_ops;
+    // // Bind mbc1 config:
+    // cart->ops = mbc1_ops;
 
-    printf(":MBC: [MBC1 Init]. Done.\n");
+    // printf(":MBC: [MBC1 Init]. Done.\n");
 
     return 0;
 }
@@ -478,6 +475,8 @@ static void mbc3_init_state(Cartridge *cart) {
     cart->state.mbc3.rtc_reg_select = 0;
     cart->state.mbc3.ram_bank_mode = 0;
     cart->state.mbc3.rtc_latch_armed = 0;
+    cart->state.mbc3.ram_dirty = 0;
+    cart->state.mbc3.allow_save = 1;
 }
 
 static int mbc3_decode(Cartridge *cart, uint8_t type_code) {
@@ -531,26 +530,21 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val) {
     }
     if (addr <= 0x3FFF) {
         /* ROM bank select */
-        uint8_t bank = val & 0x7F;
-        if (bank >= cart->config.rom_bank_count) {
-            bank %= cart->config.rom_bank_count;
-            if (bank == 0) { bank = 1; }
-        }
-
         if (cart->config.rom_bank_count == 0) {
             printf("cart: ERROR rom_bank_count == 0\n");
             return;
         }
 
-        // Clamp the bank to the total rom bank count.
-        if (cart->state.mbc3.current_rom_bank != bank) {
-            //logging_cart_mbc_log("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
-            // Add the bank switch to the CPU trace log. So I know when it happens
-            //logging_cpu_trace("[MBC3] Addr= %04X Write=%02X RomBank_From=%02X RomBank_To=%02X\n", addr, val, cart->state.mbc3.current_rom_bank, bank);
+        uint8_t bank = val & 0x7F;
+        if (bank == 0) { bank = 1; }
+
+        if (cart->config.rom_bank_count != 0) {
+            bank %= cart->config.rom_bank_count;
+
+            if (bank == 0) { bank = 1; }
         }
 
         cart->state.mbc3.current_rom_bank = bank;
-        //printf("cart: [MBC3-WriteIntercept] ROM Bank Switch: %02X\n", bank);
         return;
     }
 
@@ -600,22 +594,47 @@ uint8_t mbc3_read(Cartridge *cart, uint16_t addr) {
 
 void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t write_val) {
     if (addr >= 0xA000 && addr <= 0xBFFF) {
-        if (cart->state.mbc3.ram_rtc_enabled) {
-            if (cart->state.mbc3.ram_bank_mode == 0) {  // Write RAM
-                uint8_t bank = cart->state.mbc3.current_ram_bank;
-                size_t b_offset = (bank * 0x2000)+(addr - 0x2000);
+        if (!cart->state.mbc3.ram_rtc_enabled) {
+            return;
+        }
+        if (cart->state.mbc3.ram_bank_mode == 1) {
+            return; // ignore RTC mode for now
+        }
+        if (cart->storage.ram_data == NULL) {
+            fprintf(stderr, "[MBC3] ram_data NULL\n");
+            return;
+        }
 
-                uint8_t old_val = cart->storage.ram_data[b_offset];
+        uint8_t bank = cart->state.mbc3.current_ram_bank;
+        if (bank > 0x03) {
+            return; // RTC selected, ignore for now
+        }
+        if (cart->state.mbc3.ram_bank_mode == 0) {  // Write RAM
+            if (bank <= 0x03) { // Make sure it's not writing to RTC registers
+                size_t b_offset = ((size_t)bank * 0x2000)+ (size_t)(addr - 0xA000);
+                if (b_offset >= cart->config.ram_size) {
+                    fprintf(stderr,
+                            "[MBC3] BAD SRAM offset=%zu ram_size=%zu bank=%u addr=%04X\n",
+                            b_offset,
+                            cart->config.ram_size,
+                            bank,
+                            addr);
+                    return;
+                }
 
                 cart->storage.ram_data[b_offset] = write_val;
-                //logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X O_V=%02X W_V=%02X| B=%02X\n", addr, old_val, write_val, bank);
-
+                cart->state.mbc3.ram_dirty = 1;
                 return;
             }
-            if (cart->state.mbc3.ram_bank_mode == 1) {  // Write RTC Registers
-
+            return;
+        }
+        if (cart->state.mbc3.ram_bank_mode == 1) {  // Write RTC Registers
+            uint8_t bank = cart->state.mbc3.current_ram_bank;
+            if (bank >= 0x08 && bank <= 0x0C) { // This is only RTC Bank registers.
                 return;
+
             }
+            return;
         }
     }
     return;
@@ -627,14 +646,20 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
         if (cart->state.mbc3.ram_rtc_enabled) {
             if (cart->state.mbc3.ram_bank_mode == 0) {  // Read RAM
                 uint8_t bank = cart->state.mbc3.current_ram_bank;
-                size_t b_offset = (bank * 0x2000)+(addr - 0x2000);
-
-                uint8_t val = cart->storage.ram_data[b_offset];
-
-                //logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
-                return cart->storage.ram_data[b_offset];
+                if (bank <= 0x03) { // Make sure it's not reading from RTC registers
+                    size_t b_offset = (bank * 0x2000)+ (size_t)(addr - 0xA000);
+                    uint8_t val = cart->storage.ram_data[b_offset];
+                    logging_cart_mbc_log("[MBC3] R EXT-R |A=%04X V=%02X| B=%02X\n", addr, val, bank);
+                    return cart->storage.ram_data[b_offset];
+                }
+                return 0x00;
             }
             if (cart->state.mbc3.ram_bank_mode == 1) {  // Read RTC Registers
+                uint8_t bank = cart->state.mbc3.current_ram_bank;
+                if (bank >= 0x08 && bank <= 0x0C) {
+                    return 0x00; // RTC registers, return 0 for now.
+
+                }
                 /*
                     $08	RTC S	Seconds	0-59 ($00-$3B)
                     $09	RTC M	Minutes	0-59 ($00-$3B)
@@ -645,12 +670,70 @@ uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr){
                     Bit 6: Halt (0=Active, 1=Stop Timer)
                     Bit 7: Day Counter Carry Bit (1=Counter Overflow)
                 */
-                //rtc_reg_select
-                return 0xFF;
             }
         }
     }
-    return 0xFF;
+    return 0x00;
+}
+
+// Load save file from file.
+int mbc3_load_save(Cartridge *cart, const char *save_path) {
+    FILE *fp = fopen(save_path, "rb");
+    if (fp == NULL) {
+        return 0; // No save yet. This is fine.
+    }
+
+    size_t bytes_read = fread(cart->storage.ram_data, 1, cart->config.ram_size, fp);
+    fclose(fp);
+
+    if (bytes_read != cart->config.ram_size) {
+        fprintf(stderr, "Save file size mismatch: read %zu bytes, expected %zu\n",
+                bytes_read,
+                cart->config.ram_size);
+    }
+
+    return 0;
+}
+
+// Write RAM to save file.
+int mbc3_save_ram(Cartridge *cart, const char *save_path) {
+    if (cart->storage.ram_data == NULL || cart->config.ram_size == 0) {
+        return 0;
+    }
+
+    FILE *fp = fopen(save_path, "wb");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to open save file: %s\n", save_path);
+        return -1;
+    }
+
+    size_t bytes_written = fwrite(cart->storage.ram_data, 1, cart->config.ram_size, fp);
+    fclose(fp);
+
+    if (bytes_written != cart->config.ram_size) {
+        fprintf(stderr, "Failed to write full save file\n");
+        return -1;
+    }
+
+    printf("saving cart ram: size=%zu first bytes=%02X %02X %02X %02X\n",
+       cart->config.ram_size,
+       cart->storage.ram_data[0],
+       cart->storage.ram_data[1],
+       cart->storage.ram_data[2],
+       cart->storage.ram_data[3]);
+
+    uint16_t addr = 0xA000;
+    uint8_t bank = cart->state.mbc3.current_ram_bank;
+    size_t b_offset = (bank * 0x2000)+(addr - 0x2000);
+    printf("Save data Bank_Offsets bytes=%02X %02X %02X %02X\n",
+       cart->storage.ram_data[b_offset + 0],
+       cart->storage.ram_data[b_offset + 1],
+       cart->storage.ram_data[b_offset + 2],
+       cart->storage.ram_data[b_offset + 3]);
+
+    cart->state.mbc3.ram_dirty = 0;
+    return 0;
+
 }
 
 // Bind Read/Write functions to MBC3 operations
@@ -665,9 +748,24 @@ const Operations mbc3_ops = {
 void mbc3_init_ram(Cartridge *cart) {
     size_t ram_size = cart->config.ram_size;    // MBC3 RAM size should be: 32kb total. (8kb * 4 banks);
 
-    // Initialize Cartridge RAM data, setting all values to 0.
-    uint8_t *ram_data = calloc(ram_size, sizeof(uint8_t));
-    cart->storage.ram_data = ram_data;
+    if (ram_size == 0) {
+        cart->storage.ram_data = NULL;
+        fprintf(stderr, "MBC3: no external RAM\n");
+        return;
+    }
+
+    cart->storage.ram_data = malloc(ram_size);
+    if (cart->storage.ram_data == NULL) {
+        fprintf(stderr, "MBC3: [MBC3_RAM_INIT] failed to allocate %zu bytes of RAM\n", ram_size);
+        return;
+    }
+
+    memset(cart->storage.ram_data, 0xFF, ram_size);
+
+    fprintf(stderr,
+            "[MBC3 RAM INIT] ram_data=%p ram_size=%zu\n",
+            (void *)cart->storage.ram_data,
+            cart->config.ram_size);
 }
 
 int mbc3_init(GB *gb, Cartridge *cart, uint8_t type_code) {
@@ -681,6 +779,15 @@ int mbc3_init(GB *gb, Cartridge *cart, uint8_t type_code) {
     mbc3_init_ram(cart);
     // Bind mbc3 config:
     cart->ops = mbc3_ops;
+
+    const char *ram_sav_file = "save/pk_blue.sav";
+    // MBC 3 enable save/load:
+    if (cart->state.mbc3.allow_save == 1) {
+        if (mbc3_load_save(cart, ram_sav_file) != 0) {
+            fprintf(stderr, ":MBC: [MBC3 Load-Save] Error loading save into ram.\n");
+            return -1;
+        }
+    }
 
     printf(":MBC: [MBC3 Init]. Done.\n");
 
@@ -833,6 +940,7 @@ int mbc_init(GB *gb, Cartridge *cart, uint8_t type_code) {
             return mbc5_init(gb, cart, type_code);
         default:
             return -1;
+        break;
     }
     return 0;
 }

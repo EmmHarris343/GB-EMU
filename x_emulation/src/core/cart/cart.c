@@ -204,7 +204,7 @@ int load_cartridge(GB *gb, const char *filename) {
     return 0;
 }
 
-int configure_cartrige(GB *gb) {
+int configure_cartridge(GB *gb) {
     // ROM Size / Bank count
     gb->cart.config.rom_size = rom_size_by_code(headers.rom_size_code);
     gb->cart.config.rom_bank_count = rom_bank_by_code(headers.rom_size_code);
@@ -222,6 +222,10 @@ int cartridge_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [LoadHeaders] Error Loading Headers:\n");
         return -1;
     }
+    if (configure_cartridge(gb) != 0) {
+        fprintf(stderr, "Init Cartrige: [ConfigCartridge] Error during Config Cartridge.\n");
+        return -1;
+    }
     if (load_cartridge(gb, rom_file) != 0) {
         fprintf(stderr, "Init Cartrige: [LoadCartridge] Error loading the cartridge data. (rom file)\n");
         return -1;
@@ -230,11 +234,16 @@ int cartridge_init(GB *gb, const char *rom_file) {
         fprintf(stderr, "Init Cartrige: [MBCInit] Error during mbc setup.\n");
         return -1;
     }
-    if (configure_cartrige(gb) != 0) {
-        fprintf(stderr, "Init Cartrige: [ConfigCartridge] Error during Config Cartridge.\n");
-        return -1;
-    }
     return 0;
+}
+
+void cart_save(GB *gb, const char *save_file) {
+    // Currently only setup MBC3 save file sooo lets do that:
+
+    if (mbc3_save_ram(&gb->cart, save_file) != 0) {
+        fprintf(stderr, ":MBC: [MBC3 Load-Save] Error saving RAM into file.\n");
+        return;
+    }
 }
 
 /*

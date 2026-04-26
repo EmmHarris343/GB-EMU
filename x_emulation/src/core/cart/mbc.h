@@ -41,6 +41,8 @@ void mbc3_write(Cartridge *cart, uint16_t addr, uint8_t val);
 uint8_t mbc3_read(Cartridge *cart, uint16_t addr);
 void mbc3_write_ext(Cartridge *cart, uint16_t addr, uint8_t val);
 uint8_t mbc3_read_ext(Cartridge *cart, uint16_t addr);
+// MBC-3 Save (basic setup)
+int mbc3_save_ram(Cartridge *cart, const char *save_path);
 
 
 

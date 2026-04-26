@@ -185,6 +185,16 @@ int gb_init(GB *gb, const char *rom_file) {
     return 0;
 }
 
+void gb_shutdown(GB *gb, const char *save_file) {
+    // Check here if RAM is Dirty (Unsaved).
+    if (gb->cart.state.mbc3.ram_dirty) {
+        cart_save(gb, save_file);
+    }
+
+}
+
+
+
 
 // GB Tick => Machine timing dispatcher.
 // Tick; update the total_cycles / frame_cycles,
@@ -238,6 +248,22 @@ void gb_step_frame(GB *gb, uint64_t *next_frame_time_ns) {
         frame_cycles += cycles; // Adds cpu cycles to frame_cycles.
     }
 
+    if (gb->frame_cycles % 200 == 0){
+        printf("PC=%04X ROM_B=%02X VBLKS=%08lX SP=%04X IME=%u IE=%02X IF=%02X HALT=%u LY=%u DIV=%02X TIMA=%02X TAC=%02X\n",
+            gb->cpu.reg.PC,
+            gb->cart.state.mbc3.current_rom_bank,
+            gb->db_stats.vblank_entries,
+            gb->cpu.reg.SP,
+            gb->cpu.state.IME,
+            gb->interrupts.IE,
+            gb->interrupts.IF,
+            gb->cpu.state.halt,
+            gb->ppu.ly,
+            gb->timer.div,
+            gb->timer.tima,
+            gb->timer.tac);
+    }
+
     if (gb->panic) {
         printf("GB Panic, Cancelling run..\n");
         // DUMP GB Trace logs
@@ -261,30 +287,28 @@ void gb_request_interrupt(GB *gb, uint8_t interrupt_bit) {
 }
 
 // Special interupt handling both IE (Interrupt Enable) and IF (Interrupt Flag):
-uint8_t ie_read(GB *gb, uint16_t addr) {
-    (void)addr;
-    uint8_t read_value = gb->interrupts.IE;
-    // printf("IE Read hit. PC=%04X , OPCODE=%02X, value=%02X\n",
-    //      gb->cpu.reg.PC, gb->instruction.opcode, read_value);
-    return read_value;
+uint8_t interrupt_read(GB *gb, uint16_t addr) {
+    if (addr == 0xFFFF) {
+        return gb->interrupts.IE;
+    }
+    if (addr == 0xFFFF) {
+        return gb->interrupts.IF | 0xE0;
+    }
+    return 0xFF;
 }
-void ie_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
-    (void)addr;
-    printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
-        gb->cpu.reg.A,
-        gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
-    gb->interrupts.IE = interrupt_hex & 0x1F;
+void interrupt_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
+    if (addr == 0xFFFF) {
+        gb->interrupts.IE = interrupt_hex & 0x1F;
+        printf("IE Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+        gb->cpu.reg.A, gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
+    }
+    if (addr == 0xFFFF) {
+        gb->interrupts.IF = interrupt_hex & 0x1F;
+        printf("IF Write hit. A-Reg=%02X, PC=%04X , OPCODE=%02X, Oprand=%02X, value=%02X\n",
+        gb->cpu.reg.A, gb->cpu.reg.PC, gb->instruction.opcode, gb->instruction.operand1, interrupt_hex);
+    }
 }
-uint8_t if_read(GB *gb, uint16_t addr) {
-    (void)addr;
-    return gb->interrupts.IF & 0x1F;
 
-}
-void if_write(GB *gb, uint16_t addr, uint8_t interrupt_hex) {
-    (void)addr;
-    printf("IF Write hit. Interrupt_Hex: %02X\n", interrupt_hex);
-    gb->interrupts.IF = interrupt_hex & 0x1F;
-}
 
 
 

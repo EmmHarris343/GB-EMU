@@ -4,6 +4,7 @@
 *.gbc
 
 # Ignore Folders
+save/
 rom/
 doc/
 old/
