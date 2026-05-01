@@ -30,7 +30,7 @@ tile_pixel_y, tile_pixel_x
 
 
 
-
+// Based on the BG, OB10 OB01
 static uint32_t decode_gray_from_palette(uint8_t palette, uint8_t color_id) {
     uint8_t shade = (palette >> ((color_id & 0x03) * 2)) & 0x03;
 
@@ -65,7 +65,7 @@ static uint8_t decode_tile_pixel(const uint8_t *tile_data, uint8_t y, uint8_t x)
     return (uint8_t)((high_bit << 1) | low_bit);
 }
 
-
+// Loads a single BG/Window tile based on the the map indexes calculated vram and the tiles x,y coordinate.
 const uint8_t *get_tile_data(int unsigned_indices, uint16_t map_index, const uint8_t *vram) {
     const uint8_t *tile_data;
     uint8_t tile_index = vram[map_index];
@@ -83,16 +83,6 @@ const uint8_t *get_tile_data(int unsigned_indices, uint16_t map_index, const uin
     return tile_data;   // Returns One(1) 8x8 tile. (64 pixels total size)
 }
 
-
-    /*
-        For every ScanLine this checks if any any of the objects inside the OAM[] register
-        Matches the Current Scanline Position (Y).
-        Any that do, are added to the scnl_objects.
-
-        The objects are loaded sequentially.
-        Once the maximum objects per scanline has been reached. (10).
-        Break and end function.
-    */
 OAM_Entry oam_read_entry(PPU *ppu, uint8_t obj_index) {
     uint16_t  offset = ((uint16_t)obj_index * 4);
     OAM_Entry entry = {
@@ -105,6 +95,16 @@ OAM_Entry oam_read_entry(PPU *ppu, uint8_t obj_index) {
 
     return entry;
 }
+
+/*
+    For every ScanLine this checks if any any of the objects inside the OAM[] register
+    Matches the Current Scanline Position (Y).
+    Any that do, are added to the scnl_objects.
+
+    The objects are loaded sequentially.
+    Once the maximum objects per scanline has been reached. (10).
+    Break and end function.
+*/
 
 uint8_t add_scnl_objects(PPU *ppu, OAM_Entry *scnl_objects, uint8_t obj_height, uint8_t screen_y) {
     uint8_t obj_count = 0;
@@ -128,9 +128,7 @@ uint8_t add_scnl_objects(PPU *ppu, OAM_Entry *scnl_objects, uint8_t obj_height, 
 }
 
 
-
-
-
+// Gets a single pixel for the window layer
 uint8_t get_win_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t screen_x) {
     uint8_t lcdc = ppu->lcdc;
     uint8_t wx = ppu->wx;
@@ -158,6 +156,7 @@ uint8_t get_win_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t s
     return decode_tile_pixel(tile_data, tile_pixel_y, tile_pixel_x);;
 }
 
+// Gets a single pixel for the background (BG) layer
 uint8_t get_bg_pixel(PPU *ppu, const uint8_t *vram, uint8_t screen_y, uint8_t screen_x) {
     uint8_t lcdc = ppu->lcdc;
 
@@ -214,7 +213,23 @@ uint8_t get_obj_pixel(PPU *ppu, const uint8_t *vram, OAM_Entry *obj, uint8_t scr
     return decode_tile_pixel(tile_data, pixel_y, pixel_x);
 }
 
-// NOTE: This still needs to handle Objects/ Sprite priorities. (Which gets printed)
+
+/*
+
+=====-- Main Pixel Generation --=====
+
+This ties together the Background tiles, the Window Tiles, the OAM Objects (Sprites)
+
+Calls each separate function to find, decode, extract of the pixels, and add them to the frame_buffer.
+
+This adds each pixel, by the current scanline.
+
+- Note this function is being called from the PPU, when the LY (SCANLINE) advances.
+(This is printing each line at a time)
+
+*/
+
+
 void gen_pixel_line(PPU *ppu, const uint8_t *vram) {
     uint8_t lcdc = ppu->lcdc;
 
@@ -244,7 +259,7 @@ void gen_pixel_line(PPU *ppu, const uint8_t *vram) {
         uint8_t obj_found = 0;
 
 
-        // Window / BG:
+        // Window / BG (Background):
         if (window_enabled &&
             screen_y >= ppu->wy &&
             screen_x >= (ppu->wx - 7)) {    // Risk of roll-over if wx = 0.
@@ -298,80 +313,4 @@ void gen_pixel_line(PPU *ppu, const uint8_t *vram) {
         ppu->vp_rgba_buffer[((uint16_t) screen_y * GB_LCD_WIDTH) + screen_x] = decode_gray_from_palette(0, merged_color_id);
         // ALSO NOTE: 0,1,2,3 colorid for oam 0 = transparent.
     }
-}
-
-
-
-
-
-
-/*
-
-IGNORE THE REST. This is wildly inefficient.
-
-
-Maybe keep for some kind of "DEBUG" mode, to have it display the entire BG layer.
-
-*/
-
-// Generate the Background Layer Buffer. By decoding tile indices, vram offests, pixels, and stores it in a [256*256] array of pixels.
-void gen_bg_layer(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format) {
-    // Note VRAM has: VRAM[2000]. So the offsets are -0x8000 so they aren't out of range.
-
-    // While the PPU/ LCD is trying to draw each layer,
-
-    uint8_t lcdc;
-    lcdc = ppu->lcdc;
-
-    // Bit 4 LCDC changes Reading from Block 0/1 and Block1/2. Bit cleared (0) => -128 to -1 are in block 1 (So needs Signed Int))
-    int unsigned_indices = (lcdc & (1u << 4)) ? 1 : 0;
-
-    // Bit 3 LCDC controls which BG tile map area is used for rendering.
-    uint16_t map_base_offset = (lcdc & (1u << 3)) ? VRAM_BG_OFFSET_9C00 : VRAM_BG_OFFSET_9800;
-
-    // Each Tile-Map is 32x32 tiles, this decodes the current selected Tile-Map based on the LCDC bit 3.
-    for (uint8_t map_y = 0; map_y < 32; map_y++) {
-        for (uint8_t map_x = 0; map_x < 32; map_x++) {
-            const uint8_t *tile_data;
-
-            // Calculates location/ offset of the BG Tile-Map in VRAM, to load the idividual Tile from VRAM.
-            uint8_t map_index  = (uint16_t)(map_base_offset + (map_y * 32) + map_x);
-            uint8_t tile_index = vram[map_index];
-
-            if (unsigned_indices) {
-                // Simple math, no negative tile_indexes.
-                tile_data = &vram[VRAM_TILE_8000_OFFSET + (tile_index * 16)];
-            } else {
-                // This is to load the -128 to -1 signed addressing thats in block 1;
-                int8_t signed_tile_index;
-                uint16_t tile_offset;
-
-                // Convert tile_index into +/- signed addressing
-                signed_tile_index = (int8_t)tile_index;
-
-                // 0x9000 as base pointer. VRAM base 0x8000 => offset 0x1000
-                tile_offset = (uint16_t)(0x1000 + (signed_tile_index * 16));
-
-                tile_data = &vram[tile_offset];
-            }
-        }
-    }
-}
-
-// Generate the Window Layer Buffer.
-void gen_win_layer(PPU *ppu, const uint8_t *vram, SDL_PixelFormat *gb_pixel_format) {
-    // Consider, not generating a window layer buffer.
-    // But doing it on demand while Rendering the "final" window. (Or the viewport window)
-
-    // Window X/Y in range. x[0;166] y[0;143]
-    // if ((window_x >= 0 && window_x <= 166) && (window_y >= 0 && window_y <= 143)) {
-    //     if (bg_win_enabled && win_enabled) {
-    //         win_render_enabled = (y_condition) ? 1 : 0;
-    //     } else {
-    //         win_render_enabled = 0;
-    //     }
-    // } else {
-    //     win_render_enabled = 0;
-    // }
-
 }
